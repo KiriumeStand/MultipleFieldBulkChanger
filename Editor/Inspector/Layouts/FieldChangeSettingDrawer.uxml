@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement>
+        <ui:Label name="DebugLabel" text="DebugLabel" style="white-space: normal; display: none;" />
+        <ui:Toggle label="有効" name="FCS_Enable" value="true" />
+        <ui:TextField picking-mode="Ignore" label="代入式" name="FCS_Expression" multiline="true" />
+        <ui:VisualElement style="flex-direction: row;">
+            <ui:Label tabindex="-1" text="=" parse-escape-sequences="true" display-tooltip-when-elided="true" style="font-size: 20px;" />
+            <ui:Label tabindex="-1" text="Value" parse-escape-sequences="true" display-tooltip-when-elided="true" name="FCS_ValuePreview" style="font-size: 20px; -unity-text-align: middle-left; white-space: normal; flex-shrink: 1;" />
+        </ui:VisualElement>
+        <ui:ListView show-border="true" show-foldout-header="true" show-add-remove-footer="true" header-title="パラメーター" reorderable="true" selection-type="Multiple" show-alternating-row-backgrounds="ContentOnly" virtualization-method="DynamicHeight" reorder-mode="Animated" name="FCS_TargetFields" show-bound-collection-size="false" />
+    </ui:VisualElement>
+</ui:UXML>

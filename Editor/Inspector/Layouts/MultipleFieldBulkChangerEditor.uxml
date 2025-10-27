@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement>
+        <ui:Label name="DebugLabel" text="DebugLabel" style="white-space: normal; display: none;" />
+        <ui:Button text="Debug" name="MFBC_DebugButton" />
+        <ui:Button text="ParamReload" name="MFBC_ParamReloadButton" />
+        <ui:Button text="Apply" name="MFBC_ApplyButton" />
+        <ui:Toggle label="有効" value="true" name="MFBC_Enable" />
+        <ui:ListView name="MFBC_Arguments" show-border="true" show-foldout-header="true" show-add-remove-footer="true" header-title="引数" reorderable="true" selection-type="Multiple" show-alternating-row-backgrounds="ContentOnly" virtualization-method="DynamicHeight" reorder-mode="Animated" show-bound-collection-size="false" />
+        <ui:ListView name="MFBC_ChangeSettings" show-border="true" show-foldout-header="true" show-add-remove-footer="true" header-title="変更設定" reorderable="true" selection-type="Multiple" show-alternating-row-backgrounds="ContentOnly" virtualization-method="DynamicHeight" reorder-mode="Animated" show-bound-collection-size="false" />
+    </ui:VisualElement>
+</ui:UXML>

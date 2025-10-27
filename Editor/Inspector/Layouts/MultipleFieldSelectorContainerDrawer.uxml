@@ -1,0 +1,16 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement style="flex-grow: 1;">
+        <ui:Label name="DebugLabel" text="DebugLabel" style="white-space: normal; display: none;" />
+        <ui:VisualElement style="flex-direction: row;">
+            <ui:VisualElement style="flex-grow: 2; flex-basis: 0;">
+                <ui:Label tabindex="-1" text="オブジェクト" parse-escape-sequences="true" display-tooltip-when-elided="true" />
+                <uie:ObjectField name="MFSC_SelectObject" />
+            </ui:VisualElement>
+            <ui:VisualElement name="Spacer" style="flex-grow: 1; flex-basis: 0;" />
+        </ui:VisualElement>
+        <ui:VisualElement>
+            <ui:Label tabindex="-1" text="プロパティ" parse-escape-sequences="true" display-tooltip-when-elided="true" style="display: none;" />
+            <ui:ListView name="MFSC_FieldsSelector" virtualization-method="DynamicHeight" show-border="true" selection-type="Multiple" show-alternating-row-backgrounds="ContentOnly" reorderable="true" show-foldout-header="true" header-title="メンバー" show-add-remove-footer="true" show-bound-collection-size="false" reorder-mode="Animated" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

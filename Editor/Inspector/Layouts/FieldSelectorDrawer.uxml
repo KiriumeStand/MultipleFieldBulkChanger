@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement>
+        <ui:Label name="DebugLabel" text="DebugLabel" style="white-space: normal; display: none;" />
+        <ui:VisualElement>
+            <ui:Label tabindex="-1" text="プロパティ" parse-escape-sequences="true" display-tooltip-when-elided="true" style="display: none;" />
+            <ui:DropdownField name="FS_SelectField" />
+        </ui:VisualElement>
+        <ui:TextField name="FS_SelectFieldPath" />
+        <ui:Label text="LogLabel" name="FS_LogLabel" style="white-space: normal; display: none;" />
+    </ui:VisualElement>
+</ui:UXML>

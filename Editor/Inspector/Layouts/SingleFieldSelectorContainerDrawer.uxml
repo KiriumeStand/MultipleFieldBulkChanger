@@ -1,0 +1,16 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement>
+        <ui:Label name="DebugLabel" text="DebugLabel" style="white-space: normal; display: none;" />
+        <ui:VisualElement style="flex-direction: row;">
+            <ui:VisualElement style="flex-grow: 2; flex-basis: 0;">
+                <ui:Label tabindex="-1" text="オブジェクト" parse-escape-sequences="true" display-tooltip-when-elided="true" />
+                <uie:ObjectField name="SFSC_SelectObject" />
+            </ui:VisualElement>
+            <ui:VisualElement name="Spacer" style="flex-grow: 1; flex-basis: 0;" />
+        </ui:VisualElement>
+        <ui:VisualElement>
+            <ui:Label tabindex="-1" text="プロパティ" parse-escape-sequences="true" display-tooltip-when-elided="true" style="display: none;" />
+            <uie:PropertyField name="SFSC_FieldSelector" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,17 @@
+{
+    "name": "io.github.kiriumestand.multiplefieldbulkchanger",
+    "displayName": "Multiple Field Bulk Changer",
+    "version": "0.1.0",
+    "unity": "2022.3",
+    "description": "複数のオブジェクトの値を一括で変更するコンポーネント",
+    "author": {
+        "name": "きり梅直売所",
+        "url": "https://kiriume-stand.booth.pm"
+    },
+    "url": "https://github.com/KiriumeStand/MultipleFieldBulkChanger",
+    "repo": "",
+    "vpmDependencies": {
+        "com.vrchat.avatars": ">=3.9.0",
+        "nadena.dev.ndmf": ">=1.9.4"
+    }
+}

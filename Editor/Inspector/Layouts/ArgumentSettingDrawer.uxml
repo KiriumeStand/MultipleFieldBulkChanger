@@ -1,0 +1,57 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement>
+        <ui:Label name="DebugLabel" text="DebugLabel" style="white-space: normal; display: none;" />
+        <ui:Toggle label="参照モード" name="AS_IsReferenceMode" />
+        <ui:VisualElement style="flex-direction: row;">
+            <ui:VisualElement style="flex-grow: 4; flex-basis: 0; flex-direction: row;">
+                <ui:VisualElement style="flex-grow: 1; flex-basis: 0;">
+                    <ui:Label text="型" />
+                    <ui:EnumField name="AS_InputtableArgumentType" />
+                    <ui:EnumField name="AS_ReferenceArgumentType" style="display: none;" />
+                </ui:VisualElement>
+                <ui:VisualElement style="flex-grow: 1; flex-basis: 0;">
+                    <ui:Label text="引数名" />
+                    <ui:TextField picking-mode="Ignore" name="AS_ArgumentName" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="Spacer" style="flex-grow: 1; flex-basis: 0;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-direction: row;">
+            <ui:VisualElement name="Spacer" style="flex-grow: 1; flex-basis: 1%;" />
+            <ui:VisualElement style="flex-grow: 4; flex-basis: 0;">
+                <ui:VisualElement name="AS_InputtableValueSettingContainer" style="flex-direction: row;">
+                    <ui:Label text="=" style="-unity-text-align: lower-left; font-size: 20px;" />
+                    <ui:VisualElement style="display: flex; flex-grow: 1;">
+                        <ui:Label text="値" />
+                        <ui:Toggle name="AS_InputtableBoolValueField" style="flex-shrink: 1;" />
+                        <ui:DoubleField name="AS_InputtableNumberValueField" style="flex-shrink: 1; display: none;" />
+                        <ui:TextField picking-mode="Ignore" name="AS_InputtableStringValueField" style="flex-shrink: 1; display: none;" />
+                        <uie:ObjectField name="AS_InputtableObjectValueField" style="flex-shrink: 1; display: none;" />
+                        <uie:PropertyField name="AS_InputtableOtherValueField" style="display: none;" />
+                        <ui:Label text="Invalid" name="AS_InputtableInvalidValueLabel" style="font-size: 20px; flex-shrink: 1; white-space: normal; -unity-text-align: middle-left; display: none;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="AS_ReferenceValueSettingContainer" style="display: none;">
+                    <ui:VisualElement style="flex-direction: row;">
+                        <ui:Label text="=" style="-unity-text-align: lower-left; font-size: 20px;" />
+                        <ui:VisualElement style="display: flex; flex-grow: 1;">
+                            <uie:PropertyField name="AS_SourceField" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement style="flex-direction: row;">
+                        <ui:Label text="=" style="-unity-text-align: lower-left; font-size: 20px;" />
+                        <ui:VisualElement style="flex-grow: 1;">
+                            <ui:VisualElement name="Spacer" style="flex-grow: 1;" />
+                            <ui:Toggle name="AS_ReferenceBoolValueField" />
+                            <ui:DoubleField name="AS_ReferenceNumberValueField" style="display: none;" />
+                            <ui:TextField picking-mode="Ignore" name="AS_ReferenceStringValueField" style="display: none;" />
+                            <uie:ObjectField name="AS_ReferenceObjectValueField" style="display: none;" />
+                            <uie:PropertyField name="AS_ReferenceOtherValueField" style="display: none;" />
+                            <ui:Label text="Invalid" name="AS_ReferenceInvalidValueLabel" style="font-size: 20px; height: 24px; flex-shrink: 1; white-space: normal; -unity-text-align: middle-left; display: none;" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
