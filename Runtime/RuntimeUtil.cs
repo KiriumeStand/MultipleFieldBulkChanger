@@ -11,8 +11,12 @@ using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
 {
+
     public static class RuntimeUtil
     {
+        public static bool DebugMode = false;
+        public static bool DebugLogOn = false;
+
         // ▼ デバッグ用 ========================= ▼
         // MARK: ==デバッグ用==
 
@@ -20,7 +24,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
         {
             public static void DebugLog(string mes, LogType logType, string color = "white")
             {
-                if (!true) return;
+                if (!DebugLogOn) return;
 
                 mes = $"<color={color}>{mes}</color>";
 

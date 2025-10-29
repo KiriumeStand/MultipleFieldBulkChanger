@@ -49,7 +49,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
             var _ => null,
         };
 
-        // MARK: TODO:要らないかも
+        // MARK: TODO:ごちゃごちゃしてるので廃止予定
+        //[Obsolete]
         public record PrivateFieldNames
         {
             public static readonly string _OriginalFieldType = nameof(FieldSelector._OriginalFieldType);
