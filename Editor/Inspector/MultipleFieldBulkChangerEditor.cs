@@ -26,9 +26,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             // MARK: デバッグ用
             Button u_DebugButton = UIQuery.Q<Button>(uxml, "MFBC_DebugButton");
-            Button u_ParamReloadButton = UIQuery.Q<Button>(uxml, "MFBC_ParamReloadButton");
-            Button u_ApplyButton = UIQuery.Q<Button>(uxml, "MFBC_ApplyButton");
-
             u_DebugButton.clicked += () =>
             {
                 RuntimeUtil.Debugger.DebugLog(
@@ -37,8 +34,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     $"{UniversalDataManager.Debugger.UnsubscribeActionsInfoList}"
                     , LogType.Log);
             };
-            u_ParamReloadButton.clicked += () => { };
-            u_ApplyButton.clicked += () => { };
+            EditorUtil.VisualElementHelper.SetDisplay(u_DebugButton, RuntimeUtil.DebugMode);
 
             Toggle u_Enable = BindHelper.Bind<Toggle>(uxml, UxmlNames.Enable, serializedObject, nameof(MultipleFieldBulkChanger._Enable));
             ListView u_Arguments = BindHelper.Bind<ListView>(uxml, UxmlNames.Arguments, serializedObject, nameof(MultipleFieldBulkChanger._ArgumentSettings));

@@ -23,24 +23,27 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             // MARK: 要確認 クローンは中身が変更されてしまうアセットのみでいい？ つまり、 mfscPropObj._SelectObject だけのクローンでいい？
             foreach (MultipleFieldBulkChanger mfbcComponent in mfbcComponents)
             {
-                List<ArgumentData> argDatas = new();
-                foreach (ArgumentSetting asPropObj in mfbcComponent._ArgumentSettings)
-                {
-                    // MARK: TODO ここ要らんくね？
-                    //asPropObj._InputtableObjectValue = cloner.DeepClone(asPropObj._InputtableObjectValue);
-                    //asPropObj._SourceField._SelectObject = cloner.DeepClone(asPropObj._SourceField._SelectObject);
-                    //asPropObj._SourceField._SelectField._OriginalObjectValue = cloner.DeepClone(asPropObj._SourceField._SelectField._OriginalObjectValue);
-                }
+                if (!mfbcComponent._Enable) continue;
+
+                // MARK: 要確認 上記の理由でここはいらないのでは？
+                //foreach (ArgumentSetting asPropObj in mfbcComponent._ArgumentSettings)
+                //{
+                //    asPropObj._InputtableObjectValue = cloner.DeepClone(asPropObj._InputtableObjectValue);
+                //    asPropObj._SourceField._SelectObject = cloner.DeepClone(asPropObj._SourceField._SelectObject);
+                //    asPropObj._SourceField._SelectField._OriginalObjectValue = cloner.DeepClone(asPropObj._SourceField._SelectField._OriginalObjectValue);
+                //}
                 foreach (FieldChangeSetting fcsPropObj in mfbcComponent._FieldChangeSettings)
                 {
+                    if (!fcsPropObj._Enable) continue;
+
                     foreach (MultiFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
                     {
                         mfscPropObj._SelectObject = cloner.DeepClone(mfscPropObj._SelectObject);
-                        foreach (FieldSelector fsPropObj in mfscPropObj._FieldSelectors)
-                        {
-                            // MARK: TODO ここ要らんくね？
-                            //fsPropObj._OriginalObjectValue = cloner.DeepClone(fsPropObj._OriginalObjectValue);
-                        }
+                        // MARK: 要確認 上記の理由でここはいらないのでは？
+                        //foreach (FieldSelector fsPropObj in mfscPropObj._FieldSelectors)
+                        //{
+                        //    fsPropObj._OriginalObjectValue = cloner.DeepClone(fsPropObj._OriginalObjectValue);
+                        //}
                     }
                 }
             }
@@ -55,6 +58,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             foreach (MultipleFieldBulkChanger mfbcComponent in mfbcComponents)
             {
+                if (!mfbcComponent._Enable) continue;
+
                 // 引数データの作成
                 List<ArgumentData> argDatas = new();
                 foreach (ArgumentSetting asPropObj in mfbcComponent._ArgumentSettings)
@@ -70,6 +75,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 foreach (FieldChangeSetting fcsPropObj in mfbcComponent._FieldChangeSettings)
                 {
+                    if (!fcsPropObj._Enable) continue;
+
                     string expression = fcsPropObj._Expression;
                     // 代入式を解く
                     (bool expressionSuccess, ValueTypeGroup valueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expression, argDatas);

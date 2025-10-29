@@ -726,11 +726,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 using (var so = new SerializedObject(clone))
                 {
-                    foreach (var prop in SerializedObjectUtil.GetAllProperties(so).Where(x => x.propertyType == SerializedPropertyType.ObjectReference))
-                    {
-                        // MARK: 要確認 ここ要らんくね？
-                        //prop.objectReferenceValue = DeepCloneImpl(prop.objectReferenceValue, cache);
-                    }
+                    // MARK: 要確認 ここ要らないのでは？
+                    //foreach (var prop in SerializedObjectUtil.GetAllProperties(so).Where(x => x.propertyType == SerializedPropertyType.ObjectReference))
+                    //{
+                    //    prop.objectReferenceValue = DeepCloneImpl(prop.objectReferenceValue, cache);
+                    //}
                     so.ApplyModifiedPropertiesWithoutUndo();
                 }
 
