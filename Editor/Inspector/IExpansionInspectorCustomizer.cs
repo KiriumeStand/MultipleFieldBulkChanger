@@ -74,7 +74,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <returns></returns>
         private VisualElement CreateUxml()
         {
-            string layoutFilePathBase = $"{RuntimeUtil.GetCallerScriptRelativeDirectoryPath(SourceFilePath)}/Layouts/{GetType().Name}";
+            string layoutFilePathBase = $"{EditorUtil.GetCallerScriptRelativeDirectoryPath(SourceFilePath)}/Layouts/{GetType().Name}";
             VisualTreeAsset visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{layoutFilePathBase}.uxml");
             StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"{layoutFilePathBase}.uss");
             // UXML をインスタンス化
