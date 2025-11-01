@@ -23,7 +23,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <param name="sourceFilePath"></param>
         public ExpansionPropertyDrawer([CallerFilePath] string sourceFilePath = "")
         {
-            SourceFilePath = sourceFilePath;
+            SourceFilePath = new System.IO.FileInfo(sourceFilePath).FullName;
         }
 
         // ▼ 初期化定義 ========================= ▼

@@ -12,7 +12,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     {
         /// <summary>
         /// イベントハンドラーの管理は基本弱参照なので、ドロワーより先に消えないようにするためのリスト
-        /// MARK: TODO ここたぶんメモリリークする。方法もスマートじゃないので要修正
+        /// MARK: TODO 大した規模じゃないがUnityの仕様的に恐らくメモリリークする。方法もスマートじゃない気がするので要修正
         /// </summary>
         /// <returns></returns>
         public List<Delegate> EventHandlers { get; }
@@ -60,8 +60,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (u_DebugLabel != null)
             {
                 u_DebugLabel.text = $"drawerId:{EditorUtil.ObjectIdUtil.GetObjectId(this)}/targetId:{EditorUtil.ObjectIdUtil.GetObjectId(targetObject)}/serializedDataId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedData)}";
+                EditorUtil.VisualElementHelper.SetDisplay(u_DebugLabel, RuntimeUtil.DebugMode);
             }
-            EditorUtil.VisualElementHelper.SetDisplay(u_DebugLabel, EditorUtil.DebugMode);
 
             status.SetPhase(InspectorCustomizerStatus.Phase.BeforeDelayCall);
 
@@ -74,7 +74,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <returns></returns>
         private VisualElement CreateUxml()
         {
-            string layoutFilePathBase = $"{RuntimeUtil.GetCallerScriptRelativeDirectoryPath(SourceFilePath)}/Layouts/{GetType().Name}";
+            string layoutFilePathBase = $"{EditorUtil.GetCallerScriptRelativeDirectoryPath(SourceFilePath)}/Layouts/{GetType().Name}";
             VisualTreeAsset visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{layoutFilePathBase}.uxml");
             StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"{layoutFilePathBase}.uss");
             // UXML をインスタンス化
@@ -83,7 +83,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             uxml.styleSheets.Add(styleSheet);
             // ウィンドウ全体に要素が広がるように設定
             // MARK: TODO ここ不要かも
-            uxml.style.flexGrow = 1;
+            //uxml.style.flexGrow = 1;
 
             return uxml;
         }
@@ -262,10 +262,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <returns></returns>
         public Action Subscribe<T>(IExpansionInspectorCustomizer inspectorCustomizer, IDisposable serializedData, InspectorCustomizerStatus status, EventHandler<T> handler, Func<T, bool> filter = null, bool allowNestEvent = false) where T : BaseEventArgs
         {
+            // MARK: 要確認 単一責任でIsValidをSubscribeの外側で呼び出したほうが良い？
             if (EditorUtil.SerializedObjectUtil.IsValid(serializedData) != true)
             {
                 // MARK: デバッグ用 
-                // MARK: TODO IsValidをSubscribeの外側で呼び出し徹底
                 RuntimeUtil.Debugger.DebugLog($"ここは必要みたいです/Subscribe", LogType.Warning);
                 return () => { };
             }
