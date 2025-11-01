@@ -2,8 +2,8 @@
     "name": "io.github.kiriumestand.multiplefieldbulkchanger.editor",
     "rootNamespace": "",
     "references": [
-        "GUID:ba2eb78c16c2dd2428a2c5ae4d448680",
-        "GUID:62ced99b048af7f4d8dfe4bed8373d76"
+        "io.github.kiriumestand.multiplefieldbulkchanger.runtime",
+        "nadena.dev.ndmf"
     ],
     "includePlatforms": [
         "Editor"
