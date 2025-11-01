@@ -3,13 +3,14 @@
     "displayName": "Multiple Field Bulk Changer",
     "version": "0.1.0-alpha",
     "unity": "2022.3",
-    "description": "複数のオブジェクトの値を一括で変更するコンポーネント",
+    "description": "複数のオブジェクトの値を非破壊に一括で変更するコンポーネント",
     "author": {
-        "name": "きり梅直売所",
-        "url": "https://kiriume-stand.booth.pm"
+        "name": "KiriumeStand",
+        "url": "https://github.com/KiriumeStand/MultipleFieldBulkChanger"
     },
-    "url": "https://github.com/KiriumeStand/MultipleFieldBulkChanger",
-    "repo": "",
+    "license": "MIT",
+    "repo": "https://kiriumestand.github.io/vpm-repos/index.json",
+    "url": "",
     "vpmDependencies": {
         "com.vrchat.avatars": ">=3.9.0",
         "nadena.dev.ndmf": ">=1.9.4"
