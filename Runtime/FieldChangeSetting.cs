@@ -16,10 +16,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
         /// </summary>
         public string _Expression = "";
 
-
         [SerializeField]
         [HideInInspector]
-        private ValueTypeGroup _expressionResultType;
+        private FieldType _expressionResultType;
 
         [SerializeField]
         [HideInInspector]

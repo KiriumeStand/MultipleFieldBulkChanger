@@ -421,45 +421,21 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 _ => null,
             };
 
-            public static (ValueTypeGroup valueType, object value) GetPropertyValue(SerializedProperty property)
+            public static object GetPropertyValue(SerializedProperty property)
             {
                 property.serializedObject.Update();
 
-                ValueTypeGroup resultArgumentTypeValue = ValueTypeGroup.Other;
-                object resultValue = null;
-
-                switch (property.propertyType)
+                object resultValue = property.propertyType switch
                 {
-                    case SerializedPropertyType.Boolean:
-                        resultArgumentTypeValue = ValueTypeGroup.Bool;
-                        resultValue = property.boolValue;
-                        break;
-                    case SerializedPropertyType.Integer:
-                        resultArgumentTypeValue = ValueTypeGroup.Number;
-                        resultValue = Convert.ToDouble(property.intValue);
-                        break;
-                    case SerializedPropertyType.Float:
-                        resultArgumentTypeValue = ValueTypeGroup.Number;
-                        resultValue = Convert.ToDouble(property.doubleValue);
-                        break;
-                    case SerializedPropertyType.String:
-                        resultArgumentTypeValue = ValueTypeGroup.String;
-                        resultValue = property.stringValue;
-                        break;
-                    case SerializedPropertyType.ObjectReference:
-                        resultArgumentTypeValue = ValueTypeGroup.UnityObject;
-                        resultValue = property.objectReferenceValue;
-                        break;
-                    case SerializedPropertyType.ManagedReference:
-                        resultArgumentTypeValue = ValueTypeGroup.ManagedReference;
-                        resultValue = property.managedReferenceValue;
-                        break;
-                    default:
-                        resultArgumentTypeValue = ValueTypeGroup.Other;
-                        break;
-                }
-
-                return (resultArgumentTypeValue, resultValue);
+                    SerializedPropertyType.Boolean => property.boolValue,
+                    SerializedPropertyType.Integer => Convert.ToDouble(property.intValue),
+                    SerializedPropertyType.Float => Convert.ToDouble(property.doubleValue),
+                    SerializedPropertyType.String => property.stringValue,
+                    SerializedPropertyType.ObjectReference => property.objectReferenceValue,
+                    SerializedPropertyType.ManagedReference => property.managedReferenceValue,
+                    _ => null,
+                };
+                return resultValue;
             }
 
             public static void SetPropertyValue(SerializedProperty property, object value)
@@ -1030,70 +1006,68 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public static class OtherUtil
         {
-            public static ValueTypeGroup GetValueTypeGroup(object obj) => obj switch
+            public static FieldType GetFieldType(object obj) => obj switch
             {
-                bool => ValueTypeGroup.Bool,
+                bool => FieldType.Boolean,
                 sbyte or byte or
                 short or ushort or
                 int or uint or
-                long or ulong or
-                float or double => ValueTypeGroup.Number,
-                string => ValueTypeGroup.String,
-                Object => ValueTypeGroup.UnityObject,
-                _ => ValueTypeGroup.Other,
+                long or ulong => FieldType.Integer,
+                float or double => FieldType.Float,
+                string => FieldType.String,
+                Object => FieldType.ObjectReference,
+                _ => FieldType.Generic,
             };
 
-            public static ValueTypeGroup Parse2ValueTypeGroup(Type type) => Type.GetTypeCode(type) switch
+            public static FieldType Parse2FieldType(Type type) => Type.GetTypeCode(type) switch
             {
-                TypeCode.Boolean => ValueTypeGroup.Bool,
+                TypeCode.Boolean => FieldType.Boolean,
                 TypeCode.SByte or TypeCode.Byte or
                 TypeCode.Int16 or TypeCode.UInt16 or
                 TypeCode.Int32 or TypeCode.UInt32 or
-                TypeCode.Int64 or TypeCode.UInt64 or
-                TypeCode.Single or TypeCode.Double => ValueTypeGroup.Number,
-                TypeCode.String => ValueTypeGroup.String,
-                TypeCode.Object when typeof(Object).IsAssignableFrom(type) => ValueTypeGroup.UnityObject,
-                _ => ValueTypeGroup.Other,
+                TypeCode.Int64 or TypeCode.UInt64 => FieldType.Integer,
+                TypeCode.Single or TypeCode.Double => FieldType.Float,
+                TypeCode.String => FieldType.String,
+                TypeCode.Object when typeof(Object).IsAssignableFrom(type) => FieldType.ObjectReference,
+                _ => FieldType.Generic,
             };
 
-            public static ValueTypeGroup Parse2ValueTypeGroup(SerializedPropertyType propType) => propType switch
-            {
-                SerializedPropertyType.Boolean => ValueTypeGroup.Bool,
-                SerializedPropertyType.Float or SerializedPropertyType.Integer => ValueTypeGroup.Number,
-                SerializedPropertyType.String => ValueTypeGroup.String,
-                SerializedPropertyType.ObjectReference => ValueTypeGroup.UnityObject,
-                _ => ValueTypeGroup.Other,
-            };
+            public static FieldType Parse2FieldType(SerializedPropertyType spType) => (FieldType)spType;
 
-            public static Type Parse2Type(ValueTypeGroup typeGroup) => typeGroup switch
+            public static SerializedPropertyType Parse2SerializedPropertyType(FieldType fieldType) => (SerializedPropertyType)fieldType;
+
+            public static Type Parse2Type(FieldType typeGroup) => typeGroup switch
             {
-                ValueTypeGroup.Bool => typeof(bool),
-                ValueTypeGroup.Number => typeof(double),
-                ValueTypeGroup.String => typeof(string),
-                ValueTypeGroup.UnityObject => typeof(Object),
+                FieldType.Boolean => typeof(bool),
+                FieldType.Integer => typeof(int),
+                FieldType.Float => typeof(double),
+                FieldType.String => typeof(string),
+                FieldType.ObjectReference => typeof(Object),
                 _ => null,
             };
 
             public static Type GetValueHolderValueType<T>(SerializedProperty valueHolderProperty) where T : ValueHolderBase, new()
             {
                 T valueHolderInstance = new();
-                ValueTypeGroup fieldValueTypeGroup = (ValueTypeGroup)valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.ValueTypeFieldName).enumValueIndex;
+                var temp = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.ValueTypeFieldName);
+                FieldType fieldValueType = (FieldType)temp.enumValueFlag;
                 Type valueType = null;
-                switch (fieldValueTypeGroup)
+                switch (fieldValueType)
                 {
-                    case ValueTypeGroup.Bool:
+                    case FieldType.Boolean:
                         SerializedProperty boolvalueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.BoolValueFieldName);
                         valueType = boolvalueFieldProperty.boolValue.GetType();
                         break;
-                    case ValueTypeGroup.Number:
+                    case FieldType.Integer:
+                    case FieldType.Float:
                         SerializedProperty numbervalueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.NumberValueFieldName);
                         valueType = numbervalueFieldProperty.doubleValue.GetType();
                         break;
-                    case ValueTypeGroup.String:
+                    case FieldType.String:
                         SerializedProperty stringvalueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
                         valueType = stringvalueFieldProperty.stringValue.GetType();
                         break;
-                    case ValueTypeGroup.UnityObject:
+                    case FieldType.ObjectReference:
                         SerializedProperty ObjectvalueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.ObjectValueFieldName);
                         Object objectValue = ObjectvalueFieldProperty.objectReferenceValue;
                         if (!FakeNullUtil.IsNullOrFakeNull(objectValue))
@@ -1108,7 +1082,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             private static readonly Regex BlankCharRegex = new(@"\s+", RegexOptions.Compiled);
 
-            public static (bool success, ValueTypeGroup valueType, object result) CalculateExpression(string expressionString, List<ArgumentData> argumentDatas)
+            public static (bool success, FieldType valueType, object result) CalculateExpression(string expressionString, List<ArgumentData> argumentDatas)
             {
                 // 数式パーサー
                 Processor processor = new();
@@ -1119,7 +1093,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     expression = processor.Parse(expressionString);
                 }
-                catch (Exception ex) { return (false, ValueTypeGroup.Other, ex.Message); }
+                catch (Exception ex) { return (false, FieldType.Generic, ex.Message); }
 
                 IEnumerable<Variable> needVariables = GetAllVariables(expression).GroupBy(x => x.Name).Select(x => x.First());
 
@@ -1130,11 +1104,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     // 該当する引数が無ければエラーを返す
                     string varibleNames = string.Join("', '", missingVariables.Select(x => x.Name));
-                    return (false, ValueTypeGroup.Other, $"引数'{varibleNames}'が設定されていません。");
+                    return (false, FieldType.Generic, $"引数'{varibleNames}'が設定されていません。");
                 }
 
                 // ArgumentTypeがUnityObjectのArgumentDataのリスト
-                IEnumerable<ArgumentData> unityObjectTypeArgumentDatas = filteredArgumentDatas.Where(x => x.ArgumentType == ValueTypeGroup.UnityObject);
+                IEnumerable<ArgumentData> unityObjectTypeArgumentDatas = filteredArgumentDatas.Where(x => x.ArgumentFieldType == FieldType.ObjectReference);
                 // ArgumentTypeがUnityObjectのArgumentDataが存在するか確認
                 if (unityObjectTypeArgumentDatas.Count() > 0)
                 {
@@ -1150,33 +1124,33 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         object valueObj = argumentData.Value;
                         if (FakeNullUtil.IsNullOrFakeNull(valueObj))
                         {
-                            return (true, ValueTypeGroup.UnityObject, null);
+                            return (true, FieldType.ObjectReference, null);
                         }
 
                         if (valueObj is not Object gameObject)
                         {
-                            return (false, ValueTypeGroup.Other, $"'{argumentData.ArgumentName}'の{typeof(Object)}へのキャストに失敗しました。");
+                            return (false, FieldType.Generic, $"'{argumentData.ArgumentName}'の{typeof(Object)}へのキャストに失敗しました。");
                         }
                         else
                         {
-                            return (true, ValueTypeGroup.UnityObject, gameObject);
+                            return (true, FieldType.ObjectReference, gameObject);
                         }
                     }
                     else
                     {
                         // UnityObjectを引数に指定しながら不正な代入式なら
                         string unityObjectTypeArgumentDataNames = string.Join("', '", unityObjectTypeArgumentDatas.Select(x => x.ArgumentName));
-                        return (false, ValueTypeGroup.Other, $"引数'{unityObjectTypeArgumentDataNames}'は値がUnityObjectであり、代入式に計算を必要とする式を指定することはできません。\n単一の引数名のみを入力してください。(例:代入式 = 'x1')");
+                        return (false, FieldType.Generic, $"引数'{unityObjectTypeArgumentDataNames}'は値がUnityObjectであり、代入式に計算を必要とする式を指定することはできません。\n単一の引数名のみを入力してください。(例:代入式 = 'x1')");
                     }
                 }
 
                 // ArgumentTypeがOtherのArgumentDataのリスト
-                IEnumerable<ArgumentData> otherTypeArgumentDatas = filteredArgumentDatas.Where(x => x.ArgumentType == ValueTypeGroup.Other);
+                IEnumerable<ArgumentData> otherTypeArgumentDatas = filteredArgumentDatas.Where(x => x.ArgumentFieldType == FieldType.ObjectReference);
                 // ArgumentTypeがOtherのArgumentDataが存在するか確認
                 if (otherTypeArgumentDatas.Count() > 0)
                 {
                     string otherTypeArgumentDataNames = string.Join("', '", otherTypeArgumentDatas.Select(x => x.ArgumentName));
-                    return (false, ValueTypeGroup.Other, $"引数'{otherTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
+                    return (false, FieldType.Generic, $"引数'{otherTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
                 }
 
                 // ArgumentDataをParameterに変換
@@ -1189,20 +1163,20 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     result = expression.Execute(parameters);
                 }
-                catch (Exception ex) { return (false, ValueTypeGroup.Other, ex.Message); }
+                catch (Exception ex) { return (false, FieldType.Generic, ex.Message); }
 
-                ValueTypeGroup resultValueType = result switch
+                FieldType resultValueType = result switch
                 {
-                    bool => ValueTypeGroup.Bool,
-                    NumberValue => ValueTypeGroup.Number,
-                    double => ValueTypeGroup.Number,
-                    string => ValueTypeGroup.String,
-                    _ => ValueTypeGroup.Other,
+                    bool => FieldType.Boolean,
+                    NumberValue => FieldType.Float,
+                    double => FieldType.Float,
+                    string => FieldType.String,
+                    _ => FieldType.Generic,
                 };
 
-                if (resultValueType == ValueTypeGroup.Other) return (false, resultValueType, $"不明な型が返されました。{result.GetType().Name}/{result}");
+                if (resultValueType == FieldType.Generic) return (false, resultValueType, $"不明な型が返されました。{result.GetType().Name}/{result}");
 
-                if (resultValueType == ValueTypeGroup.Number && result is NumberValue numberValue) result = numberValue.Number;
+                if ((resultValueType == FieldType.Integer || resultValueType == FieldType.Float) && result is NumberValue numberValue) result = numberValue.Number;
 
                 return (true, resultValueType, result);
             }
@@ -1273,20 +1247,21 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 List<Parameter> arguments = new();
                 foreach (ArgumentData argumentData in argumentDatas)
                 {
-                    switch (argumentData.ArgumentType)
+                    switch (argumentData.ArgumentFieldType)
                     {
                         // 変数データを追加
-                        case ValueTypeGroup.Bool:
+                        case FieldType.Boolean:
                             bool? valueBool = (bool?)argumentData.Value;
-                            if (valueBool != null)
+                            if (valueBool.HasValue)
                                 arguments.Add(new(argumentData.ArgumentName, valueBool.Value));
                             break;
-                        case ValueTypeGroup.Number:
+                        case FieldType.Integer:
+                        case FieldType.Float:
                             string valueNumberStr = argumentData.Value?.ToString();
                             if (double.TryParse(valueNumberStr, out double doubleValue))
                                 arguments.Add(new(argumentData.ArgumentName, doubleValue));
                             break;
-                        case ValueTypeGroup.String:
+                        case FieldType.String:
                             string valueStr = (string)argumentData.Value;
                             if (valueStr != null)
                                 arguments.Add(new(argumentData.ArgumentName, valueStr));
@@ -1313,33 +1288,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             public static bool ValidationTypeAssignable(Type assignValueType, Type targetValueType)
             {
-                ValueTypeGroup assignValueTypeGroup = Parse2ValueTypeGroup(assignValueType);
-                ValueTypeGroup targetValueTypeGroup = Parse2ValueTypeGroup(targetValueType);
-
-                return ValidationTypeAssignable(assignValueType, assignValueTypeGroup, targetValueType, targetValueTypeGroup);
-            }
-
-            public static bool ValidationTypeAssignable(Type assignValueType, ValueTypeGroup assignValueTypeGroup, Type targetType, ValueTypeGroup targetTypeGroup)
-            {
                 bool typeCheckResult = false;
-                switch (assignValueTypeGroup)
+                if (targetValueType != null)
                 {
-                    case ValueTypeGroup.Bool:
-                        typeCheckResult = targetTypeGroup == assignValueTypeGroup || targetTypeGroup == ValueTypeGroup.Number || targetTypeGroup == ValueTypeGroup.String;
-                        break;
-                    case ValueTypeGroup.Number:
-                        typeCheckResult = targetTypeGroup == assignValueTypeGroup || targetTypeGroup == ValueTypeGroup.String;
-                        break;
-                    case ValueTypeGroup.String:
-                        typeCheckResult = targetTypeGroup == assignValueTypeGroup;
-                        break;
-                    case ValueTypeGroup.UnityObject:
-                        if (targetType != null)
-                        {
-                            if (assignValueType == null) typeCheckResult = true;
-                            else typeCheckResult = targetType.IsAssignableFrom(assignValueType);
-                        }
-                        break;
+                    if (assignValueType == null) typeCheckResult = true;
+                    else typeCheckResult = targetValueType.IsAssignableFrom(assignValueType);
                 }
 
                 return typeCheckResult;

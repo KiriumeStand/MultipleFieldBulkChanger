@@ -255,7 +255,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 (SerializedObject rootSerializedObject, SerializedProperty parentProperty) = EditorUtil.SerializedObjectUtil.GetParentPropertyAndRootObject(curProperty);
                 if (parentProperty == null) return false;
 
-                (ValueTypeGroup resultArgumentTypeValue, object resultValue) = EditorUtil.SerializedObjectUtil.GetPropertyValue(parentProperty);
+                object resultValue = EditorUtil.SerializedObjectUtil.GetPropertyValue(parentProperty);
                 if (AllowUneditableAncestorTypes.Contains(resultValue?.GetType())) return true;
 
                 curProperty = parentProperty;
@@ -366,7 +366,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private void UpdateOriginalValue(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedProperty selectProperty, string selectPropertyFieldTypeFullName)
         {
-            ValueTypeGroup resultOriginalFieldType = ValueTypeGroup.Other;
+            FieldType resultOriginalFieldType = FieldType.Generic;
 
             bool resultOriginalBoolValue = false;
             double resultOriginalNumberValue = 0.0;
@@ -375,26 +375,28 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             if (selectProperty != null)
             {
-                (ValueTypeGroup selectedFieldValueType, object selectedFieldValue) = EditorUtil.SerializedObjectUtil.GetPropertyValue(selectProperty);
+                object selectedFieldValue = EditorUtil.SerializedObjectUtil.GetPropertyValue(selectProperty);
+                FieldType selectedFieldValueType = EditorUtil.OtherUtil.Parse2FieldType(selectProperty.propertyType);
                 resultOriginalFieldType = selectedFieldValueType;
                 switch (selectedFieldValueType)
                 {
-                    case ValueTypeGroup.Bool:
+                    case FieldType.Boolean:
                         resultOriginalBoolValue = (bool)selectedFieldValue;
                         break;
-                    case ValueTypeGroup.Number:
+                    case FieldType.Integer:
+                    case FieldType.Float:
                         resultOriginalNumberValue = (double)selectedFieldValue;
                         break;
-                    case ValueTypeGroup.String:
+                    case FieldType.String:
                         resultOriginalStringValue = (string)selectedFieldValue;
                         break;
-                    case ValueTypeGroup.UnityObject:
+                    case FieldType.ObjectReference:
                         resultOriginalObjectValue = (UnityEngine.Object)selectedFieldValue;
                         break;
                 }
             }
 
-            property.SafeFindPropertyRelative(FieldSelector.PrivateFieldNames._OriginalFieldType).enumValueIndex = (int)resultOriginalFieldType;
+            property.SafeFindPropertyRelative(FieldSelector.PrivateFieldNames._OriginalFieldType).enumValueFlag = (int)resultOriginalFieldType;
             property.SafeFindPropertyRelative(FieldSelector.PrivateFieldNames._OriginalFieldTypeFullName).stringValue = selectPropertyFieldTypeFullName;
 
             property.SafeFindPropertyRelative(FieldSelector.PrivateFieldNames._OriginalBoolValue).boolValue = resultOriginalBoolValue;

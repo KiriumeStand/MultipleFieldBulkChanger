@@ -65,7 +65,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         {
                             ArgumentName = asPropObj._ArgumentName,
                             Value = asPropObj.Value,
-                            ArgumentType = asPropObj.ValueType,
+                            ArgumentFieldType = asPropObj.ValueType,
                         };
                         argDatas.Add(argData);
                     }
@@ -76,7 +76,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                         string expression = fcsPropObj._Expression;
                         // 代入式を解く
-                        (bool expressionSuccess, ValueTypeGroup valueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expression, argDatas);
+                        (bool expressionSuccess, FieldType valueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expression, argDatas);
 
                         if (expressionSuccess)
                         {
@@ -107,20 +107,21 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                                                 if (isValid)
                                                 {
-                                                    ValueTypeGroup targetFieldTypeGroup = EditorUtil.OtherUtil.Parse2ValueTypeGroup(targetFieldType);
+                                                    FieldType targetFieldTypeGroup = EditorUtil.OtherUtil.Parse2FieldType(targetFieldType);
 
                                                     switch (targetFieldTypeGroup)
                                                     {
-                                                        case ValueTypeGroup.Bool:
+                                                        case FieldType.Boolean:
                                                             targetProperty.boolValue = (bool)result;
                                                             break;
-                                                        case ValueTypeGroup.Number:
+                                                        case FieldType.Integer:
+                                                        case FieldType.Float:
                                                             targetProperty.doubleValue = (double)result;
                                                             break;
-                                                        case ValueTypeGroup.String:
+                                                        case FieldType.String:
                                                             targetProperty.stringValue = (string)result;
                                                             break;
-                                                        case ValueTypeGroup.UnityObject:
+                                                        case FieldType.ObjectReference:
                                                             targetProperty.objectReferenceValue = (UnityEngine.Object)result;
                                                             break;
                                                         default:

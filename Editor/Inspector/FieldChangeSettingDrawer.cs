@@ -190,7 +190,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             List<ArgumentData> argumentDatas = GetArgumentList(property);
 
-            (bool success, ValueTypeGroup valueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expressionString, argumentDatas);
+            (bool success, FieldType valueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expressionString, argumentDatas);
 
             UpdateExpressionResultData(property, valueType, result);
 
@@ -416,7 +416,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         //    return parameters;
         //}
 
-        private static void UpdateExpressionResultData(SerializedProperty property, ValueTypeGroup resultValueType, object resultObj)
+        private static void UpdateExpressionResultData(SerializedProperty property, FieldType resultValueType, object resultObj)
         {
             bool resultBoolValue = false;
             double resultNumberValue = 0.0;
@@ -427,23 +427,24 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             switch (resultValueType)
             {
-                case ValueTypeGroup.Bool:
+                case FieldType.Boolean:
                     resultBoolValue = (bool)resultObj;
                     break;
-                case ValueTypeGroup.Number:
+                case FieldType.Integer:
+                case FieldType.Float:
                     resultNumberValue = (double)resultObj;
                     break;
-                case ValueTypeGroup.String:
+                case FieldType.String:
                     resultStringValue = (string)resultObj;
                     break;
-                case ValueTypeGroup.UnityObject:
+                case FieldType.ObjectReference:
                     resultObjectValue = (UnityEngine.Object)resultObj;
                     break;
                 default:
                     break;
             }
 
-            property.SafeFindPropertyRelative(FieldChangeSetting.PrivateFieldNames._expressionResultType).enumValueIndex = (int)resultValueType;
+            property.SafeFindPropertyRelative(FieldChangeSetting.PrivateFieldNames._expressionResultType).enumValueFlag = (int)resultValueType;
             property.SafeFindPropertyRelative(FieldChangeSetting.PrivateFieldNames._expressionResultTypeFullName).stringValue = resultValueTypeFullName;
 
             property.SafeFindPropertyRelative(FieldChangeSetting.PrivateFieldNames._expressionResultBoolValue).boolValue = resultBoolValue;

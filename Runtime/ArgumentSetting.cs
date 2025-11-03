@@ -12,7 +12,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
 
         public string _ArgumentName = "";
 
-        public ValueTypeGroup _InputtableArgumentType = ValueTypeGroup.Number;
+        public SelectableFieldType _InputtableArgumentType = SelectableFieldType.Number;
 
         public bool _InputtableBoolValue;
 
@@ -30,16 +30,16 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
         {
             false => _InputtableArgumentType switch
             {
-                ValueTypeGroup.Bool => _InputtableBoolValue,
-                ValueTypeGroup.Number => _InputtableNumberValue,
-                ValueTypeGroup.String => _InputtableStringValue,
-                ValueTypeGroup.UnityObject => _InputtableObjectValue,
+                SelectableFieldType.Bool => _InputtableBoolValue,
+                SelectableFieldType.Number => _InputtableNumberValue,
+                SelectableFieldType.String => _InputtableStringValue,
+                SelectableFieldType.UnityObject => _InputtableObjectValue,
                 var _ => null,
             },
             true => _SourceField._FieldSelector.Value
         };
 
-        public ValueTypeGroup ValueType => _IsReferenceMode ? _SourceField._FieldSelector.ValueType : _InputtableArgumentType;
+        public FieldType ValueType => _IsReferenceMode ? _SourceField._FieldSelector.ValueType : RuntimeUtil.OtherUtil.SelectableFieldType2FieldType(_InputtableArgumentType);
 
         public override string ValueTypeFieldName => nameof(_InputtableArgumentType);
         public override string FieldTypeFullNameFieldName => "";
