@@ -12,40 +12,32 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
 
         public string FixedSelectFieldPath => _SelectFieldPath.Replace('/', '.');
 
-
-        // プロパティの元値
-        //[SerializeField]
         [HideInInspector]
-        public ValueTypeGroup _OriginalFieldType;
+        public FieldType _OriginalFieldType;
 
-        //[SerializeField]
         [HideInInspector]
         public string _OriginalFieldTypeFullName = "";
 
-        //[SerializeField]
         [HideInInspector]
         public bool _OriginalBoolValue;
 
-        //[SerializeField]
         [HideInInspector]
         public double _OriginalNumberValue;
 
-        //[SerializeField]
         [HideInInspector]
         public string _OriginalStringValue = "";
 
-        //[SerializeField]
         [HideInInspector]
         public UnityEngine.Object _OriginalObjectValue;
 
-        public ValueTypeGroup ValueType => _OriginalFieldType;
+        public FieldType ValueType => _OriginalFieldType;
 
         public object Value => _OriginalFieldType switch
         {
-            ValueTypeGroup.Bool => _OriginalBoolValue,
-            ValueTypeGroup.Number => _OriginalNumberValue,
-            ValueTypeGroup.String => _OriginalStringValue,
-            ValueTypeGroup.UnityObject => _OriginalObjectValue,
+            FieldType.Boolean => _OriginalBoolValue,
+            FieldType.Integer or FieldType.Float => _OriginalNumberValue,
+            FieldType.String => _OriginalStringValue,
+            FieldType.ObjectReference => _OriginalObjectValue,
             var _ => null,
         };
 

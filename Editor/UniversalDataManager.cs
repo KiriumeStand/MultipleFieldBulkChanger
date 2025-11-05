@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -133,6 +134,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public object Value { get; set; } = null;
 
-        public ValueTypeGroup ArgumentType { get; set; } = ValueTypeGroup.Other;
+        public FieldType ArgumentFieldType { get; set; } = FieldType.Generic;
+
+        public SerializedPropertyNumericType ArgumentSPNumericType { get; set; } = SerializedPropertyNumericType.Unknown;
     }
 }
