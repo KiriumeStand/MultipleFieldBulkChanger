@@ -107,28 +107,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                                                 if (isValid)
                                                 {
-                                                    FieldType targetFieldTypeGroup = EditorUtil.OtherUtil.Parse2FieldType(targetFieldType);
-
-                                                    switch (targetFieldTypeGroup)
+                                                    // カスタムキャスト処理
+                                                    object customCastedResult = EditorUtil.OtherUtil.CustomCast(result, targetFieldType);
+                                                    if (!EditorUtil.FakeNullUtil.IsNullOrFakeNull(customCastedResult))
                                                     {
-                                                        case FieldType.Boolean:
-                                                            targetProperty.boolValue = (bool)result;
-                                                            break;
-                                                        case FieldType.Integer:
-                                                        case FieldType.Float:
-                                                            targetProperty.doubleValue = (double)result;
-                                                            break;
-                                                        case FieldType.String:
-                                                            targetProperty.stringValue = (string)result;
-                                                            break;
-                                                        case FieldType.ObjectReference:
-                                                            targetProperty.objectReferenceValue = (UnityEngine.Object)result;
-                                                            break;
-                                                        default:
-                                                            break;
+                                                        result = customCastedResult;
                                                     }
-                                                }
 
+                                                    targetProperty.boxedValue = result;
+                                                }
                                             }
                                         }
                                     }

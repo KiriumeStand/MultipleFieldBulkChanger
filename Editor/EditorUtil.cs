@@ -1286,16 +1286,182 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 return parameters;
             }
 
-            public static bool ValidationTypeAssignable(Type assignValueType, Type targetValueType)
+            public static bool ValidationTypeAssignable(Type assignType, Type targetType)
             {
+                FieldType temp1 = FieldType.AnimationCurve;
+                Enum temp2 = temp1;
+                Type enumType = temp2.GetType();
+                FieldType temp3 = (FieldType)temp2;
+
+
                 bool typeCheckResult = false;
-                if (targetValueType != null)
+                if (targetType != null)
                 {
-                    if (assignValueType == null) typeCheckResult = true;
-                    else typeCheckResult = targetValueType.IsAssignableFrom(assignValueType);
+                    if (assignType == null) typeCheckResult = true;
+                    else
+                    {
+                        typeCheckResult = targetType.IsAssignableFrom(assignType) ||
+                            CustomCastFuncDic.Any(x => x.AssignType.IsAssignableFrom(assignType) && x.TargetType.IsAssignableFrom(targetType));
+                    }
                 }
 
                 return typeCheckResult;
+            }
+
+            public static object CustomCast(object assignValue, Type targetType)
+            {
+                if (FakeNullUtil.IsNullOrFakeNull(assignValue))
+                {
+                    return null;
+                }
+                else
+                {
+                    ITypeConverter converter = CustomCastFuncDic.FirstOrDefault(
+                        x => x.AssignType.IsAssignableFrom(assignValue.GetType()) && x.TargetType.IsAssignableFrom(targetType));
+
+                    return converter?.DoConvert(assignValue, assignValue.GetType(), targetType);
+                }
+            }
+
+            private static readonly List<ITypeConverter> CustomCastFuncDic = new()
+            {
+                new TypeConverter<byte, sbyte>((v) => (sbyte)v),
+                new TypeConverter<short, sbyte>((v) => (sbyte)v),
+                new TypeConverter<ushort, sbyte>((v) => (sbyte)v),
+                new TypeConverter<int, sbyte>((v) => (sbyte)v),
+                new TypeConverter<uint, sbyte>((v) => (sbyte)v),
+                new TypeConverter<long, sbyte>((v) => (sbyte)v),
+                new TypeConverter<ulong, sbyte>((v) => (sbyte)v),
+                new TypeConverter<float, sbyte>((v) => (sbyte)v),
+                new TypeConverter<double, sbyte>((v) => (sbyte)v),
+
+                new TypeConverter<sbyte, byte>((v) => (byte)v),
+                new TypeConverter<short, byte>((v) => (byte)v),
+                new TypeConverter<ushort, byte>((v) => (byte)v),
+                new TypeConverter<int, byte>((v) => (byte)v),
+                new TypeConverter<uint, byte>((v) => (byte)v),
+                new TypeConverter<long, byte>((v) => (byte)v),
+                new TypeConverter<ulong, byte>((v) => (byte)v),
+                new TypeConverter<float, byte>((v) => (byte)v),
+                new TypeConverter<double, byte>((v) => (byte)v),
+
+                new TypeConverter<ushort, short>((v) => (short)v),
+                new TypeConverter<int, short>((v) => (short)v),
+                new TypeConverter<uint, short>((v) => (short)v),
+                new TypeConverter<long, short>((v) => (short)v),
+                new TypeConverter<ulong, short>((v) => (short)v),
+                new TypeConverter<float, short>((v) => (short)v),
+                new TypeConverter<double, short>((v) => (short)v),
+
+                new TypeConverter<sbyte, ushort>((v) => (ushort)v),
+                new TypeConverter<short, ushort>((v) => (ushort)v),
+                new TypeConverter<int, ushort>((v) => (ushort)v),
+                new TypeConverter<uint, ushort>((v) => (ushort)v),
+                new TypeConverter<long, ushort>((v) => (ushort)v),
+                new TypeConverter<ulong, ushort>((v) => (ushort)v),
+                new TypeConverter<float, ushort>((v) => (ushort)v),
+                new TypeConverter<double, ushort>((v) => (ushort)v),
+
+                new TypeConverter<uint, int>((v) => (int)v),
+                new TypeConverter<long, int>((v) => (int)v),
+                new TypeConverter<ulong, int>((v) => (int)v),
+                new TypeConverter<float, int>((v) => (int)v),
+                new TypeConverter<double, int>((v) => (int)v),
+
+                new TypeConverter<sbyte, uint>((v) => (uint)v),
+                new TypeConverter<short, uint>((v) => (uint)v),
+                new TypeConverter<int, uint>((v) => (uint)v),
+                new TypeConverter<long, uint>((v) => (uint)v),
+                new TypeConverter<ulong, uint>((v) => (uint)v),
+                new TypeConverter<float, uint>((v) => (uint)v),
+                new TypeConverter<double, uint>((v) => (uint)v),
+
+                new TypeConverter<ulong, long>((v) => (long)v),
+                new TypeConverter<float, long>((v) => (long)v),
+                new TypeConverter<double, long>((v) => (long)v),
+
+                new TypeConverter<sbyte, ulong>((v) => (ulong)v),
+                new TypeConverter<short, ulong>((v) => (ulong)v),
+                new TypeConverter<int, ulong>((v) => (ulong)v),
+                new TypeConverter<long, ulong>((v) => (ulong)v),
+                new TypeConverter<float, ulong>((v) => (ulong)v),
+                new TypeConverter<double, ulong>((v) => (ulong)v),
+
+                new TypeConverter<double, float>((v) => (float)v),
+
+                new TypeConverter<sbyte, string>((v) => v.ToString()),
+                new TypeConverter<byte, string>((v) => v.ToString()),
+                new TypeConverter<short, string>((v) => v.ToString()),
+                new TypeConverter<ushort, string>((v) => v.ToString()),
+                new TypeConverter<int, string>((v) => v.ToString()),
+                new TypeConverter<uint, string>((v) => v.ToString()),
+                new TypeConverter<long, string>((v) => v.ToString()),
+                new TypeConverter<ulong, string>((v) => v.ToString()),
+                new TypeConverter<float, string>((v) => v.ToString()),
+                new TypeConverter<double, string>((v) => v.ToString()),
+
+                new TypeConverter<Enum, string>((v) => v.ToString()),
+
+                new TypeConverter<sbyte, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<byte, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<short, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<ushort, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<int, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<uint, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<long, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<ulong, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<float, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<double, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+
+                new TypeConverter<Enum, sbyte>((v) => (sbyte)(object)v),
+                new TypeConverter<Enum, byte>((v) => (byte)(object)v),
+                new TypeConverter<Enum, short>((v) => (short)(object)v),
+                new TypeConverter<Enum, ushort>((v) => (ushort)(object)v),
+                new TypeConverter<Enum, int>((v) => (int)(object)v),
+                new TypeConverter<Enum, uint>((v) => (uint)(object)v),
+                new TypeConverter<Enum, long>((v) => (long)(object)v),
+                new TypeConverter<Enum, ulong>((v) => (ulong)(object)v),
+                new TypeConverter<Enum, float>((v) => (float)(object)v),
+                new TypeConverter<Enum, double>((v) => (double)(object)v),
+            };
+
+            private interface ITypeConverter
+            {
+                public Type AssignType { get; }
+                public Type TargetType { get; }
+
+                public object DoConvert(object assignValue, Type assignType = null, Type targetType = null);
+            }
+
+            private class TypeConverter<T1, T2> : ITypeConverter
+            {
+                public TypeConverter(Func<T1, Type, Type, T2> converter)
+                {
+                    Converter1 = converter;
+                }
+
+                public TypeConverter(Func<T1, T2> converter)
+                {
+                    Converter2 = converter;
+                }
+
+                public Type AssignType { get; } = typeof(T1);
+                public Type TargetType { get; } = typeof(T2);
+
+                private Func<T1, Type, Type, T2> Converter1 { get; } = null;
+                private Func<T1, T2> Converter2 { get; } = null;
+
+                public object DoConvert(object assignValue, Type assignType = null, Type targetType = null)
+                {
+                    if (assignValue is not T1 castedValue)
+                    {
+                        throw new Exception("型が不正です");
+                    }
+
+                    if (Converter1 != null) return Converter1(castedValue, assignType, targetType);
+                    else if (Converter2 != null) return Converter2(castedValue);
+                    else throw new Exception("TypeConverter.DoConvert()を実行中にエラーが発生しました。");
+                }
             }
         }
 
