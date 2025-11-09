@@ -233,7 +233,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             IExpansionInspectorCustomizerTargetMarker targetObject,
             InspectorCustomizerStatus status)
         {
-            if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(this))
+            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(this))
             {
                 // MARK: デバッグ用
                 RuntimeUtil.Debugger.DebugLog($"ここは必要みたいです/OnDetachFromPanelEvent", LogType.Warning);
@@ -288,7 +288,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             EventHandlers.Add(eventHandler);
 
             string identifier = UniversalDataManager.IdentifierNames.UnsubscribeAction;
-            RegisterUnsubscribeAction<T>(serializedData, targetObject, identifier, eventHandler, unsubscribeAction, EditorUtil.ObjectIdUtil.GetObjectId(inspectorCustomizer));
+            RegisterUnsubscribeAction(serializedData, targetObject, identifier, eventHandler, unsubscribeAction, EditorUtil.ObjectIdUtil.GetObjectId(inspectorCustomizer));
             return unsubscribeAction;
         }
 

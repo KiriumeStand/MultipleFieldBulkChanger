@@ -49,6 +49,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             public static readonly string UnsubscribeAction = "UnsubscribeAction";
             public static readonly string EditorApplicationUpdateIdentifier = "EditorApplication.update";
             public static readonly string ArgumentData = "ArgumentData";
+            public static readonly string CalculateResult = "CalculateResult";
         }
 
         /// <summary>
@@ -71,6 +72,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public static readonly Dictionary<FieldSelectorContainerBase, SerializedObject> targetObjectRootSerializedObjectCache = new();
 
+        // MARK: TODO メモリリーク直す
         public static readonly Dictionary<FieldSelector, SerializedProperty> selectFieldPropertyCache = new();
 
         // ▲ SerializedProperty系 ========================= ▲

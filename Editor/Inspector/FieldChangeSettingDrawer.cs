@@ -7,8 +7,6 @@ using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
-using xFunc.Maths;
-using xFunc.Maths.Expressions;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
@@ -18,13 +16,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private static string GetMultiFieldSelectorContainerPath(int index1) => $"{nameof(FieldChangeSetting._TargetFields)}.Array.data[{index1}]";
         private static string GetFieldSelectorPath(int index1, int index2) => $"{GetMultiFieldSelectorContainerPath(index1)}.{nameof(MultiFieldSelectorContainer._FieldSelectors)}.Array.data[{index2}]";
-
-        private static string GetFieldSelectorOriginalFieldTypePath(int index1, int index2) => $"{GetFieldSelectorPath(index1, index2)}.{nameof(FieldSelector.PrivateFieldNames._OriginalFieldType)}";
-        private static string GetFieldSelectorOriginalFieldTypeFullNamePath(int index1, int index2) => $"{GetFieldSelectorPath(index1, index2)}.{nameof(FieldSelector.PrivateFieldNames._OriginalFieldTypeFullName)}";
-        private static string GetFieldSelectorOriginalBoolValuePath(int index1, int index2) => $"{GetFieldSelectorPath(index1, index2)}.{nameof(FieldSelector.PrivateFieldNames._OriginalBoolValue)}";
-        private static string GetFieldSelectorOriginalNumberValuePath(int index1, int index2) => $"{GetFieldSelectorPath(index1, index2)}.{nameof(FieldSelector.PrivateFieldNames._OriginalNumberValue)}";
-        private static string GetFieldSelectorOriginalStringValuePath(int index1, int index2) => $"{GetFieldSelectorPath(index1, index2)}.{nameof(FieldSelector.PrivateFieldNames._OriginalStringValue)}";
-        private static string GetFieldSelectorOriginalObjectValuePath(int index1, int index2) => $"{GetFieldSelectorPath(index1, index2)}.{nameof(FieldSelector.PrivateFieldNames._OriginalObjectValue)}";
 
 
         public FieldChangeSettingDrawer() : base() { }
@@ -42,8 +33,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Label u_ValuePreview = UIQuery.Q<Label>(uxml, UxmlNames.ValuePreview);
 
             // イベント発行の登録
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher<Toggle, bool>(u_Enable, this, property, status);
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher<TextField, string>(u_Expression, this, property, status);
+            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_Enable, this, property, status);
+            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_Expression, this, property, status);
             u_TargetFields.itemsAdded += (e) =>
             {
                 IExpansionInspectorCustomizer.AddListElementWithClone(((FieldChangeSetting)targetObject)._TargetFields, e);
@@ -86,7 +77,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             );
             ((IExpansionInspectorCustomizer)this).Subscribe<ArgumentDataUpdatedEventArgs>(this,
                 property, status,
-                (sender, args) => { OnArgumentDataUpdatedEventHandler(args, property, uxml, status); },
+                (sender, args) => { OnArgumentDataUpdatedEventHandler(args, property, uxml, targetObject, status); },
                 e =>
                 {
                     if (!EditorUtil.SerializedObjectUtil.IsValid(property)) return false;
@@ -130,12 +121,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             TextField u_Expression = UIQuery.Q<TextField>(uxml, UxmlNames.Expression);
 
-            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<TextField, string>(u_Expression, this, property, status,
-                (sender, args) => { OnExpressionTextChangedEventHandler(args, property, uxml, status); });
+            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<string>(u_Expression, this, property, status,
+                (sender, args) => { OnExpressionTextChangedEventHandler(args, property, uxml, targetObject, status); });
 
-            (bool success, string result) = CalculateExpression(property, uxml);
-            ChangeValuePreviewLabel(uxml, result, success);
-            ValidationValueTypeAllFieldSelector(property, uxml, status);
+            (bool success, object result, string resultStr) = CalculateExpression(property, uxml, targetObject);
+            ChangeValuePreviewLabel(uxml, resultStr, success);
+            ValidationValueTypeAllFieldSelector(property, uxml, status, result);
         }
 
         // ▲ 初期化定義 ========================= ▲
@@ -150,24 +141,26 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             ((IExpansionInspectorCustomizer)this).OnDetachFromPanelEvent(property, uxml, targetObject, status);
         }
 
-        private void OnArgumentDataUpdatedEventHandler(ArgumentDataUpdatedEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
+        private void OnArgumentDataUpdatedEventHandler(ArgumentDataUpdatedEventArgs args, SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
-            (bool success, string result) = CalculateExpression(property, uxml);
-            ChangeValuePreviewLabel(uxml, result, success);
-            ValidationValueTypeAllFieldSelector(property, uxml, status);
+            (bool success, object result, string resultStr) = CalculateExpression(property, uxml, targetObject);
+            ChangeValuePreviewLabel(uxml, resultStr, success);
+            ValidationValueTypeAllFieldSelector(property, uxml, status, result);
         }
 
-        private void OnExpressionTextChangedEventHandler(FieldValueChangedEventArgs<TextField, string> args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
+        private void OnExpressionTextChangedEventHandler(FieldValueChangedEventArgs<string> args, SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
-            (bool success, string result) = CalculateExpression(property, uxml);
-            ChangeValuePreviewLabel(uxml, result, success);
-            ValidationValueTypeAllFieldSelector(property, uxml, status);
+            (bool success, object result, string resultStr) = CalculateExpression(property, uxml, targetObject);
+            ChangeValuePreviewLabel(uxml, resultStr, success);
+            ValidationValueTypeAllFieldSelector(property, uxml, status, result);
         }
 
         private void OnSelectedFieldSerializedPropertyUpdateEventHandler(SelectedFieldSerializedPropertyUpdateEventArgs args, SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
             SerializedProperty fieldSelectorProperty = args.SenderInspectorCustomizerSerializedProperty;
-            ValidationValueType(property, uxml, status, fieldSelectorProperty);
+
+            object value = UniversalDataManager.GetUniqueObject<object>((this, targetObject, property), UniversalDataManager.IdentifierNames.CalculateResult);
+            ValidationValueType(property, uxml, status, fieldSelectorProperty, value);
         }
 
         // ▲ イベントハンドラー ========================= ▲
@@ -183,10 +176,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private static readonly Regex BlankCharRegex = new(@"\s+", RegexOptions.Compiled);
 
-        private (bool success, string result) CalculateExpression(SerializedProperty property, VisualElement uxml)
+        private (bool success, object result, string resultStr) CalculateExpression(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
             string expressionString = UIQuery.Q<TextField>(uxml, UxmlNames.Expression).value;
-            if (string.IsNullOrWhiteSpace(expressionString)) { return (false, "式を入力してください。"); }
+            if (string.IsNullOrWhiteSpace(expressionString)) { return (false, null, "式を入力してください。"); }
 
             List<ArgumentData> argumentDatas = GetArgumentList(property);
 
@@ -194,7 +187,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             UpdateExpressionResultData(property, valueType, result);
 
-            return (success, result?.ToString() ?? "Null");
+            UniversalDataManager.RegisterUniqueObject((this, targetObject, property), UniversalDataManager.IdentifierNames.CalculateResult, result);
+
+            return (success, result, result?.ToString() ?? "Null");
         }
 
         private static List<ArgumentData> GetArgumentList(SerializedProperty property)
@@ -220,239 +215,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return argumentDatas;
         }
 
-        //private static (bool success, ValueTypeGroup valueType, object result) CalculateExpression(SerializedProperty property, string expressionString)
-        //{
-        //    // 数式パーサー
-        //    Processor processor = new();
-        //    // 数式をパースして式ツリーを作成
-        //    IExpression expression;
-        //    try
-        //    {
-        //        expression = processor.Parse(expressionString);
-        //    }
-        //    catch (Exception ex) { return (false, ValueTypeGroup.Other, ex.Message); }
-        //
-        //    IEnumerable<Variable> needVariables = Helpers.GetAllVariables(expression).GroupBy(x => x.Name).Select(x => x.First());
-        //
-        //    // 使用するArgumentDataのみを抽出
-        //    (List<ArgumentData> filteredArgumentDatas, List<Variable> missingVariables) = FilterArgumentDatas(property, needVariables);
-        //    // 不足している引数が無いかを確認
-        //    if (missingVariables.Count() > 0)
-        //    {
-        //        // 該当する引数が無ければエラーを返す
-        //        string varibleNames = string.Join("', '", missingVariables.Select(x => x.Name));
-        //        return (false, ValueTypeGroup.Other, $"引数'{varibleNames}'が設定されていません。");
-        //    }
-        //
-        //    // ArgumentTypeがUnityObjectのArgumentDataのリスト
-        //    IEnumerable<ArgumentData> unityObjectTypeArgumentDatas = filteredArgumentDatas.Where(x => x.ArgumentType == ValueTypeGroup.UnityObject);
-        //    // ArgumentTypeがUnityObjectのArgumentDataが存在するか確認
-        //    if (unityObjectTypeArgumentDatas.Count() > 0)
-        //    {
-        //        // 空白文字を削除した式文字列
-        //        string NonBlankLowerExpressionString = BlankCharRegex.Replace(expressionString, "").ToLower();
-        //
-        //        if (needVariables.Count() == 1 && NonBlankLowerExpressionString == needVariables.First().Name.ToLower())
-        //        {
-        //            // 必要な変数が1つのみで余計な計算式も無い(=空白文字無し代入式が唯一の変数名と完全一致する)なら
-        //
-        //            // UnityObjectを代入する場合の特殊処理
-        //            ArgumentData argumentData = unityObjectTypeArgumentDatas.First();
-        //            object valueObj = argumentData.Value;
-        //            if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(valueObj))
-        //            {
-        //                return (true, ValueTypeGroup.UnityObject, null);
-        //            }
-        //
-        //            if (valueObj is not UnityEngine.Object gameObject)
-        //            {
-        //                return (false, ValueTypeGroup.Other, $"'{argumentData.ArgumentName}'の{typeof(UnityEngine.Object)}へのキャストに失敗しました。");
-        //            }
-        //            else
-        //            {
-        //                return (true, ValueTypeGroup.UnityObject, gameObject);
-        //            }
-        //        }
-        //        else
-        //        {
-        //            // UnityObjectを引数に指定しながら不正な代入式なら
-        //            string unityObjectTypeArgumentDataNames = string.Join("', '", unityObjectTypeArgumentDatas.Select(x => x.ArgumentName));
-        //            return (false, ValueTypeGroup.Other, $"引数'{unityObjectTypeArgumentDataNames}'は値がUnityObjectであり、代入式に計算を必要とする式を指定することはできません。\n単一の引数名のみを入力してください。(例:代入式 = 'x1')");
-        //        }
-        //    }
-        //
-        //    // ArgumentTypeがOtherのArgumentDataのリスト
-        //    IEnumerable<ArgumentData> otherTypeArgumentDatas = filteredArgumentDatas.Where(x => x.ArgumentType == ValueTypeGroup.Other);
-        //    // ArgumentTypeがOtherのArgumentDataが存在するか確認
-        //    if (otherTypeArgumentDatas.Count() > 0)
-        //    {
-        //        string otherTypeArgumentDataNames = string.Join("', '", otherTypeArgumentDatas.Select(x => x.ArgumentName));
-        //        return (false, ValueTypeGroup.Other, $"引数'{otherTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
-        //    }
-        //
-        //    // ArgumentDataをParameterに変換
-        //    List<Parameter> arguments = ArgumentDatas2ParameterList(filteredArgumentDatas);
-        //
-        //    ExpressionParameters parameters = Parameters2ExpressionParameters(arguments);
-        //
-        //    object result;
-        //    try
-        //    {
-        //        result = expression.Execute(parameters);
-        //    }
-        //    catch (Exception ex) { return (false, ValueTypeGroup.Other, ex.Message); }
-        //
-        //    ValueTypeGroup resultValueType = result switch
-        //    {
-        //        bool => ValueTypeGroup.Bool,
-        //        NumberValue => ValueTypeGroup.Number,
-        //        string => ValueTypeGroup.String,
-        //        _ => ValueTypeGroup.Other,
-        //    };
-        //
-        //    if (resultValueType == ValueTypeGroup.Other) return (false, resultValueType, $"不明な型が返されました。{result.GetType().Name}/{result}");
-        //
-        //    if (resultValueType == ValueTypeGroup.Number) result = ((NumberValue)result).Number;
-        //
-        //    return (true, resultValueType, result);
-        //}
-
-        //private static (List<ArgumentData> filteredArgumentDatas, List<Variable> missingVariables) FilterArgumentDatas(SerializedProperty property, IEnumerable<Variable> needVariables)
-        //{
-        //    string[] constantsNames = new[] { "pi", "π", "e", "i" };
-        //
-        //    // 引数データ辞書
-        //    var argumentDataDictionary = UniversalDataManager.GetUniqueObjectDictionary<ArgumentData>(UniversalDataManager.IdentifierNames.ArgumentData);
-        //
-        //    IExpansionInspectorCustomizerTargetMarker rootObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property.serializedObject);
-        //    var rootMultipleFieldBulkChanger = rootObject as MultipleFieldBulkChanger;
-        //    List<ArgumentSetting> argumentSettings = rootMultipleFieldBulkChanger._ArgumentSettings;
-        //
-        //    List<ArgumentData> filteredArgumentDatas = new();
-        //    List<Variable> missingVariables = new();
-        //    foreach (Variable needVariable in needVariables)
-        //    {
-        //        string needVariableName = needVariable.Name;
-        //
-        //        // 辞書から条件に一致するArgumentDataを取り出す
-        //        object matchObject = argumentDataDictionary.Where(
-        //              kvp =>
-        //              {
-        //                  // 同一コンポーネントかつ、同一エディターであるか確認
-        //                  if (
-        //                      !(
-        //                          (kvp.Key.TargetObject is ArgumentSetting keyArgumentSetting) &&
-        //                          argumentSettings.Contains(keyArgumentSetting) &&
-        //                          (EditorUtil.SerializedObjectUtil.GetSerializedObject(kvp.Key.SerializedData) == property.serializedObject)
-        //                      )
-        //                  ) return false;
-        //                  // ArgumentDataにキャストできるか
-        //                  if (kvp.Value is not ArgumentData argumentData) return false;
-        //                  // 引数名が必要な変数名に一致するか
-        //                  return argumentData.ArgumentName == needVariableName;
-        //              }
-        //          ).LastOrDefault().Value;
-        //
-        //        // マッチしたデータがnullでないかを確認
-        //        if (matchObject != null && matchObject is ArgumentData matchArgumentData)
-        //        {
-        //            // nullでないならフィルター済みArgumentDatasに登録
-        //            filteredArgumentDatas.Add(matchArgumentData);
-        //        }
-        //        else
-        //        {
-        //            if (!constantsNames.Contains(needVariableName))
-        //            {
-        //                // nullかつ、定数値の名前でもないなら不足変数リストに追加
-        //                missingVariables.Add(needVariable);
-        //            }
-        //        }
-        //    }
-        //
-        //    return (filteredArgumentDatas, missingVariables);
-        //}
-
-        //private static List<Parameter> ArgumentDatas2ParameterList(IEnumerable<ArgumentData> argumentDatas)
-        //{
-        //    // 引数データをParameterに変換
-        //    List<Parameter> arguments = new();
-        //    foreach (ArgumentData argumentData in argumentDatas)
-        //    {
-        //        switch (argumentData.ArgumentType)
-        //        {
-        //            // 変数データを追加
-        //            case ValueTypeGroup.Bool:
-        //                bool? valueBool = (bool?)argumentData.Value;
-        //                if (valueBool != null)
-        //                    arguments.Add(new(argumentData.ArgumentName, valueBool.Value));
-        //                break;
-        //            case ValueTypeGroup.Number:
-        //                string valueNumberStr = argumentData.Value?.ToString();
-        //                if (double.TryParse(valueNumberStr, out double doubleValue))
-        //                    arguments.Add(new(argumentData.ArgumentName, doubleValue));
-        //                break;
-        //            case ValueTypeGroup.String:
-        //                string valueStr = (string)argumentData.Value;
-        //                if (valueStr != null)
-        //                    arguments.Add(new(argumentData.ArgumentName, valueStr));
-        //                break;
-        //            default:
-        //                break;
-        //        }
-        //    }
-        //
-        //    return arguments;
-        //}
-
-        //private static ExpressionParameters Parameters2ExpressionParameters(List<Parameter> arguments)
-        //{
-        //    // 式ツリー用の変数データ
-        //    ExpressionParameters parameters = new();
-        //    foreach (Parameter argument in arguments)
-        //    {
-        //        parameters.Variables.Add(argument);
-        //    }
-        //
-        //    return parameters;
-        //}
-
         private static void UpdateExpressionResultData(SerializedProperty property, FieldType resultValueType, object resultObj)
         {
-            bool resultBoolValue = false;
-            double resultNumberValue = 0.0;
-            string resultStringValue = "";
-            UnityEngine.Object resultObjectValue = null;
-
-            string resultValueTypeFullName = (resultObj != null) ? resultObj.GetType().FullName : "";
-
-            switch (resultValueType)
-            {
-                case FieldType.Boolean:
-                    resultBoolValue = (bool)resultObj;
-                    break;
-                case FieldType.Integer:
-                case FieldType.Float:
-                    resultNumberValue = (double)resultObj;
-                    break;
-                case FieldType.String:
-                    resultStringValue = (string)resultObj;
-                    break;
-                case FieldType.ObjectReference:
-                    resultObjectValue = (UnityEngine.Object)resultObj;
-                    break;
-                default:
-                    break;
-            }
-
-            property.SafeFindPropertyRelative(FieldChangeSetting.PrivateFieldNames._expressionResultType).enumValueFlag = (int)resultValueType;
-            property.SafeFindPropertyRelative(FieldChangeSetting.PrivateFieldNames._expressionResultTypeFullName).stringValue = resultValueTypeFullName;
-
-            property.SafeFindPropertyRelative(FieldChangeSetting.PrivateFieldNames._expressionResultBoolValue).boolValue = resultBoolValue;
-            property.SafeFindPropertyRelative(FieldChangeSetting.PrivateFieldNames._expressionResultNumberValue).doubleValue = resultNumberValue;
-            property.SafeFindPropertyRelative(FieldChangeSetting.PrivateFieldNames._expressionResultStringValue).stringValue = resultStringValue;
-            property.SafeFindPropertyRelative(FieldChangeSetting.PrivateFieldNames._expressionResultObjectValue).objectReferenceValue = resultObjectValue;
-
-            property.serializedObject.ApplyModifiedProperties();
+            FieldChangeSetting fcs = (FieldChangeSetting)property.managedReferenceValue;
+            fcs.SetValue(resultObj, resultValueType);
+            property.serializedObject.Update();
         }
 
         private static void ChangeValuePreviewLabel(VisualElement uxml, string newText, bool success)
@@ -475,7 +242,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         }
 
 
-        private void ValidationValueTypeAllFieldSelector(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
+        private void ValidationValueTypeAllFieldSelector(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, object value)
         {
             // List<MultiFieldSelectorContainer> の SerializedProperty
             SerializedProperty mfscListProperty = property.SafeFindPropertyRelative(nameof(FieldChangeSetting._TargetFields));
@@ -491,14 +258,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     // FieldSelector の SerializedProperty
                     SerializedProperty fsProperty = fsListProperty.GetArrayElementAtIndex(j);
                     // 代入値と代入先の型チェック
-                    ValidationValueType(property, uxml, status, fsProperty);
+                    ValidationValueType(property, uxml, status, fsProperty, value);
                 }
             }
         }
 
-        private void ValidationValueType(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedProperty fieldSelectorProperty)
+        private void ValidationValueType(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedProperty fieldSelectorProperty, object value)
         {
-            (bool isValid, Type expressionResultType, Type selectedFieldType) = ValidationTypeAssignable(property, fieldSelectorProperty);
+            (bool isValid, Type expressionResultType, Type selectedFieldType) = ValidationTypeAssignable(property, fieldSelectorProperty, value);
 
             string selectedFieldTypeFullName = selectedFieldType?.FullName ?? "Null";
             string expressionResultTypeFullName = expressionResultType?.FullName ?? "Null";
@@ -524,9 +291,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             OnFieldSelectorLogChangeRequestEventPublish(property, uxml, status, EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(fieldSelectorProperty), logMessage, logColor, fontStyle, null);
         }
 
-        private static (bool isValid, Type expressionResultType, Type selectedFieldType) ValidationTypeAssignable(SerializedProperty property, SerializedProperty fieldSelectorProperty)
+        private static (bool isValid, Type expressionResultType, Type selectedFieldType) ValidationTypeAssignable(SerializedProperty property, SerializedProperty fieldSelectorProperty, object value)
         {
-            Type expressionResultType = EditorUtil.OtherUtil.GetValueHolderValueType<FieldChangeSetting>(property);
+            (bool GetVHValueTypeSuccess, Type expressionResultType) = EditorUtil.OtherUtil.GetValueHolderValueType<FieldChangeSetting>(property);
+            if (!GetVHValueTypeSuccess) expressionResultType = value?.GetType();
 
             Type selectFieldType = default;
 
@@ -562,7 +330,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ 名前辞書 ========================= ▼
         // MARK: ==名前辞書==
 
-        public static class UxmlNames
+        public record UxmlNames
         {
             public static readonly string Enable = "FCS_Enable";
             public static readonly string Expression = "FCS_Expression";
