@@ -59,7 +59,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <param name="args"></param>
         /// <param name="property"></param>
         /// <param name="propertyInstancePath"></param>
-        protected void OnFieldSelectorSelectObjectChangedEventHandler(FieldValueChangedEventArgs<ObjectField, UnityEngine.Object> args, VisualElement uxml, InspectorCustomizerStatus status)
+        protected void OnFieldSelectorSelectObjectChangedEventHandler(FieldValueChangedEventArgs<UnityEngine.Object> args, VisualElement uxml, InspectorCustomizerStatus status)
         {
             // ノードツリーのキャッシュを更新
             UpdateSerializedPropertiesCache(args.SenderInspectorCustomizerSerializedProperty, uxml, status, args.NewValue);
@@ -87,11 +87,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         protected void UpdateSerializedPropertiesCache(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, UnityEngine.Object selectedObject)
         {
             // 偽装NullかNullならNullに統一
-            selectedObject = EditorUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject) ? null : selectedObject;
+            selectedObject = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject) ? null : selectedObject;
 
             SerializedObject selectedSerializedObject = null;
             SerializedProperty[] properties = Array.Empty<SerializedProperty>();
-            if (!EditorUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject))
+            if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject))
             {
                 selectedSerializedObject = new(selectedObject);
                 properties = EditorUtil.SerializedObjectUtil.GetAllProperties(selectedSerializedObject);

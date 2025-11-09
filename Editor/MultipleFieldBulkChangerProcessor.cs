@@ -82,7 +82,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         {
                             foreach (MultiFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
                             {
-                                if (!EditorUtil.FakeNullUtil.IsNullOrFakeNull(mfscPropObj._SelectObject))
+                                if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(mfscPropObj._SelectObject))
                                 {
                                     SerializedObject targetSerializedObject = new(mfscPropObj._SelectObject);
                                     if (mfscPropObj._SelectObject is Transform tf)
@@ -109,7 +109,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                                 {
                                                     // カスタムキャスト処理
                                                     object customCastedResult = EditorUtil.OtherUtil.CustomCast(result, targetFieldType);
-                                                    if (!EditorUtil.FakeNullUtil.IsNullOrFakeNull(customCastedResult))
+                                                    if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(customCastedResult))
                                                     {
                                                         result = customCastedResult;
                                                     }

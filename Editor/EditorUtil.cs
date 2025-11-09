@@ -14,6 +14,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using xFunc.Maths;
 using xFunc.Maths.Expressions;
+using xFunc.Maths.Expressions.Matrices;
 using xFunc.Maths.Expressions.Parameters;
 using Object = UnityEngine.Object;
 
@@ -108,31 +109,30 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             /// <param name="customizer"></param>
             /// <param name="property"></param>
             /// <param name="status"></param>
-            /// <typeparam name="TFieldElementType"></typeparam>
             /// <typeparam name="TValueType"></typeparam>
             /// <returns></returns>
-            public static void RegisterFieldValueChangeEventPublisher<TFieldElementType, TValueType>(
-                TFieldElementType fieldElement,
+            public static void RegisterFieldValueChangeEventPublisher<TValueType>(
+                BaseField<TValueType> fieldElement,
                 IExpansionInspectorCustomizer customizer,
                 SerializedProperty property,
                 InspectorCustomizerStatus status
-            ) where TFieldElementType : BaseField<TValueType>
+            )
             {
                 fieldElement.RegisterValueChangedCallback(e =>
                 {
                     if (EqualityComparer<TValueType>.Default.Equals(e.previousValue, e.newValue)) return;
-                    FieldValueChangedEventArgs<TFieldElementType, TValueType> args = new(customizer, property, fieldElement, status, e.previousValue, e.newValue);
+                    FieldValueChangedEventArgs<TValueType> args = new(customizer, property, fieldElement, status, e.previousValue, e.newValue);
                     customizer.Publish(args);
                 });
             }
 
-            public static Action SubscribeFieldValueChangedEvent<TFieldElementType, TValueType>(
-                TFieldElementType fieldElement,
+            public static Action SubscribeFieldValueChangedEvent<TValueType>(
+                BaseField<TValueType> fieldElement,
                 IExpansionInspectorCustomizer customizer,
                 SerializedProperty property,
                 InspectorCustomizerStatus status,
-                 EventHandler<FieldValueChangedEventArgs<TFieldElementType, TValueType>> handler
-            ) where TFieldElementType : BaseField<TValueType>
+                EventHandler<FieldValueChangedEventArgs<TValueType>> handler
+            )
             {
                 return customizer.Subscribe(customizer,
                     property, status,
@@ -221,12 +221,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     }
                 }
 
-                // MARK: デバッグ用 最終的には消す
-                if (result == null)
-                {
-                    RuntimeUtil.Debugger.DebugLog($"{type.Name}.IsValid/Null", LogType.Error, "red");
-                    return false;
-                }
+                if (result == null) return false;
                 return (bool)result;
             }
 
@@ -423,17 +418,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             public static object GetPropertyValue(SerializedProperty property)
             {
+                if (property == null) return null;
                 property.serializedObject.Update();
 
                 object resultValue = property.propertyType switch
                 {
-                    SerializedPropertyType.Boolean => property.boolValue,
-                    SerializedPropertyType.Integer => Convert.ToDouble(property.intValue),
-                    SerializedPropertyType.Float => Convert.ToDouble(property.doubleValue),
-                    SerializedPropertyType.String => property.stringValue,
-                    SerializedPropertyType.ObjectReference => property.objectReferenceValue,
-                    SerializedPropertyType.ManagedReference => property.managedReferenceValue,
-                    _ => null,
+                    //SerializedPropertyType.Integer => Convert.ToDouble(property.intValue),
+                    _ => property.boxedValue,
                 };
                 return resultValue;
             }
@@ -446,10 +437,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         property.boolValue = (bool)value;
                         break;
                     case SerializedPropertyType.Integer:
-                        property.longValue = (long)value;
+                        property.longValue = Convert.ToInt64(value);
                         break;
                     case SerializedPropertyType.Float:
-                        property.doubleValue = (double)value;
+                        property.doubleValue = Convert.ToDouble(value);
                         break;
                     case SerializedPropertyType.String:
                         property.stringValue = (string)value;
@@ -466,7 +457,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             public static SerializedProperty[] GetAllProperties(SerializedObject serializedObject)
             {
                 SerializedProperty[] properties = Array.Empty<SerializedProperty>();
-                if (FakeNullUtil.IsNullOrFakeNull(serializedObject.targetObject))
+                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(serializedObject.targetObject))
                 {
                     return properties;
                 }
@@ -529,13 +520,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             public static long GetObjectId(object obj)
             {
-                if (FakeNullUtil.IsNullOrFakeNull(obj)) return -1;
+                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(obj)) return -1;
                 return _objectIDGenerator.GetId(obj, out _);
             }
 
             public static long GetObjectId(object obj, out bool firstTime)
             {
-                if (FakeNullUtil.IsNullOrFakeNull(obj))
+                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(obj))
                 {
                     firstTime = false;
                     return -1;
@@ -545,63 +536,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         }
 
         // ▲ ObjectID関連 ========================= ▲
-
-
-
-        // ▼ 偽装Null関連 ========================= ▼
-        // MARK: ==偽装Null関連==
-
-        public static class FakeNullUtil
-        {
-            public static NullType GetNullType(Object obj)
-            {
-                bool isTrueNull = ((object)obj) == null;
-                // "=="演算子のオーバーライドのせいで独自のNullチェックが行われる
-                bool isNull = obj == null;
-
-                if (isTrueNull)
-                {
-                    return NullType.TrueNull;
-                }
-                else if (isNull)
-                {
-                    return NullType.FakeNull;
-                }
-                else
-                {
-                    return NullType.NotNull;
-                }
-            }
-
-            public static bool IsNullOrFakeNull(Object obj)
-            {
-                NullType result = GetNullType(obj);
-                if (result == NullType.FakeNull || result == NullType.TrueNull)
-                {
-                    // 偽装NullかNullなら戻る
-                    return true;
-                }
-                return false;
-            }
-            public static bool IsNullOrFakeNull(object obj)
-            {
-
-                if (obj == null || (obj is Object uObj && IsNullOrFakeNull(uObj)))
-                {
-                    // 偽装NullかNullなら戻る
-                    return true;
-                }
-                return false;
-            }
-
-            public enum NullType
-            {
-                NotNull,
-                FakeNull,
-                TrueNull,
-            }
-        }
-        // ▲ 偽装Null関連 ========================= ▲
 
 
         // ▼ VisualElement関連 ========================= ▼
@@ -1006,72 +940,80 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public static class OtherUtil
         {
-            public static FieldType GetFieldType(object obj) => obj switch
-            {
-                bool => FieldType.Boolean,
-                sbyte or byte or
-                short or ushort or
-                int or uint or
-                long or ulong => FieldType.Integer,
-                float or double => FieldType.Float,
-                string => FieldType.String,
-                Object => FieldType.ObjectReference,
-                _ => FieldType.Generic,
-            };
-
-            public static FieldType Parse2FieldType(Type type) => Type.GetTypeCode(type) switch
-            {
-                TypeCode.Boolean => FieldType.Boolean,
-                TypeCode.SByte or TypeCode.Byte or
-                TypeCode.Int16 or TypeCode.UInt16 or
-                TypeCode.Int32 or TypeCode.UInt32 or
-                TypeCode.Int64 or TypeCode.UInt64 => FieldType.Integer,
-                TypeCode.Single or TypeCode.Double => FieldType.Float,
-                TypeCode.String => FieldType.String,
-                TypeCode.Object when typeof(Object).IsAssignableFrom(type) => FieldType.ObjectReference,
-                _ => FieldType.Generic,
-            };
-
             public static FieldType Parse2FieldType(SerializedPropertyType spType) => (FieldType)spType;
 
             public static SerializedPropertyType Parse2SerializedPropertyType(FieldType fieldType) => (SerializedPropertyType)fieldType;
 
-            public static Type Parse2Type(FieldType typeGroup) => typeGroup switch
+            public static (bool success, Type type) GetValueHolderValueType<T>(SerializedProperty valueHolderProperty) where T : ValueHolderBase<T>, new()
             {
-                FieldType.Boolean => typeof(bool),
-                FieldType.Integer => typeof(int),
-                FieldType.Float => typeof(double),
-                FieldType.String => typeof(string),
-                FieldType.ObjectReference => typeof(Object),
-                _ => null,
-            };
+                T valueHolder = (T)valueHolderProperty.managedReferenceValue;
+                // 現在の値のフィールドの名前
+                string currentValueFieldName = valueHolder.GetCurrentValueFieldName();
 
-            public static Type GetValueHolderValueType<T>(SerializedProperty valueHolderProperty) where T : ValueHolderBase, new()
+                if (currentValueFieldName == null) return (false, null);
+
+                // 現在の値を取得
+                SerializedProperty currentValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(currentValueFieldName);
+                object boxedValue = currentValueFieldProperty.boxedValue;
+
+                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(boxedValue)) return (true, null);
+                return (true, boxedValue.GetType());
+            }
+
+            [Obsolete]
+            public static Type GetValueHolderValueType_old<T>(SerializedProperty valueHolderProperty) where T : ValueHolderBase<T>, new()
             {
                 T valueHolderInstance = new();
-                var temp = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.ValueTypeFieldName);
-                FieldType fieldValueType = (FieldType)temp.enumValueFlag;
+                SerializedProperty ValueTypeFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.ValueTypeFieldName);
+                SelectableFieldType selectableFieldType = ((FieldType)ValueTypeFieldProperty.enumValueFlag).ToSelectableFieldType();
                 Type valueType = null;
-                switch (fieldValueType)
+                switch (selectableFieldType)
                 {
-                    case FieldType.Boolean:
-                        SerializedProperty boolvalueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.BoolValueFieldName);
-                        valueType = boolvalueFieldProperty.boolValue.GetType();
+                    case SelectableFieldType.Boolean:
+                        SerializedProperty boolValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.BoolValueFieldName);
+                        valueType = boolValueFieldProperty.boolValue.GetType();
                         break;
-                    case FieldType.Integer:
-                    case FieldType.Float:
-                        SerializedProperty numbervalueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.NumberValueFieldName);
-                        valueType = numbervalueFieldProperty.doubleValue.GetType();
+                    case SelectableFieldType.Number:
+                        SerializedProperty numberValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.NumberValueFieldName);
+                        valueType = numberValueFieldProperty.doubleValue.GetType();
                         break;
-                    case FieldType.String:
-                        SerializedProperty stringvalueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
-                        valueType = stringvalueFieldProperty.stringValue.GetType();
+                    case SelectableFieldType.String:
+                        SerializedProperty stringValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
+                        valueType = stringValueFieldProperty.stringValue.GetType();
                         break;
-                    case FieldType.ObjectReference:
-                        SerializedProperty ObjectvalueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.ObjectValueFieldName);
-                        Object objectValue = ObjectvalueFieldProperty.objectReferenceValue;
-                        if (!FakeNullUtil.IsNullOrFakeNull(objectValue))
+                    case SelectableFieldType.Color:
+                        SerializedProperty colorValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
+                        valueType = colorValueFieldProperty.colorValue.GetType();
+                        break;
+                    case SelectableFieldType.UnityObject:
+                        SerializedProperty ObjectValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.ObjectValueFieldName);
+                        Object objectValue = ObjectValueFieldProperty.objectReferenceValue;
+                        if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(objectValue))
                             valueType = objectValue.GetType();
+                        break;
+                    case SelectableFieldType.Vector2:
+                        SerializedProperty vector2ValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
+                        valueType = vector2ValueFieldProperty.colorValue.GetType();
+                        break;
+                    case SelectableFieldType.Vector3:
+                        SerializedProperty vector3ValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
+                        valueType = vector3ValueFieldProperty.colorValue.GetType();
+                        break;
+                    case SelectableFieldType.Vector4:
+                        SerializedProperty vector4ValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
+                        valueType = vector4ValueFieldProperty.colorValue.GetType();
+                        break;
+                    case SelectableFieldType.Bounds:
+                        SerializedProperty boundsValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
+                        valueType = boundsValueFieldProperty.colorValue.GetType();
+                        break;
+                    case SelectableFieldType.Curve:
+                        SerializedProperty curveValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
+                        valueType = curveValueFieldProperty.colorValue.GetType();
+                        break;
+                    case SelectableFieldType.Gradient:
+                        SerializedProperty gradientValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
+                        valueType = gradientValueFieldProperty.colorValue.GetType();
                         break;
                     default:
                         break;
@@ -1107,10 +1049,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     return (false, FieldType.Generic, $"引数'{varibleNames}'が設定されていません。");
                 }
 
-                // ArgumentTypeがUnityObjectのArgumentDataのリスト
-                IEnumerable<ArgumentData> unityObjectTypeArgumentDatas = filteredArgumentDatas.Where(x => x.ArgumentFieldType == FieldType.ObjectReference);
-                // ArgumentTypeがUnityObjectのArgumentDataが存在するか確認
-                if (unityObjectTypeArgumentDatas.Count() > 0)
+                // 計算式に利用できるFieldTypeのリスト
+                FieldType[] allowCalcFieldType = new[] { FieldType.Integer, FieldType.Boolean, FieldType.Float, FieldType.String, FieldType.Vector2, FieldType.Vector3, FieldType.Vector4 };
+                // 計算式に利用できないArgumentFieldTypeのArgumentDataのリスト
+                IEnumerable<ArgumentData> notAllowCalcArgumentDatas = filteredArgumentDatas.Where(
+                    x => !allowCalcFieldType.Contains(x.ArgumentFieldType)
+                );
+                // 計算式に利用できないArgumentFieldTypeのArgumentDataが存在するか確認
+                if (notAllowCalcArgumentDatas.Count() > 0)
                 {
                     // 空白文字を削除した式文字列
                     string NonBlankLowerExpressionString = BlankCharRegex.Replace(expressionString, "").ToLower();
@@ -1119,38 +1065,31 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     {
                         // 必要な変数が1つのみで余計な計算式も無い(=空白文字無し代入式が唯一の変数名と完全一致する)なら
 
-                        // UnityObjectを代入する場合の特殊処理
-                        ArgumentData argumentData = unityObjectTypeArgumentDatas.First();
+                        // 計算式に利用できないデータを代入する場合の特殊処理
+                        ArgumentData argumentData = notAllowCalcArgumentDatas.First();
                         object valueObj = argumentData.Value;
-                        if (FakeNullUtil.IsNullOrFakeNull(valueObj))
+                        if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(valueObj))
                         {
-                            return (true, FieldType.ObjectReference, null);
+                            return (true, argumentData.ArgumentFieldType, null);
                         }
 
-                        if (valueObj is not Object gameObject)
-                        {
-                            return (false, FieldType.Generic, $"'{argumentData.ArgumentName}'の{typeof(Object)}へのキャストに失敗しました。");
-                        }
-                        else
-                        {
-                            return (true, FieldType.ObjectReference, gameObject);
-                        }
+                        return (true, argumentData.ArgumentFieldType, valueObj);
                     }
                     else
                     {
-                        // UnityObjectを引数に指定しながら不正な代入式なら
-                        string unityObjectTypeArgumentDataNames = string.Join("', '", unityObjectTypeArgumentDatas.Select(x => x.ArgumentName));
-                        return (false, FieldType.Generic, $"引数'{unityObjectTypeArgumentDataNames}'は値がUnityObjectであり、代入式に計算を必要とする式を指定することはできません。\n単一の引数名のみを入力してください。(例:代入式 = 'x1')");
+                        // 計算式に利用できないデータを引数に指定しながら不正な代入式なら
+                        string unityObjectTypeArgumentDataNames = string.Join("', '", notAllowCalcArgumentDatas.Select(x => x.ArgumentName));
+                        return (false, FieldType.Generic, $"引数'{unityObjectTypeArgumentDataNames}'は計算に使用できない値であり、代入式に計算を必要とする式を指定することはできません。\n単一の引数名のみを入力してください。(例:代入式 = 'x1')");
                     }
                 }
 
-                // ArgumentTypeがOtherのArgumentDataのリスト
-                IEnumerable<ArgumentData> otherTypeArgumentDatas = filteredArgumentDatas.Where(x => x.ArgumentFieldType == FieldType.ObjectReference);
-                // ArgumentTypeがOtherのArgumentDataが存在するか確認
-                if (otherTypeArgumentDatas.Count() > 0)
+                // ArgumentFieldTypeが使用できないタイプのArgumentDataのリスト
+                IEnumerable<ArgumentData> notAllowUseTypeArgumentDatas = filteredArgumentDatas.Where(x => !FieldTypeHelper.AllowToSelectableFieldType(x.ArgumentFieldType));
+                // ArgumentFieldTypeが使用できないタイプのArgumentDataが存在するか確認
+                if (notAllowUseTypeArgumentDatas.Count() > 0)
                 {
-                    string otherTypeArgumentDataNames = string.Join("', '", otherTypeArgumentDatas.Select(x => x.ArgumentName));
-                    return (false, FieldType.Generic, $"引数'{otherTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
+                    string notAllowUseTypeArgumentDataNames = string.Join("', '", notAllowUseTypeArgumentDatas.Select(x => x.ArgumentName));
+                    return (false, FieldType.Generic, $"引数'{notAllowUseTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
                 }
 
                 // ArgumentDataをParameterに変換
@@ -1165,20 +1104,45 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (Exception ex) { return (false, FieldType.Generic, ex.Message); }
 
-                FieldType resultValueType = result switch
+                FieldType resultValueType;
+                object fixedResult = result;
+                switch (result)
                 {
-                    bool => FieldType.Boolean,
-                    NumberValue => FieldType.Float,
-                    double => FieldType.Float,
-                    string => FieldType.String,
-                    _ => FieldType.Generic,
-                };
+                    case bool: resultValueType = FieldType.Boolean; break;
+                    case double: resultValueType = FieldType.Float; break;
+                    case string: resultValueType = FieldType.String; break;
+                    case NumberValue numberValue:
+                        fixedResult = numberValue.Number;
+                        resultValueType = FieldType.Float;
+                        break;
+                    case VectorValue vectorValue:
+                        switch (vectorValue.Size)
+                        {
+                            case 1:
+                                fixedResult = CustomCast<double>(vectorValue);
+                                resultValueType = FieldType.Float;
+                                break;
+                            case 2:
+                                fixedResult = CustomCast<Vector2>(vectorValue);
+                                resultValueType = FieldType.Vector2;
+                                break;
+                            case 3:
+                                fixedResult = CustomCast<Vector3>(vectorValue);
+                                resultValueType = FieldType.Vector3;
+                                break;
+                            case 4:
+                                fixedResult = CustomCast<Vector4>(vectorValue);
+                                resultValueType = FieldType.Vector4;
+                                break;
+                            default:
+                                return (false, FieldType.Generic, $"ベクトルの次元数`{vectorValue.Size}`が異常です。");
+                        }
+                        break;
+                    default:
+                        return (false, FieldType.Generic, $"不明な型が返されました。{fixedResult.GetType().Name}/{fixedResult}");
+                }
 
-                if (resultValueType == FieldType.Generic) return (false, resultValueType, $"不明な型が返されました。{result.GetType().Name}/{result}");
-
-                if ((resultValueType == FieldType.Integer || resultValueType == FieldType.Float) && result is NumberValue numberValue) result = numberValue.Number;
-
-                return (true, resultValueType, result);
+                return (true, resultValueType, fixedResult);
             }
 
             private static IEnumerable<Variable> GetAllVariables(IExpression expression)
@@ -1266,6 +1230,21 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                             if (valueStr != null)
                                 arguments.Add(new(argumentData.ArgumentName, valueStr));
                             break;
+                        case FieldType.Vector2:
+                            Vector2? valueVector2 = (Vector2?)argumentData.Value;
+                            if (valueVector2 != null)
+                                arguments.Add(new(argumentData.ArgumentName, CustomCast<VectorValue>(valueVector2)));
+                            break;
+                        case FieldType.Vector3:
+                            Vector3? valueVector3 = (Vector3?)argumentData.Value;
+                            if (valueVector3 != null)
+                                arguments.Add(new(argumentData.ArgumentName, CustomCast<VectorValue>(valueVector3)));
+                            break;
+                        case FieldType.Vector4:
+                            Vector4? valueVector4 = (Vector4?)argumentData.Value;
+                            if (valueVector4 != null)
+                                arguments.Add(new(argumentData.ArgumentName, CustomCast<VectorValue>(valueVector4)));
+                            break;
                         default:
                             break;
                     }
@@ -1288,29 +1267,33 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             public static bool ValidationTypeAssignable(Type assignType, Type targetType)
             {
-                FieldType temp1 = FieldType.AnimationCurve;
-                Enum temp2 = temp1;
-                Type enumType = temp2.GetType();
-                FieldType temp3 = (FieldType)temp2;
-
-
                 bool typeCheckResult = false;
                 if (targetType != null)
                 {
-                    if (assignType == null) typeCheckResult = true;
+                    if (assignType == null)
+                    {
+                        // 代入先がnull許容型か確認
+                        typeCheckResult = !targetType.IsValueType || Nullable.GetUnderlyingType(targetType) != null;
+                    }
                     else
                     {
                         typeCheckResult = targetType.IsAssignableFrom(assignType) ||
-                            CustomCastFuncDic.Any(x => x.AssignType.IsAssignableFrom(assignType) && x.TargetType.IsAssignableFrom(targetType));
+                            CustomCastFuncDic.Any(x => assignType.IsAssignableFrom(x.AssignType) && x.TargetType.IsAssignableFrom(targetType));
                     }
                 }
 
                 return typeCheckResult;
             }
 
+            public static T CustomCast<T>(object assignValue)
+            {
+                object castedObj = CustomCast(assignValue, typeof(T));
+                return (T)castedObj;
+            }
+
             public static object CustomCast(object assignValue, Type targetType)
             {
-                if (FakeNullUtil.IsNullOrFakeNull(assignValue))
+                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(assignValue))
                 {
                     return null;
                 }
@@ -1413,16 +1396,30 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 new TypeConverter<float, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
                 new TypeConverter<double, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
 
-                new TypeConverter<Enum, sbyte>((v) => (sbyte)(object)v),
-                new TypeConverter<Enum, byte>((v) => (byte)(object)v),
-                new TypeConverter<Enum, short>((v) => (short)(object)v),
-                new TypeConverter<Enum, ushort>((v) => (ushort)(object)v),
-                new TypeConverter<Enum, int>((v) => (int)(object)v),
-                new TypeConverter<Enum, uint>((v) => (uint)(object)v),
-                new TypeConverter<Enum, long>((v) => (long)(object)v),
-                new TypeConverter<Enum, ulong>((v) => (ulong)(object)v),
-                new TypeConverter<Enum, float>((v) => (float)(object)v),
-                new TypeConverter<Enum, double>((v) => (double)(object)v),
+                new TypeConverter<Enum, sbyte>((v) => Convert.ToSByte(v)),
+                new TypeConverter<Enum, byte>((v) => Convert.ToByte(v)),
+                new TypeConverter<Enum, short>((v) => Convert.ToInt16(v)),
+                new TypeConverter<Enum, ushort>((v) => Convert.ToUInt16(v)),
+                new TypeConverter<Enum, int>((v) => Convert.ToInt32(v)),
+                new TypeConverter<Enum, uint>((v) => Convert.ToUInt32(v)),
+                new TypeConverter<Enum, long>((v) => Convert.ToInt64(v)),
+                new TypeConverter<Enum, ulong>((v) => Convert.ToUInt64(v)),
+                new TypeConverter<Enum, float>((v) => Convert.ToSingle(v)),
+                new TypeConverter<Enum, double>((v) => Convert.ToDouble(v)),
+
+
+                new TypeConverter<Vector4, Quaternion>((v) => new(v[0],v[1],v[2],v[3])),
+                new TypeConverter<Quaternion, Vector4>((v) => new(v[0],v[1],v[2],v[3])),
+
+                new TypeConverter<double, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v) })),
+                new TypeConverter<Vector2, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]) })),
+                new TypeConverter<Vector3, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]), new(v[2]) })),
+                new TypeConverter<Vector4, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]), new(v[2]), new(v[3]) })),
+
+                new TypeConverter<VectorValue, double>((v) => (float)v[0].Number),
+                new TypeConverter<VectorValue, Vector2>((v) => new Vector2((float)v[0].Number, (float)v[1].Number)),
+                new TypeConverter<VectorValue, Vector3>((v) => new Vector3((float)v[0].Number, (float)v[1].Number, (float)v[2].Number)),
+                new TypeConverter<VectorValue, Vector4>((v) => new Vector4((float)v[0].Number, (float)v[1].Number, (float)v[2].Number, (float)v[3].Number)),
             };
 
             private interface ITypeConverter

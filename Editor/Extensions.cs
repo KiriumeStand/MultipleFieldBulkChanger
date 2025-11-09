@@ -38,61 +38,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             RuntimeUtil.Debugger.DebugLog($"GetAllNativeUnityObjectAndSubTypes TimeSpan/{timeSpan}", LogType.Log, "blue");
 
             _nativeUnityObjectAndSubTypeNames = _nativeUnityObjectAndSubTypes.Select(t => t.FullName).ToHashSet();
-
-            /*
-            List<string> FailedTypeNames = new();
-            Dictionary<string, (string TypeFullName, string propPath)> FailedToGetTypeDict = new();
-            Dictionary<string, (string TypeFullName, string propPath)> MultipleMatchingTypesFoundDict = new();
-            Dictionary<string, (string TypeFullName, string propPath)> NoMatchingTypesFoundDict = new();
-            foreach (Type type in _nativeUnityObjectAndSubTypes)
-            {
-                UnityEngine.Object instance = default;
-                try
-                {
-                    instance = Activator.CreateInstance(type) as UnityEngine.Object;
-                }
-                catch
-                {
-                    FailedTypeNames.Add(type.FullName);
-                    continue;
-                }
-
-                if (!EditorUtil.FakeNullUtil.IsNullOrFakeNull(instance))
-                {
-                    SerializedObject so = new(instance);
-                    List<SerializedProperty> sps = EditorUtil.SerializedObjectUtil.GetAllProperties(so);
-                    foreach (SerializedProperty prop in sps)
-                    {
-                        if (prop.propertyType == SerializedPropertyType.Generic) continue;
-                        (bool success, Type propType, string errorLog) = prop.GetFieldType();
-                        if (!success)
-                        {
-                            if (errorLog == "No matching types found")
-                            {
-                                if (!NoMatchingTypesFoundDict.ContainsKey(prop.type))
-                                {
-                                    NoMatchingTypesFoundDict.Add(prop.type, (type.FullName, prop.propertyPath));
-                                }
-                            }
-                            else if (errorLog.StartsWith("Multiple matching types found"))
-                            {
-                                if (!MultipleMatchingTypesFoundDict.ContainsKey(prop.type))
-                                {
-                                    MultipleMatchingTypesFoundDict.Add(prop.type, (type.FullName, prop.propertyPath));
-                                }
-                            }
-                            else if (errorLog == "Failed to get type")
-                            {
-                                if (!FailedToGetTypeDict.ContainsKey(prop.type))
-                                {
-                                    FailedToGetTypeDict.Add(prop.type, (type.FullName, prop.propertyPath));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            //*/
         }
 
         private static GetFieldInfoAndStaticTypeFromProperty GetFieldInfoAndTypeGetter()
