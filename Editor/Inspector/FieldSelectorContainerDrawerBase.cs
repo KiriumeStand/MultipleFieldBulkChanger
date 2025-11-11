@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -94,7 +95,17 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject))
             {
                 selectedSerializedObject = new(selectedObject);
-                properties = EditorUtil.SerializedObjectUtil.GetAllProperties(selectedSerializedObject);
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = new() {
+                        EditorUtil.SerializedObjectUtil.ExcludeFilters.ReadOnly,
+                        EditorUtil.SerializedObjectUtil.ExcludeFilters.HighRisk,
+                        EditorUtil.SerializedObjectUtil.ExcludeFilters.SafetyUnknown,
+                        };
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = new() {
+                        EditorUtil.SerializedObjectUtil.ExcludeFilters.ReadOnly,
+                        EditorUtil.SerializedObjectUtil.ExcludeFilters.HighRisk,
+                        EditorUtil.SerializedObjectUtil.ExcludeFilters.SafetyUnknown,
+                        };
+                properties = EditorUtil.SerializedObjectUtil.GetAllProperties(selectedSerializedObject, addListFilters, enterChildrenFilters);
             }
 
             FieldSelectorContainerBase targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property) as FieldSelectorContainerBase;
