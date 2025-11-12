@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
+using System.Security.Policy;
 using System.Text.RegularExpressions;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using nadena.dev.ndmf;
@@ -454,60 +455,239 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
             }
 
-            public static SerializedProperty[] GetAllProperties(SerializedObject serializedObject)
+            public static SerializedProperty[] GetAllProperties(
+                SerializedObject serializedObject,
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = null,
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = null
+            )
             {
+                // nullなら空のリストにする
+                enterChildrenFilters ??= new();
+
                 SerializedProperty[] properties = Array.Empty<SerializedProperty>();
-                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(serializedObject.targetObject))
-                {
-                    return properties;
-                }
-                if (serializedObject.targetObject is Mesh)
-                {
-                    return properties;
-                }
 
                 SerializedProperty curProperty = serializedObject.GetIterator();
 
-                bool enterChildren = true;
-                curProperty.Next(enterChildren);
+                enterChildrenFilters.Add(ExcludeFilters.EnterChildrenObjectDefault);
 
-                properties = GetProperties(curProperty, null);
+                // serializedObjectをフィルターにかける
+                bool enterChildren = enterChildrenFilters.All(x => x(serializedObject, new()));
+
+                if (enterChildren)
+                {
+                    curProperty.Next(enterChildren);
+                    properties = GetProperties(curProperty, null, addListFilters, enterChildrenFilters);
+                }
                 return properties;
             }
 
-            public static SerializedProperty[] GetAllProperties(SerializedProperty property)
+            public static SerializedProperty[] GetAllProperties(
+                SerializedProperty property,
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = null,
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = null)
             {
+                bool includeInvisible = true;
+                // このプロパティの子または孫ではない次のプロパティ
+                SerializedProperty cancelProperty = property.GetEndProperty(includeInvisible);
+
+                SerializedProperty[] properties = GetProperties(property, cancelProperty, addListFilters, enterChildrenFilters);
+                return properties;
+            }
+
+            private static SerializedProperty[] GetProperties(
+                SerializedProperty property,
+                SerializedProperty cancelProperty = null,
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = null,
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = null)
+            {
+                addListFilters ??= new();
+                enterChildrenFilters ??= new();
+                addListFilters.Add(ExcludeFilters.AddListPropertyDefault);
+                enterChildrenFilters.Add(ExcludeFilters.EnterChildrenPropertyDefault);
+
                 SerializedProperty curProperty = property.Copy();
 
-                bool includeInvisible = true;
-                // このプロパティ内の最後のプロパティの次のプロパティ、つまり、現在のプロパティ外のプロパティで次に来るもの
-                SerializedProperty endProperty = curProperty.GetEndProperty(includeInvisible);
-
-                SerializedProperty[] properties = GetProperties(curProperty, endProperty);
-                return properties;
-            }
-
-            private static SerializedProperty[] GetProperties(SerializedProperty property, SerializedProperty endProperty = null)
-            {
                 List<SerializedProperty> properties = new();
 
-                bool enterChildren;
+                List<SerializedProperty> propertyStack = new();
+                List<SerializedProperty> endPropertyStack = new();
+
+                bool doLoop;
                 do
                 {
-                    enterChildren = true;
-                    if (property.name == "m_GameObject") continue;
+                    doLoop = false;
 
-                    if (property.propertyType == SerializedPropertyType.String || property.propertyType == SerializedPropertyType.AnimationCurve)
-                        enterChildren = false;
+                    SerializedProperty spCopy = curProperty.Copy();
 
-                    properties.Add(property.Copy());
+                    // スタックを追加
+                    propertyStack.Add(spCopy);
+                    bool includeInvisible = true;
+                    // このプロパティの子または孫ではない次のプロパティ
+                    endPropertyStack.Add(curProperty.GetEndProperty(includeInvisible));
+
+                    // serializedPropertyをフィルターにかける
+                    bool addList = addListFilters.All(filter => filter(curProperty.serializedObject, propertyStack));
+                    bool enterChildren = enterChildrenFilters.All(filter => filter(curProperty.serializedObject, propertyStack));
+
+                    // リストに追加する
+                    if (addList) { properties.Add(spCopy); }
+
+                    // 次の要素を取得
+                    bool existNext = curProperty.Next(enterChildren);
+
+                    while (endPropertyStack.Count() > 0 && SerializedProperty.EqualContents(curProperty, endPropertyStack.Last()))
+                    {
+                        // 次の要素が子でないならendPropertyStackから一致するものが無くなるまでスタックを遡る
+                        propertyStack.RemoveAt(propertyStack.Count() - 1);
+                        endPropertyStack.RemoveAt(endPropertyStack.Count() - 1);
+                    }
+
+                    // ループを続けるか
+                    doLoop = existNext && (cancelProperty == null || !SerializedProperty.EqualContents(curProperty, cancelProperty));
                 }
-                while (property.Next(enterChildren) && (endProperty == null || !SerializedProperty.EqualContents(property, endProperty)));
+                while (doLoop);
 
                 return properties.ToArray();
             }
-        }
 
+
+            public record ExcludeFilters
+            {
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> AddListPropertyDefault = (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty lastStack = spStack.Last();
+                    }
+                    return true;
+                };
+
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> EnterChildrenObjectDefault = (root, spStack) =>
+                {
+                    if (spStack.Count() == 0)
+                    {
+                        // ルートオブジェクトを見ているなら
+                        if (
+                            RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(root.targetObject) ||
+                            root.targetObject is Mesh)
+                        {
+                            // ルートオブジェクトがnullなら or
+                            // ルートオブジェクトがMeshなら中を探索しない
+                            return false;
+                        }
+                    }
+                    return true;
+                };
+
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> EnterChildrenPropertyDefault = (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty curProperty = spStack.Last();
+                        // フィールドが文字列かAnimationCurveなら中を探索しない
+                        return !(
+                            curProperty.propertyType == SerializedPropertyType.String ||
+                            curProperty.propertyType == SerializedPropertyType.AnimationCurve ||
+                            false
+                            );
+                    }
+                    return true;
+                };
+
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> ReadOnly = (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty lastStack = spStack.Last();
+                        // Transformの最上層のフィールドか
+                        if (root.targetObject is Transform && lastStack.depth == 0)
+                        {
+                            // Transformのm_LocalEulerAnglesHintフィールドならfalse
+                            if (
+                                lastStack.name == "m_LocalEulerAnglesHint"
+                            ) return false;
+                        }
+                    }
+                    return true;
+                };
+
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> HighRisk = (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty lastStack = spStack.Last();
+                        // 最上層のフィールドか
+                        if (lastStack.depth == 0)
+                        {
+                            if (
+                                lastStack.name == "m_ObjectHideFlags" ||
+                                lastStack.name == "m_EditorHideFlags" ||
+                                lastStack.name == "m_StaticEditorFlags"
+                            ) return false;
+                        }
+                    }
+                    return true;
+                };
+
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> SafetyUnknown = (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty lastStack = spStack.Last();
+                        // 最上層のフィールドか
+                        if (lastStack.depth == 0)
+                        {
+                            if (
+                                lastStack.name == "m_Script" || // テキスト本文 or コンポーネントの本体csファイル
+                                lastStack.name == "m_CorrespondingSourceObject" ||
+                                lastStack.name == "m_PrefabInstance" ||
+                                lastStack.name == "m_PrefabAsset"
+                            ) return false;
+
+                            if (root.targetObject is GameObject)
+                            {
+                                if (
+                                    lastStack.name == "m_Component"
+                                ) return false;
+                            }
+                            if (root.targetObject is ScriptableObject)
+                            {
+                                if (
+                                    lastStack.name == "m_GameObject" ||
+                                    lastStack.name == "m_EditorClassIdentifier"
+                                ) return false;
+                            }
+                            if (root.targetObject is Component)
+                            {
+                                if (
+                                    lastStack.name == "m_GameObject" ||
+                                    lastStack.name == "m_EditorClassIdentifier"
+                                ) return false;
+                            }
+                            if (root.targetObject is Transform)
+                            {
+                                if (
+                                    lastStack.name == "m_ConstrainProportionsScale" ||
+                                    lastStack.name == "m_Children" ||
+                                    lastStack.name == "m_Father"
+                                ) return false;
+                            }
+                        }
+                    }
+                    return true;
+                };
+
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> OtherThanObjectReference = (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty lastStack = spStack.Last();
+                        return lastStack.propertyType == SerializedPropertyType.ObjectReference;
+                    }
+                    return true;
+                };
+            }
+        }
         // ▲ SerializedObject関連 ========================= ▲
 
 
@@ -679,7 +859,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 using (var so = new SerializedObject(obj))
                 {
-                    foreach (var prop in SerializedObjectUtil.GetAllProperties(so).Where(x => x.propertyType == SerializedPropertyType.ObjectReference))
+                    HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = new() {
+                        SerializedObjectUtil.ExcludeFilters.ReadOnly,
+                        SerializedObjectUtil.ExcludeFilters.OtherThanObjectReference,
+                        };
+                    HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = new() {
+                        SerializedObjectUtil.ExcludeFilters.ReadOnly,
+                        };
+                    SerializedProperty[] props = SerializedObjectUtil.GetAllProperties(so, addListFilters, enterChildrenFilters);
+                    foreach (var prop in props)
                         prop.objectReferenceValue = ReplaceClonedObjectImpl(prop.objectReferenceValue, cache, checkedCache);
 
                     so.ApplyModifiedPropertiesWithoutUndo();
@@ -958,68 +1146,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(boxedValue)) return (true, null);
                 return (true, boxedValue.GetType());
-            }
-
-            [Obsolete]
-            public static Type GetValueHolderValueType_old<T>(SerializedProperty valueHolderProperty) where T : ValueHolderBase<T>, new()
-            {
-                T valueHolderInstance = new();
-                SerializedProperty ValueTypeFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.ValueTypeFieldName);
-                SelectableFieldType selectableFieldType = ((FieldType)ValueTypeFieldProperty.enumValueFlag).ToSelectableFieldType();
-                Type valueType = null;
-                switch (selectableFieldType)
-                {
-                    case SelectableFieldType.Boolean:
-                        SerializedProperty boolValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.BoolValueFieldName);
-                        valueType = boolValueFieldProperty.boolValue.GetType();
-                        break;
-                    case SelectableFieldType.Number:
-                        SerializedProperty numberValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.NumberValueFieldName);
-                        valueType = numberValueFieldProperty.doubleValue.GetType();
-                        break;
-                    case SelectableFieldType.String:
-                        SerializedProperty stringValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
-                        valueType = stringValueFieldProperty.stringValue.GetType();
-                        break;
-                    case SelectableFieldType.Color:
-                        SerializedProperty colorValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
-                        valueType = colorValueFieldProperty.colorValue.GetType();
-                        break;
-                    case SelectableFieldType.UnityObject:
-                        SerializedProperty ObjectValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.ObjectValueFieldName);
-                        Object objectValue = ObjectValueFieldProperty.objectReferenceValue;
-                        if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(objectValue))
-                            valueType = objectValue.GetType();
-                        break;
-                    case SelectableFieldType.Vector2:
-                        SerializedProperty vector2ValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
-                        valueType = vector2ValueFieldProperty.colorValue.GetType();
-                        break;
-                    case SelectableFieldType.Vector3:
-                        SerializedProperty vector3ValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
-                        valueType = vector3ValueFieldProperty.colorValue.GetType();
-                        break;
-                    case SelectableFieldType.Vector4:
-                        SerializedProperty vector4ValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
-                        valueType = vector4ValueFieldProperty.colorValue.GetType();
-                        break;
-                    case SelectableFieldType.Bounds:
-                        SerializedProperty boundsValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
-                        valueType = boundsValueFieldProperty.colorValue.GetType();
-                        break;
-                    case SelectableFieldType.Curve:
-                        SerializedProperty curveValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
-                        valueType = curveValueFieldProperty.colorValue.GetType();
-                        break;
-                    case SelectableFieldType.Gradient:
-                        SerializedProperty gradientValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
-                        valueType = gradientValueFieldProperty.colorValue.GetType();
-                        break;
-                    default:
-                        break;
-                }
-
-                return valueType;
             }
 
             private static readonly Regex BlankCharRegex = new(@"\s+", RegexOptions.Compiled);
