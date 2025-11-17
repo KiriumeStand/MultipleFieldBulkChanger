@@ -61,11 +61,26 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     List<ArgumentData> argDatas = new();
                     foreach (ArgumentSetting asPropObj in mfbcComponent._ArgumentSettings)
                     {
+                        Optional<object> argValue = default;
+                        if (asPropObj._IsReferenceMode)
+                        {
+                            UnityEngine.Object selectObj = asPropObj._SourceField._SelectObject;
+                            string selectFieldPath = asPropObj._SourceField._FieldSelector.FixedSelectFieldPath;
+                            if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
+                            {
+                                argValue = EditorUtil.OtherUtil.GetSelectPathValue(selectObj, selectFieldPath);
+                            }
+                        }
+                        else
+                        {
+                            argValue = OptionalHelper.Some(asPropObj.InputtableValue);
+                        }
+
                         ArgumentData argData = new()
                         {
                             ArgumentName = asPropObj._ArgumentName,
-                            Value = asPropObj.Value,
-                            ArgumentFieldType = asPropObj.ValueType,
+                            Value = argValue,
+                            ArgumentType = argValue.GetType(),
                         };
                         argDatas.Add(argData);
                     }
@@ -76,7 +91,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                         string expression = fcsPropObj._Expression;
                         // 代入式を解く
-                        (bool expressionSuccess, FieldType valueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expression, argDatas);
+                        (bool expressionSuccess, Type resultValueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expression, argDatas);
 
                         if (expressionSuccess)
                         {

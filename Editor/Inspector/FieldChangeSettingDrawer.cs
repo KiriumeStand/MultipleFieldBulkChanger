@@ -124,8 +124,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<string>(u_Expression, this, property, status,
                 (sender, args) => { OnExpressionTextChangedEventHandler(args, property, uxml, targetObject, status); });
 
-            (bool success, object result, string resultStr) = CalculateExpression(property, uxml, targetObject);
-            ChangeValuePreviewLabel(uxml, resultStr, success);
+            (Optional<object> result, string resultStr) = CalculateExpression(property, uxml, targetObject);
+            ChangeValuePreviewLabel(uxml, resultStr, result.HasValue);
             ValidationValueTypeAllFieldSelector(property, uxml, status, result);
         }
 
@@ -143,15 +143,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private void OnArgumentDataUpdatedEventHandler(ArgumentDataUpdatedEventArgs args, SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
-            (bool success, object result, string resultStr) = CalculateExpression(property, uxml, targetObject);
-            ChangeValuePreviewLabel(uxml, resultStr, success);
+            (Optional<object> result, string resultStr) = CalculateExpression(property, uxml, targetObject);
+            ChangeValuePreviewLabel(uxml, resultStr, result.HasValue);
             ValidationValueTypeAllFieldSelector(property, uxml, status, result);
         }
 
         private void OnExpressionTextChangedEventHandler(FieldValueChangedEventArgs<string> args, SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
-            (bool success, object result, string resultStr) = CalculateExpression(property, uxml, targetObject);
-            ChangeValuePreviewLabel(uxml, resultStr, success);
+            (Optional<object> result, string resultStr) = CalculateExpression(property, uxml, targetObject);
+            ChangeValuePreviewLabel(uxml, resultStr, result.HasValue);
             ValidationValueTypeAllFieldSelector(property, uxml, status, result);
         }
 
@@ -159,8 +159,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             SerializedProperty fieldSelectorProperty = args.SenderInspectorCustomizerSerializedProperty;
 
-            object value = UniversalDataManager.GetUniqueObject<object>((this, targetObject, property), UniversalDataManager.IdentifierNames.CalculateResult);
-            ValidationValueType(property, uxml, status, fieldSelectorProperty, value);
+            Optional<object> value = Optional<object>.None;
+            FieldChangeSetting fieldChangeSetting = property.managedReferenceValue as FieldChangeSetting;
+            if (UniversalDataManager.expressionResultCache.TryGetValue(fieldChangeSetting, out Optional<object> resultObj))
+            {
+                value = resultObj;
+            }
+            ValidationValueType(property, uxml, status, value, fieldSelectorProperty);
         }
 
         // ▲ イベントハンドラー ========================= ▲
@@ -176,20 +181,21 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private static readonly Regex BlankCharRegex = new(@"\s+", RegexOptions.Compiled);
 
-        private (bool success, object result, string resultStr) CalculateExpression(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
+        private (Optional<object> result, string resultStr) CalculateExpression(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
             string expressionString = UIQuery.Q<TextField>(uxml, UxmlNames.Expression).value;
-            if (string.IsNullOrWhiteSpace(expressionString)) { return (false, null, "式を入力してください。"); }
+            if (string.IsNullOrWhiteSpace(expressionString)) { return (Optional<object>.None, "式を入力してください。"); }
 
             List<ArgumentData> argumentDatas = GetArgumentList(property);
 
-            (bool success, FieldType valueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expressionString, argumentDatas);
+            (bool success, Type valueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expressionString, argumentDatas);
 
-            UpdateExpressionResultData(property, valueType, result);
+            var expressionResultCache = UniversalDataManager.expressionResultCache;
+            var fcs = (FieldChangeSetting)property.managedReferenceValue;
+            if (success) expressionResultCache[fcs] = OptionalHelper.Some(result);
+            else expressionResultCache[fcs] = Optional<object>.None;
 
-            UniversalDataManager.RegisterUniqueObject((this, targetObject, property), UniversalDataManager.IdentifierNames.CalculateResult, result);
-
-            return (success, result, result?.ToString() ?? "Null");
+            return (OptionalHelper.Some(result), result?.ToString() ?? "Null");
         }
 
         private static List<ArgumentData> GetArgumentList(SerializedProperty property)
@@ -215,13 +221,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return argumentDatas;
         }
 
-        private static void UpdateExpressionResultData(SerializedProperty property, FieldType resultValueType, object resultObj)
-        {
-            FieldChangeSetting fcs = (FieldChangeSetting)property.managedReferenceValue;
-            fcs.SetValue(resultObj, resultValueType);
-            property.serializedObject.Update();
-        }
-
         private static void ChangeValuePreviewLabel(VisualElement uxml, string newText, bool success)
         {
             Label u_ValuePreview = UIQuery.Q<Label>(uxml, UxmlNames.ValuePreview);
@@ -242,7 +241,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         }
 
 
-        private void ValidationValueTypeAllFieldSelector(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, object value)
+        private void ValidationValueTypeAllFieldSelector(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, Optional<object> value)
         {
             // List<MultiFieldSelectorContainer> の SerializedProperty
             SerializedProperty mfscListProperty = property.SafeFindPropertyRelative(nameof(FieldChangeSetting._TargetFields));
@@ -258,14 +257,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     // FieldSelector の SerializedProperty
                     SerializedProperty fsProperty = fsListProperty.GetArrayElementAtIndex(j);
                     // 代入値と代入先の型チェック
-                    ValidationValueType(property, uxml, status, fsProperty, value);
+                    ValidationValueType(property, uxml, status, value, fsProperty);
                 }
             }
         }
 
-        private void ValidationValueType(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedProperty fieldSelectorProperty, object value)
+        private void ValidationValueType(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, Optional<object> value, SerializedProperty fieldSelectorProperty)
         {
-            (bool isValid, Type expressionResultType, Type selectedFieldType) = ValidationTypeAssignable(property, fieldSelectorProperty, value);
+            (bool isValid, Type expressionResultType, Type selectedFieldType) = ValidationTypeAssignable(value, fieldSelectorProperty);
 
             string selectedFieldTypeFullName = selectedFieldType?.FullName ?? "Null";
             string expressionResultTypeFullName = expressionResultType?.FullName ?? "Null";
@@ -291,12 +290,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             OnFieldSelectorLogChangeRequestEventPublish(property, uxml, status, EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(fieldSelectorProperty), logMessage, logColor, fontStyle, null);
         }
 
-        private static (bool isValid, Type expressionResultType, Type selectedFieldType) ValidationTypeAssignable(SerializedProperty property, SerializedProperty fieldSelectorProperty, object value)
+        private static (bool isValid, Type expressionResultType, Type selectedFieldType) ValidationTypeAssignable(Optional<object> value, SerializedProperty fieldSelectorProperty)
         {
-            (bool GetVHValueTypeSuccess, Type expressionResultType) = EditorUtil.OtherUtil.GetValueHolderValueType<FieldChangeSetting>(property);
-            if (!GetVHValueTypeSuccess) expressionResultType = value?.GetType();
-
             Type selectFieldType = default;
+            Type expressionResultType = default;
 
             FieldSelector fieldSelector = fieldSelectorProperty.managedReferenceValue as FieldSelector;
             if (UniversalDataManager.selectFieldPropertyCache.TryGetValue(fieldSelector, out SerializedProperty selectFieldProperty))
@@ -310,6 +307,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     }
                 }
             }
+
+            if (value.HasValue) expressionResultType = value.Value?.GetType();
+            else return (false, null, selectFieldType);
 
             bool isValid = EditorUtil.OtherUtil.ValidationTypeAssignable(expressionResultType, selectFieldType);
             return (isValid, expressionResultType, selectFieldType);

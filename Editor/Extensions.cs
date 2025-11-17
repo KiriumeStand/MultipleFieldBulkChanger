@@ -128,7 +128,19 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             // プロパティのフィールド情報の取得を試みる
             // これで通常のフィールドと ManagedReference の型が取得できる
             FieldInfo fieldInfo = _fieldInfoAndTypeGetter.Invoke(property, out Type fieldType);
-            if (fieldInfo != null) return (true, fieldInfo.FieldType, "");
+            if (fieldInfo != null)
+            {
+                Type fieldInfoType = fieldInfo.FieldType;
+                var isArray = fieldInfoType.IsArray;
+                var isList = fieldInfoType.IsGenericType && fieldInfoType.GetGenericTypeDefinition() == typeof(List<>);
+                if (isArray || isList)
+                {
+                    // 配列かリストだった場合、要素の型を返す
+                    Type elementType = isList ? fieldInfoType.GetGenericArguments()[0] : fieldInfoType.GetElementType();
+                    return (true, elementType, "");
+                }
+                else return (true, fieldInfoType, "");
+            }
 
             // SerializedProperty.type の値( "PPtr<$hoge>" )と一致する名前を持つクラスをUnityのネイティブコンポーネントから探す
             string propertyTypeName = property.type;

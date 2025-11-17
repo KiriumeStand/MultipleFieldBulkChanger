@@ -49,6 +49,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             public static readonly string UnsubscribeAction = "UnsubscribeAction";
             public static readonly string EditorApplicationUpdateIdentifier = "EditorApplication.update";
             public static readonly string ArgumentData = "ArgumentData";
+            [Obsolete]
             public static readonly string CalculateResult = "CalculateResult";
         }
 
@@ -74,6 +75,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         // MARK: TODO メモリリーク直す
         public static readonly Dictionary<FieldSelector, SerializedProperty> selectFieldPropertyCache = new();
+        public static readonly Dictionary<FieldChangeSetting, Optional<object>> expressionResultCache = new();
 
         // ▲ SerializedProperty系 ========================= ▲
 
@@ -134,10 +136,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     {
         public string ArgumentName { get; set; } = "";
 
-        public object Value { get; set; } = null;
+        public Optional<object> Value { get; set; } = Optional<object>.None;
 
-        public FieldType ArgumentFieldType { get; set; } = FieldType.Generic;
+        public Type ArgumentType { get; set; } = null;
 
         public SerializedPropertyNumericType ArgumentSPNumericType { get; set; } = SerializedPropertyNumericType.Unknown;
+
+        public FieldSPType ArgumentFieldSPType => FieldSPTypeHelper.Parse2FieldSPType(ArgumentType);
     }
 }

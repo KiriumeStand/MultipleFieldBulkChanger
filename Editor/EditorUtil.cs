@@ -6,7 +6,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
-using System.Security.Policy;
 using System.Text.RegularExpressions;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using nadena.dev.ndmf;
@@ -34,7 +33,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 // 重複登録を防ぐため、一度削除してから追加
                 //Application.logMessageReceived -= HandleLog;
                 //Application.logMessageReceived += HandleLog;
-
                 Debug.Log("エディターログ監視を開始しました");
             }
             public static int testCounter { get; set; } = 0;
@@ -1128,9 +1126,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public static class OtherUtil
         {
-            public static FieldType Parse2FieldType(SerializedPropertyType spType) => (FieldType)spType;
-
-            public static SerializedPropertyType Parse2SerializedPropertyType(FieldType fieldType) => (SerializedPropertyType)fieldType;
+            public static SerializedPropertyType Parse2SerializedPropertyType(FieldSPType fieldSPType) => (SerializedPropertyType)fieldSPType;
 
             public static (bool success, Type type) GetValueHolderValueType<T>(SerializedProperty valueHolderProperty) where T : ValueHolderBase<T>, new()
             {
@@ -1150,7 +1146,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             private static readonly Regex BlankCharRegex = new(@"\s+", RegexOptions.Compiled);
 
-            public static (bool success, FieldType valueType, object result) CalculateExpression(string expressionString, List<ArgumentData> argumentDatas)
+            public static (bool success, Type valueType, object result) CalculateExpression(string expressionString, List<ArgumentData> argumentDatas)
             {
                 // 数式パーサー
                 Processor processor = new();
@@ -1161,7 +1157,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     expression = processor.Parse(expressionString);
                 }
-                catch (Exception ex) { return (false, FieldType.Generic, ex.Message); }
+                catch (Exception ex) { return (false, null, ex.Message); }
 
                 IEnumerable<Variable> needVariables = GetAllVariables(expression).GroupBy(x => x.Name).Select(x => x.First());
 
@@ -1172,16 +1168,18 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     // 該当する引数が無ければエラーを返す
                     string varibleNames = string.Join("', '", missingVariables.Select(x => x.Name));
-                    return (false, FieldType.Generic, $"引数'{varibleNames}'が設定されていません。");
+                    return (false, null, $"引数'{varibleNames}'が設定されていません。");
                 }
 
-                // 計算式に利用できるFieldTypeのリスト
-                FieldType[] allowCalcFieldType = new[] { FieldType.Integer, FieldType.Boolean, FieldType.Float, FieldType.String, FieldType.Vector2, FieldType.Vector3, FieldType.Vector4 };
-                // 計算式に利用できないArgumentFieldTypeのArgumentDataのリスト
+                // 計算式に利用できるFieldSPTypeのリスト
+                HashSet<FieldSPType> allowCalcFieldSPTypes = new() {
+                    FieldSPType.Integer, FieldSPType.Boolean, FieldSPType.Float, FieldSPType.String, FieldSPType.Color, FieldSPType.Enum,
+                    FieldSPType.Vector2, FieldSPType.Vector3, FieldSPType.Vector4, FieldSPType.Rect, FieldSPType.ArraySize, FieldSPType.Quaternion };
+                // 計算式に利用できないArgumentTypeのArgumentDataのリスト
                 IEnumerable<ArgumentData> notAllowCalcArgumentDatas = filteredArgumentDatas.Where(
-                    x => !allowCalcFieldType.Contains(x.ArgumentFieldType)
+                    x => !allowCalcFieldSPTypes.Contains(x.ArgumentFieldSPType)
                 );
-                // 計算式に利用できないArgumentFieldTypeのArgumentDataが存在するか確認
+                // 計算式に利用できないArgumentFieldSPTypeのArgumentDataが存在するか確認
                 if (notAllowCalcArgumentDatas.Count() > 0)
                 {
                     // 空白文字を削除した式文字列
@@ -1193,29 +1191,29 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                         // 計算式に利用できないデータを代入する場合の特殊処理
                         ArgumentData argumentData = notAllowCalcArgumentDatas.First();
-                        object valueObj = argumentData.Value;
+                        object valueObj = argumentData.Value.Value;
                         if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(valueObj))
                         {
-                            return (true, argumentData.ArgumentFieldType, null);
+                            return (true, argumentData.ArgumentType, null);
                         }
 
-                        return (true, argumentData.ArgumentFieldType, valueObj);
+                        return (true, argumentData.ArgumentType, valueObj);
                     }
                     else
                     {
                         // 計算式に利用できないデータを引数に指定しながら不正な代入式なら
                         string unityObjectTypeArgumentDataNames = string.Join("', '", notAllowCalcArgumentDatas.Select(x => x.ArgumentName));
-                        return (false, FieldType.Generic, $"引数'{unityObjectTypeArgumentDataNames}'は計算に使用できない値であり、代入式に計算を必要とする式を指定することはできません。\n単一の引数名のみを入力してください。(例:代入式 = 'x1')");
+                        return (false, null, $"引数'{unityObjectTypeArgumentDataNames}'は計算に使用できない値であり、代入式に計算を必要とする式を指定することはできません。\n単一の引数名のみを入力してください。(例:代入式 = 'x1')");
                     }
                 }
 
-                // ArgumentFieldTypeが使用できないタイプのArgumentDataのリスト
-                IEnumerable<ArgumentData> notAllowUseTypeArgumentDatas = filteredArgumentDatas.Where(x => !FieldTypeHelper.AllowToSelectableFieldType(x.ArgumentFieldType));
-                // ArgumentFieldTypeが使用できないタイプのArgumentDataが存在するか確認
+                // ArgumentFieldSPTypeが使用できないタイプのArgumentDataのリスト
+                IEnumerable<ArgumentData> notAllowUseTypeArgumentDatas = filteredArgumentDatas.Where(x => !FieldSPTypeHelper.AllowCalculateFieldSPType(x.ArgumentFieldSPType));
+                // ArgumentFieldSPTypeが使用できないタイプのArgumentDataが存在するか確認
                 if (notAllowUseTypeArgumentDatas.Count() > 0)
                 {
                     string notAllowUseTypeArgumentDataNames = string.Join("', '", notAllowUseTypeArgumentDatas.Select(x => x.ArgumentName));
-                    return (false, FieldType.Generic, $"引数'{notAllowUseTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
+                    return (false, null, $"引数'{notAllowUseTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
                 }
 
                 // ArgumentDataをParameterに変換
@@ -1228,47 +1226,42 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     result = expression.Execute(parameters);
                 }
-                catch (Exception ex) { return (false, FieldType.Generic, ex.Message); }
+                catch (Exception ex) { return (false, null, ex.Message); }
 
-                FieldType resultValueType;
                 object fixedResult = result;
                 switch (result)
                 {
-                    case bool: resultValueType = FieldType.Boolean; break;
-                    case double: resultValueType = FieldType.Float; break;
-                    case string: resultValueType = FieldType.String; break;
+                    case bool:
+                    case double:
+                    case string:
+                        break;
                     case NumberValue numberValue:
                         fixedResult = numberValue.Number;
-                        resultValueType = FieldType.Float;
                         break;
                     case VectorValue vectorValue:
                         switch (vectorValue.Size)
                         {
                             case 1:
                                 fixedResult = CustomCast<double>(vectorValue);
-                                resultValueType = FieldType.Float;
                                 break;
                             case 2:
                                 fixedResult = CustomCast<Vector2>(vectorValue);
-                                resultValueType = FieldType.Vector2;
                                 break;
                             case 3:
                                 fixedResult = CustomCast<Vector3>(vectorValue);
-                                resultValueType = FieldType.Vector3;
                                 break;
                             case 4:
                                 fixedResult = CustomCast<Vector4>(vectorValue);
-                                resultValueType = FieldType.Vector4;
                                 break;
                             default:
-                                return (false, FieldType.Generic, $"ベクトルの次元数`{vectorValue.Size}`が異常です。");
+                                return (false, null, $"ベクトルの次元数`{vectorValue.Size}`が異常です。");
                         }
                         break;
                     default:
-                        return (false, FieldType.Generic, $"不明な型が返されました。{fixedResult.GetType().Name}/{fixedResult}");
+                        return (false, null, $"不明な型が返されました。{fixedResult.GetType().Name}/{fixedResult}");
                 }
 
-                return (true, resultValueType, fixedResult);
+                return (true, fixedResult.GetType(), fixedResult);
             }
 
             private static IEnumerable<Variable> GetAllVariables(IExpression expression)
@@ -1337,39 +1330,34 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 List<Parameter> arguments = new();
                 foreach (ArgumentData argumentData in argumentDatas)
                 {
-                    switch (argumentData.ArgumentFieldType)
+                    switch (argumentData.ArgumentFieldSPType)
                     {
                         // 変数データを追加
-                        case FieldType.Boolean:
-                            bool? valueBool = (bool?)argumentData.Value;
-                            if (valueBool.HasValue)
-                                arguments.Add(new(argumentData.ArgumentName, valueBool.Value));
+                        case FieldSPType.Boolean:
+                            if (argumentData.Value.HasValue)
+                                arguments.Add(new(argumentData.ArgumentName, (bool)argumentData.Value.Value));
                             break;
-                        case FieldType.Integer:
-                        case FieldType.Float:
-                            string valueNumberStr = argumentData.Value?.ToString();
+                        case FieldSPType.Integer:
+                        case FieldSPType.Float:
+                            string valueNumberStr = argumentData.Value.Value.ToString();
                             if (double.TryParse(valueNumberStr, out double doubleValue))
                                 arguments.Add(new(argumentData.ArgumentName, doubleValue));
                             break;
-                        case FieldType.String:
-                            string valueStr = (string)argumentData.Value;
-                            if (valueStr != null)
-                                arguments.Add(new(argumentData.ArgumentName, valueStr));
+                        case FieldSPType.String:
+                            if (argumentData.Value.HasValue)
+                                arguments.Add(new(argumentData.ArgumentName, (string)argumentData.Value.Value));
                             break;
-                        case FieldType.Vector2:
-                            Vector2? valueVector2 = (Vector2?)argumentData.Value;
-                            if (valueVector2 != null)
-                                arguments.Add(new(argumentData.ArgumentName, CustomCast<VectorValue>(valueVector2)));
+                        case FieldSPType.Vector2:
+                        case FieldSPType.Vector3:
+                        case FieldSPType.Vector4:
+                        case FieldSPType.Rect:
+                        case FieldSPType.Color:
+                        case FieldSPType.Quaternion:
+                            arguments.Add(new(argumentData.ArgumentName, CustomCast<VectorValue>(argumentData.Value.Value)));
                             break;
-                        case FieldType.Vector3:
-                            Vector3? valueVector3 = (Vector3?)argumentData.Value;
-                            if (valueVector3 != null)
-                                arguments.Add(new(argumentData.ArgumentName, CustomCast<VectorValue>(valueVector3)));
-                            break;
-                        case FieldType.Vector4:
-                            Vector4? valueVector4 = (Vector4?)argumentData.Value;
-                            if (valueVector4 != null)
-                                arguments.Add(new(argumentData.ArgumentName, CustomCast<VectorValue>(valueVector4)));
+                        case FieldSPType.Enum:
+                            if (argumentData.Value.HasValue)
+                                arguments.Add(new(argumentData.ArgumentName, (int)argumentData.Value.Value));
                             break;
                         default:
                             break;
@@ -1398,13 +1386,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     if (assignType == null)
                     {
+                        // 代入先がEnum型なら代入不可
+                        if (targetType == typeof(Enum)) typeCheckResult = false;
                         // 代入先がnull許容型か確認
-                        typeCheckResult = !targetType.IsValueType || Nullable.GetUnderlyingType(targetType) != null;
+                        else typeCheckResult = !targetType.IsValueType || Nullable.GetUnderlyingType(targetType) != null;
                     }
                     else
                     {
                         typeCheckResult = targetType.IsAssignableFrom(assignType) ||
-                            CustomCastFuncDic.Any(x => assignType.IsAssignableFrom(x.AssignType) && x.TargetType.IsAssignableFrom(targetType));
+                            CustomCastFuncDic.Any(x => x.AssignType.IsAssignableFrom(assignType) && x.TargetType.IsAssignableFrom(targetType));
                     }
                 }
 
@@ -1425,10 +1415,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 else
                 {
-                    ITypeConverter converter = CustomCastFuncDic.FirstOrDefault(
-                        x => x.AssignType.IsAssignableFrom(assignValue.GetType()) && x.TargetType.IsAssignableFrom(targetType));
+                    Type assignValueType = assignValue.GetType();
 
-                    return converter?.DoConvert(assignValue, assignValue.GetType(), targetType);
+                    // そのまま代入できるなら
+                    if (targetType.IsAssignableFrom(assignValueType)) return assignValue;
+
+                    ITypeConverter converter = CustomCastFuncDic.FirstOrDefault(
+                        x => x.AssignType.IsAssignableFrom(assignValueType) && x.TargetType.IsAssignableFrom(targetType));
+
+                    return converter?.DoConvert(assignValue, assignValueType, targetType);
                 }
             }
 
@@ -1454,6 +1449,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 new TypeConverter<float, byte>((v) => (byte)v),
                 new TypeConverter<double, byte>((v) => (byte)v),
 
+                new TypeConverter<byte, short>((v) => v),
+                new TypeConverter<sbyte, short>((v) => v),
                 new TypeConverter<ushort, short>((v) => (short)v),
                 new TypeConverter<int, short>((v) => (short)v),
                 new TypeConverter<uint, short>((v) => (short)v),
@@ -1462,6 +1459,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 new TypeConverter<float, short>((v) => (short)v),
                 new TypeConverter<double, short>((v) => (short)v),
 
+                new TypeConverter<byte, ushort>((v) => v),
                 new TypeConverter<sbyte, ushort>((v) => (ushort)v),
                 new TypeConverter<short, ushort>((v) => (ushort)v),
                 new TypeConverter<int, ushort>((v) => (ushort)v),
@@ -1471,32 +1469,65 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 new TypeConverter<float, ushort>((v) => (ushort)v),
                 new TypeConverter<double, ushort>((v) => (ushort)v),
 
+                new TypeConverter<byte, int>((v) => v),
+                new TypeConverter<sbyte, int>((v) => v),
+                new TypeConverter<short, int>((v) => v),
+                new TypeConverter<ushort, int>((v) => v),
                 new TypeConverter<uint, int>((v) => (int)v),
                 new TypeConverter<long, int>((v) => (int)v),
                 new TypeConverter<ulong, int>((v) => (int)v),
                 new TypeConverter<float, int>((v) => (int)v),
                 new TypeConverter<double, int>((v) => (int)v),
 
+                new TypeConverter<byte, uint>((v) => v),
                 new TypeConverter<sbyte, uint>((v) => (uint)v),
                 new TypeConverter<short, uint>((v) => (uint)v),
+                new TypeConverter<ushort, uint>((v) => v),
                 new TypeConverter<int, uint>((v) => (uint)v),
                 new TypeConverter<long, uint>((v) => (uint)v),
                 new TypeConverter<ulong, uint>((v) => (uint)v),
                 new TypeConverter<float, uint>((v) => (uint)v),
                 new TypeConverter<double, uint>((v) => (uint)v),
 
+                new TypeConverter<byte, long>((v) => v),
+                new TypeConverter<sbyte, long>((v) => v),
+                new TypeConverter<short, long>((v) => v),
+                new TypeConverter<ushort, long>((v) => v),
+                new TypeConverter<int, long>((v) => v),
+                new TypeConverter<uint, long>((v) => v),
                 new TypeConverter<ulong, long>((v) => (long)v),
                 new TypeConverter<float, long>((v) => (long)v),
                 new TypeConverter<double, long>((v) => (long)v),
 
+                new TypeConverter<byte, ulong>((v) => v),
                 new TypeConverter<sbyte, ulong>((v) => (ulong)v),
                 new TypeConverter<short, ulong>((v) => (ulong)v),
+                new TypeConverter<ushort, ulong>((v) => v),
                 new TypeConverter<int, ulong>((v) => (ulong)v),
+                new TypeConverter<uint, ulong>((v) => v),
                 new TypeConverter<long, ulong>((v) => (ulong)v),
                 new TypeConverter<float, ulong>((v) => (ulong)v),
                 new TypeConverter<double, ulong>((v) => (ulong)v),
 
+                new TypeConverter<byte, float>((v) => v),
+                new TypeConverter<sbyte, float>((v) => v),
+                new TypeConverter<short, float>((v) => v),
+                new TypeConverter<ushort, float>((v) => v),
+                new TypeConverter<int, float>((v) => v),
+                new TypeConverter<uint, float>((v) => v),
+                new TypeConverter<long, float>((v) => v),
+                new TypeConverter<ulong, float>((v) => v),
                 new TypeConverter<double, float>((v) => (float)v),
+
+                new TypeConverter<byte, double>((v) => v),
+                new TypeConverter<sbyte, double>((v) => v),
+                new TypeConverter<short, double>((v) => v),
+                new TypeConverter<ushort, double>((v) => v),
+                new TypeConverter<int, double>((v) => v),
+                new TypeConverter<uint, double>((v) => v),
+                new TypeConverter<long, double>((v) => v),
+                new TypeConverter<ulong, double>((v) => v),
+                new TypeConverter<float, double>((v) => (double)v),
 
                 new TypeConverter<sbyte, string>((v) => v.ToString()),
                 new TypeConverter<byte, string>((v) => v.ToString()),
@@ -1515,7 +1546,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 new TypeConverter<byte, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
                 new TypeConverter<short, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
                 new TypeConverter<ushort, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
-                new TypeConverter<int, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<int, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, v)),
                 new TypeConverter<uint, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
                 new TypeConverter<long, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
                 new TypeConverter<ulong, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
@@ -1533,19 +1564,42 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 new TypeConverter<Enum, float>((v) => Convert.ToSingle(v)),
                 new TypeConverter<Enum, double>((v) => Convert.ToDouble(v)),
 
+                new TypeConverter<Vector2Int,Vector2>((v) => v),
+                new TypeConverter<Vector2,Vector2Int>((v) => new((int)v[0], (int)v[1])),
 
-                new TypeConverter<Vector4, Quaternion>((v) => new(v[0],v[1],v[2],v[3])),
-                new TypeConverter<Quaternion, Vector4>((v) => new(v[0],v[1],v[2],v[3])),
+                new TypeConverter<Vector3Int,Vector3>((v) => v),
+                new TypeConverter<Vector3,Vector3Int>((v) => new((int)v[0], (int)v[1], (int)v[2])),
+
+                new TypeConverter<Quaternion, Vector4>((v) => new(v[0], v[1], v[2], v[3])),
+                new TypeConverter<Rect, Vector4>((v) => new(v.x, v.y, v.width, v.height)),
+                new TypeConverter<RectInt, Vector4>((v) => new(v.x, v.y, v.width, v.height)),
+                new TypeConverter<Color, Vector4>((v) => new(v[0], v[1], v[2], v[3])),
+
+                new TypeConverter<Vector4,Quaternion>((v) => new(v[0], v[1], v[2], v[3])),
+                new TypeConverter<Vector4,Rect>((v) => new(v[0], v[1], v[2], v[3])),
+                new TypeConverter<Vector4,RectInt>((v) => new((int)v[0], (int)v[1], (int)v[2], (int)v[3])),
+                new TypeConverter<Vector4,Color>((v) => new(v[0], v[1], v[2], v[3])),
+
+                new TypeConverter<BoundsInt,Bounds>((v) => new(v.center, v.size)),
+                new TypeConverter<Bounds,BoundsInt>((v) => new(CustomCast<Vector3Int>(v.min), CustomCast<Vector3Int>(v.size))),
+
 
                 new TypeConverter<double, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v) })),
                 new TypeConverter<Vector2, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]) })),
                 new TypeConverter<Vector3, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]), new(v[2]) })),
                 new TypeConverter<Vector4, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]), new(v[2]), new(v[3]) })),
+                new TypeConverter<Vector4, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]), new(v[2]), new(v[3]) })),
+                new TypeConverter<Quaternion, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]), new(v[2]), new(v[3]) })),
+                new TypeConverter<Color, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]), new(v[2]), new(v[3]) })),
+                new TypeConverter<Rect, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v.x), new(v.y), new(v.width), new(v.height) })),
 
                 new TypeConverter<VectorValue, double>((v) => (float)v[0].Number),
-                new TypeConverter<VectorValue, Vector2>((v) => new Vector2((float)v[0].Number, (float)v[1].Number)),
-                new TypeConverter<VectorValue, Vector3>((v) => new Vector3((float)v[0].Number, (float)v[1].Number, (float)v[2].Number)),
-                new TypeConverter<VectorValue, Vector4>((v) => new Vector4((float)v[0].Number, (float)v[1].Number, (float)v[2].Number, (float)v[3].Number)),
+                new TypeConverter<VectorValue, Vector2>((v) => new((float)v[0].Number, (float)v[1].Number)),
+                new TypeConverter<VectorValue, Vector3>((v) => new((float)v[0].Number, (float)v[1].Number, (float)v[2].Number)),
+                new TypeConverter<VectorValue, Vector4>((v) => new((float)v[0].Number, (float)v[1].Number, (float)v[2].Number, (float)v[3].Number)),
+                new TypeConverter<VectorValue, Quaternion>((v) => new((float)v[0].Number, (float)v[1].Number, (float)v[2].Number, (float)v[3].Number)),
+                new TypeConverter<VectorValue, Color>((v) => new((float)v[0].Number, (float)v[1].Number, (float)v[2].Number, (float)v[3].Number)),
+                new TypeConverter<VectorValue, Rect>((v) => new((float)v[0].Number, (float)v[1].Number, (float)v[2].Number, (float)v[3].Number)),
             };
 
             private interface ITypeConverter
@@ -1586,58 +1640,29 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     else throw new Exception("TypeConverter.DoConvert()を実行中にエラーが発生しました。");
                 }
             }
+
+            public static Optional<object> GetSelectPathValue(Object unityObj, string propertyPath)
+            {
+                SerializedProperty selectSP = GetSelectPathSerializedProperty(unityObj, propertyPath);
+                if (selectSP == null)
+                {
+                    return Optional<object>.None;
+                }
+                return OptionalHelper.Some(selectSP.boxedValue);
+            }
+
+            public static SerializedProperty GetSelectPathSerializedProperty(Object unityObj, string propertyPath)
+            {
+                SerializedObject so = new(unityObj);
+                if (so != null && !string.IsNullOrWhiteSpace(propertyPath))
+                {
+                    return so.FindProperty(propertyPath);
+                }
+                return null;
+            }
         }
+
 
         // ▲ その他 ========================= ▲
     }
-
-    //public class ToNumberExpression : UnaryExpression
-    //{
-    //    public ToNumberExpression(IExpression expression) : base(expression)
-    //    { }
-    //
-    //    public ToNumberExpression(double expression) : base(new Number(expression))
-    //    { }
-    //
-    //    public override object Execute(ExpressionParameters? parameters)
-    //    {
-    //        object result = Argument.Execute(parameters);
-    //        return result;
-    //    }
-    //
-    //    protected override TResult AnalyzeInternal<TResult>(IAnalyzer<TResult> analyzer)
-    //        => analyzer.Analyze(this);
-    //
-    //    protected override TResult AnalyzeInternal<TResult, TContext>(
-    //        IAnalyzer<TResult, TContext> analyzer,
-    //        TContext context)
-    //        => analyzer.Analyze(this, context);
-    //
-    //    public override IExpression Clone(IExpression? argument = null)
-    //        => new ToNumberExpression(argument ?? Argument);
-    //}
-    //
-    //public class UserFunctionEx : UserFunction
-    //{
-    //    public UserFunctionEx(string function, IEnumerable<object> arguments)
-    //    : base(function, ParseArguments(arguments))
-    //    { }
-    //
-    //    private static IEnumerable<IExpression> ParseArguments(IEnumerable<object> arguments)
-    //    {
-    //        List<IExpression> parsedArguments = new();
-    //        foreach (object argument in arguments)
-    //        {
-    //            if (argument is double doubleArg)
-    //            {
-    //                parsedArguments.Add(new Number(doubleArg));
-    //            }
-    //            else if (argument is IExpression iExpressionArg)
-    //            {
-    //                parsedArguments.Add(iExpressionArg);
-    //            }
-    //        }
-    //        return parsedArguments;
-    //    }
-    //}
 }

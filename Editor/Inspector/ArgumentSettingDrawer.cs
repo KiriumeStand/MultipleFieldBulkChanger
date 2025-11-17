@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -14,18 +13,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     public class ArgumentSettingDrawer : ExpansionPropertyDrawer
     {
         private static readonly string _fieldSelectorPath = $"{nameof(ArgumentSetting._SourceField)}.{nameof(SingleFieldSelectorContainer._FieldSelector)}";
-        private static readonly string _fieldSelectorOriginalFieldTypePath = $"{_fieldSelectorPath}.{nameof(FieldSelector._OriginalFieldType)}";
-        private static readonly string _fieldSelectorOriginalBoolValuePath = $"{_fieldSelectorPath}.{nameof(FieldSelector._OriginalBoolValue)}";
-        private static readonly string _fieldSelectorOriginalNumberValuePath = $"{_fieldSelectorPath}.{nameof(FieldSelector._OriginalNumberValue)}";
-        private static readonly string _fieldSelectorOriginalStringValuePath = $"{_fieldSelectorPath}.{nameof(FieldSelector._OriginalStringValue)}";
-        private static readonly string _fieldSelectorOriginalColorValuePath = $"{_fieldSelectorPath}.{nameof(FieldSelector._OriginalColorValue)}";
-        private static readonly string _fieldSelectorOriginalObjectValuePath = $"{_fieldSelectorPath}.{nameof(FieldSelector._OriginalObjectValue)}";
-        private static readonly string _fieldSelectorOriginalVector2ValuePath = $"{_fieldSelectorPath}.{nameof(FieldSelector._OriginalVector2Value)}";
-        private static readonly string _fieldSelectorOriginalVector3ValuePath = $"{_fieldSelectorPath}.{nameof(FieldSelector._OriginalVector3Value)}";
-        private static readonly string _fieldSelectorOriginalVector4ValuePath = $"{_fieldSelectorPath}.{nameof(FieldSelector._OriginalVector4Value)}";
-        private static readonly string _fieldSelectorOriginalBoundsValuePath = $"{_fieldSelectorPath}.{nameof(FieldSelector._OriginalBoundsValue)}";
-        private static readonly string _fieldSelectorOriginalCurveValuePath = $"{_fieldSelectorPath}.{nameof(FieldSelector._OriginalCurveValue)}";
-        private static readonly string _fieldSelectorOriginalGradientValuePath = $"{_fieldSelectorPath}.{nameof(FieldSelector._OriginalGradientValue)}";
+        private static readonly string _fsSelectFieldPathPath = $"{_fieldSelectorPath}.{nameof(FieldSelector._SelectFieldPath)}";
 
 
         public ArgumentSettingDrawer() : base() { }
@@ -37,7 +25,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             Toggle u_IsReferenceMode = BindHelper.BindRelative<Toggle>(uxml, UxmlNames.IsReferenceMode, property, nameof(ArgumentSetting._IsReferenceMode));
             EnumField u_InputtableArgumentType = BindHelper.BindRelative<EnumField>(uxml, UxmlNames.InputtableArgumentType, property, nameof(ArgumentSetting._InputtableArgumentType));
-            EnumField u_ReferenceArgumentType = BindHelper.BindRelative<EnumField>(uxml, UxmlNames.ReferenceArgumentType, property, _fieldSelectorOriginalFieldTypePath);
+            EnumField u_ReferenceArgumentType = UIQuery.Q<EnumField>(uxml, UxmlNames.ReferenceArgumentType);
             TextField u_ArgumentName = BindHelper.BindRelative<TextField>(uxml, UxmlNames.ArgumentName, property, nameof(ArgumentSetting._ArgumentName));
 
             VisualElement u_InputtableValueSettingContainer = UIQuery.Q<VisualElement>(uxml, UxmlNames.InputtableValueSettingContainer);
@@ -59,23 +47,23 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             PropertyField u_SourceField = BindHelper.BindRelative<PropertyField>(uxml, UxmlNames.SourceField, property, nameof(ArgumentSetting._SourceField));
 
-            Toggle u_ReferenceBoolValueField = BindHelper.BindRelative<Toggle>(uxml, UxmlNames.ReferenceFields.BoolValueField, property, _fieldSelectorOriginalBoolValuePath);
-            DoubleField u_ReferenceNumberValueField = BindHelper.BindRelative<DoubleField>(uxml, UxmlNames.ReferenceFields.NumberValueField, property, _fieldSelectorOriginalNumberValuePath);
-            TextField u_ReferenceStringValueField = BindHelper.BindRelative<TextField>(uxml, UxmlNames.ReferenceFields.StringValueField, property, _fieldSelectorOriginalStringValuePath);
-            ColorField u_ReferenceColorValueField = BindHelper.BindRelative<ColorField>(uxml, UxmlNames.ReferenceFields.ColorValueField, property, _fieldSelectorOriginalColorValuePath);
-            ObjectField u_ReferenceObjectValueField = BindHelper.BindRelative<ObjectField>(uxml, UxmlNames.ReferenceFields.ObjectValueField, property, _fieldSelectorOriginalObjectValuePath);
-            Vector2Field u_ReferenceVector2ValueField = BindHelper.BindRelative<Vector2Field>(uxml, UxmlNames.ReferenceFields.Vector2ValueField, property, _fieldSelectorOriginalVector2ValuePath);
-            Vector3Field u_ReferenceVector3ValueField = BindHelper.BindRelative<Vector3Field>(uxml, UxmlNames.ReferenceFields.Vector3ValueField, property, _fieldSelectorOriginalVector3ValuePath);
-            Vector4Field u_ReferenceVector4ValueField = BindHelper.BindRelative<Vector4Field>(uxml, UxmlNames.ReferenceFields.Vector4ValueField, property, _fieldSelectorOriginalVector4ValuePath);
-            BoundsField u_ReferenceBoundsValueField = BindHelper.BindRelative<BoundsField>(uxml, UxmlNames.ReferenceFields.BoundsValueField, property, _fieldSelectorOriginalBoundsValuePath);
-            CurveField u_ReferenceCurveValueField = BindHelper.BindRelative<CurveField>(uxml, UxmlNames.ReferenceFields.CurveValueField, property, _fieldSelectorOriginalCurveValuePath);
-            GradientField u_ReferenceGradientValueField = BindHelper.BindRelative<GradientField>(uxml, UxmlNames.ReferenceFields.GradientValueField, property, _fieldSelectorOriginalGradientValuePath);
+            Toggle u_ReferenceBoolValueField = UIQuery.Q<Toggle>(uxml, UxmlNames.ReferenceFields.BoolValueField);
+            DoubleField u_ReferenceNumberValueField = UIQuery.Q<DoubleField>(uxml, UxmlNames.ReferenceFields.NumberValueField);
+            TextField u_ReferenceStringValueField = UIQuery.Q<TextField>(uxml, UxmlNames.ReferenceFields.StringValueField);
+            ColorField u_ReferenceColorValueField = UIQuery.Q<ColorField>(uxml, UxmlNames.ReferenceFields.ColorValueField);
+            ObjectField u_ReferenceObjectValueField = UIQuery.Q<ObjectField>(uxml, UxmlNames.ReferenceFields.ObjectValueField);
+            Vector2Field u_ReferenceVector2ValueField = UIQuery.Q<Vector2Field>(uxml, UxmlNames.ReferenceFields.Vector2ValueField);
+            Vector3Field u_ReferenceVector3ValueField = UIQuery.Q<Vector3Field>(uxml, UxmlNames.ReferenceFields.Vector3ValueField);
+            Vector4Field u_ReferenceVector4ValueField = UIQuery.Q<Vector4Field>(uxml, UxmlNames.ReferenceFields.Vector4ValueField);
+            BoundsField u_ReferenceBoundsValueField = UIQuery.Q<BoundsField>(uxml, UxmlNames.ReferenceFields.BoundsValueField);
+            CurveField u_ReferenceCurveValueField = UIQuery.Q<CurveField>(uxml, UxmlNames.ReferenceFields.CurveValueField);
+            GradientField u_ReferenceGradientValueField = UIQuery.Q<GradientField>(uxml, UxmlNames.ReferenceFields.GradientValueField);
 
             Label u_ReferenceInvalidValueLabel = UIQuery.Q<Label>(uxml, UxmlNames.ReferenceFields.InvalidValueLabel);
 
 
             u_InputtableArgumentType.Init(SelectableFieldType.Number);
-            u_ReferenceArgumentType.Init(SelectableFieldType.Number);
+            u_ReferenceArgumentType.Init(FieldSPType.Float);
 
 
             EditorUtil.VisualElementHelper.SetEnableds(
@@ -229,22 +217,29 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             string argumentName = property.SafeFindPropertyRelative(nameof(ArgumentSetting._ArgumentName)).stringValue;
             bool isReferenceMode = property.SafeFindPropertyRelative(nameof(ArgumentSetting._IsReferenceMode)).boolValue;
             SelectableFieldType inputtableArgumentSelectableType = (SelectableFieldType)property.SafeFindPropertyRelative(nameof(ArgumentSetting._InputtableArgumentType)).enumValueFlag;
-            FieldType inputtableArgumentType = inputtableArgumentSelectableType.ToFieldType();
-            FieldType referenceArgumentType = (FieldType)property.SafeFindPropertyRelative(_fieldSelectorOriginalFieldTypePath).enumValueFlag;
+            FieldSPType inputtableArgumentFieldSPType = inputtableArgumentSelectableType.ToFieldSPType();
+
+            (object selectFieldValue, Type referenceArgumentType) = GetSelectFieldValueAndType(property);
 
             ArgumentSetting argumentSetting = (ArgumentSetting)property.managedReferenceValue;
-            FieldSelector fieldSelector = (FieldSelector)property.SafeFindPropertyRelative(_fieldSelectorPath).managedReferenceValue;
 
+            FieldSPType referenceArgumentFieldSPType = FieldSPType.Generic;
+            if (referenceArgumentType != null)
+            {
+                referenceArgumentFieldSPType = FieldSPTypeHelper.Parse2FieldSPType(referenceArgumentType);
+            }
 
             // デフォルトでは非表示のものが多いので適切に表示設定
             UpdateSettingContainerDisplaySettings(property, uxml, isReferenceMode);
-            UpdateValueFieldsDisplaySettings(property, uxml, argumentSetting.InputtableValue, inputtableArgumentType, false);
-            UpdateValueFieldsDisplaySettings(property, uxml, fieldSelector.Value, referenceArgumentType, true);
+            UpdateValueFieldsDisplaySettings(property, uxml, argumentSetting.InputtableValue, inputtableArgumentFieldSPType, false);
+            UpdateValueFieldsDisplaySettings(property, uxml, selectFieldValue, referenceArgumentFieldSPType, true);
+            UpdateReferenceArgumentTypeField(uxml, referenceArgumentFieldSPType);
+            UpdateReferenceValueFields(uxml, selectFieldValue, referenceArgumentFieldSPType);
 
-            FieldType currentArgumentType = isReferenceMode ? referenceArgumentType : inputtableArgumentType;
+            Type currentArgumentType = isReferenceMode ? referenceArgumentType : FieldSPTypeHelper.Parse2Type(inputtableArgumentFieldSPType);
             GetCurrentArgumentValueAndUpdateArgumentDatasDictionary(
                 property, uxml, targetObject, status,
-                argumentName, currentArgumentType, isReferenceMode, true);
+                OptionalHelper.Some(argumentName), OptionalHelper.Some(currentArgumentType), isReferenceMode);
         }
 
         // ▲ 初期化定義 ========================= ▲
@@ -260,17 +255,31 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <param name="property"></param>
         private void OnArgumentSettingIsReferenceModeChangedEventHandler(FieldValueChangedEventArgs<bool> args, SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status, string propertyInstancePath)
         {
-            UpdateSettingContainerDisplaySettings(property, uxml, args.NewValue);
-
             bool isReferenceMode = args.NewValue;
-            FieldType valueType = GetCurrentArgumentValueType(property, isReferenceMode);
+            Type valueType;
+            if (isReferenceMode)
+            {
+                (object selectFieldValue, Type selectFieldType) = GetSelectFieldValueAndType(property);
+                valueType = selectFieldType;
+                FieldSPType valueFieldSPType = FieldSPTypeHelper.Parse2FieldSPType(valueType);
+                UpdateReferenceArgumentTypeField(uxml, valueFieldSPType);
+                UpdateReferenceValueFields(uxml, selectFieldValue, valueFieldSPType);
+            }
+            else
+            {
+                SelectableFieldType selectableFieldType = (SelectableFieldType)property.SafeFindPropertyRelative(nameof(ArgumentSetting._InputtableArgumentType)).enumValueFlag;
+                valueType = SelectableFieldTypeHelper.ToType(selectableFieldType);
+            }
+
+            UpdateSettingContainerDisplaySettings(property, uxml, isReferenceMode);
+
             GetCurrentArgumentValueAndUpdateArgumentDatasDictionary(
                 property, uxml, targetObject, status,
-                null, valueType, isReferenceMode, true);
+                Optional<string>.None, OptionalHelper.Some(valueType), isReferenceMode);
         }
 
         /// <summary>
-        /// 非参照モードの引数のタイプが変更された場合
+        /// 非参照モードの引数の型が変更された場合
         /// </summary>
         /// <param name="args"></param>
         /// <param name="property"></param>
@@ -279,12 +288,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (args.NewValue != null)
             {
                 SelectableFieldType newValue = (SelectableFieldType)args.NewValue;
-                FieldType newFieldType = newValue.ToFieldType();
-                UpdateValueFieldsDisplaySettings(property, uxml, newValue, newFieldType, false);
+                FieldSPType newFieldSPType = newValue.ToFieldSPType();
+                UpdateValueFieldsDisplaySettings(property, uxml, newValue, newFieldSPType, false);
 
+                Type newType = newValue.ToType();
                 GetCurrentArgumentValueAndUpdateArgumentDatasDictionary(
                     property, uxml, targetObject, status,
-                    null, newFieldType, null, true);
+                    Optional<string>.None, OptionalHelper.Some(newType), null);
             }
         }
 
@@ -295,15 +305,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <param name="property"></param>
         private void OnArgumentSettingArgumentNameChangedEventHandler(FieldValueChangedEventArgs<string> args, SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
-            UpdateArgumentDatasDictionary(property, uxml, targetObject, status, args.NewValue, null, null, false);
+            UpdateArgumentDatasDictionary(property, uxml, targetObject, status, OptionalHelper.Some(args.NewValue), Optional<Type>.None, Optional<object>.None);
         }
 
         private void OnArgumentSettingValueFieldChangedEventHandler<T1>(
             FieldValueChangedEventArgs<T1> args, SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status
         )
         {
-            SelectableFieldType selectableFieldType = FieldTypeHelper.GetFieldType<T1>().ToSelectableFieldType();
-            TryUpdateArgumentValueDictionaryFromInputtableValue(property, uxml, targetObject, status, selectableFieldType, args.NewValue);
+            TryUpdateArgumentValueDictionaryFromInputtableValue(property, uxml, targetObject, status, typeof(T1), args.NewValue);
         }
 
         private void OnSelectedFieldSerializedPropertyUpdateEventHandler(SelectedFieldSerializedPropertyUpdateEventArgs args, SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
@@ -324,8 +333,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             SerializedProperty fieldSelectorProperty = property.FindPropertyRelative($"{nameof(ArgumentSetting._SourceField)}.{nameof(SingleFieldSelectorContainer._FieldSelector)}");
             if (fieldSelectorProperty == null) return;
 
-            FieldSelector targetFieldSelector = EditorUtil.SerializedObjectUtil.GetTargetObject(fieldSelectorProperty) as FieldSelector;
-            if (targetFieldSelector == null) return;
+            if (EditorUtil.SerializedObjectUtil.GetTargetObject(fieldSelectorProperty) is not FieldSelector targetFieldSelector) return;
 
             UniversalDataManager.selectFieldPropertyCache.TryGetValue(targetFieldSelector, out SerializedProperty selectedFieldProperty);
             if (selectedFieldProperty == null) return;
@@ -350,34 +358,78 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private void GetCurrentArgumentValueAndUpdateArgumentDatasDictionary(
             SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status,
-            string argumentName, FieldType argumentType, bool? isReferenceMode, bool valueForceUpdate = false)
+             Optional<string> argumentName, Optional<Type> argumentType, bool? isReferenceMode)
         {
-            object value = GetCurrentArgumentValue(property, argumentType, isReferenceMode);
+            object value = GetCurrentArgumentValue(property, isReferenceMode);
             // 引数DBに登録
-            UpdateArgumentDatasDictionary(property, uxml, targetObject, status, argumentName, argumentType, value, valueForceUpdate);
+            UpdateArgumentDatasDictionary(property, uxml, targetObject, status, argumentName, argumentType, OptionalHelper.Some(value));
         }
 
-        private object GetCurrentArgumentValue(SerializedProperty property, FieldType? valueType = null, bool? isReferenceMode = null)
+        private object GetCurrentArgumentValue(SerializedProperty property, bool? isReferenceMode = null)
         {
-            ArgumentSetting argumentSetting = (ArgumentSetting)property.managedReferenceValue;
-            return argumentSetting.Value;
-        }
-
-        private FieldType GetCurrentArgumentValueType(SerializedProperty property, bool isReferenceMode)
-        {
-            FieldType valueType;
-
-            if (isReferenceMode)
+            if (!isReferenceMode.HasValue)
             {
-                valueType = (FieldType)property.SafeFindPropertyRelative(_fieldSelectorOriginalFieldTypePath).enumValueFlag;
+                isReferenceMode = property.SafeFindPropertyRelative(nameof(ArgumentSetting._IsReferenceMode)).boolValue;
+            }
+
+            if (isReferenceMode.Value)
+            {
+                SerializedProperty selectFieldSP = GetSelectObjectFieldProperty(property);
+                return selectFieldSP?.boxedValue;
             }
             else
             {
                 SelectableFieldType selectableFieldType = (SelectableFieldType)property.SafeFindPropertyRelative(nameof(ArgumentSetting._InputtableArgumentType)).enumValueFlag;
-                valueType = selectableFieldType.ToFieldType();
-            }
 
-            return valueType;
+                string inputtableValuePath = selectableFieldType switch
+                {
+                    SelectableFieldType.Boolean => nameof(ArgumentSetting._InputtableBoolValue),
+                    SelectableFieldType.Number => nameof(ArgumentSetting._InputtableNumberValue),
+                    SelectableFieldType.String => nameof(ArgumentSetting._InputtableStringValue),
+                    SelectableFieldType.Color => nameof(ArgumentSetting._InputtableColorValue),
+                    SelectableFieldType.UnityObject => nameof(ArgumentSetting._InputtableObjectValue),
+                    SelectableFieldType.Vector2 => nameof(ArgumentSetting._InputtableVector2Value),
+                    SelectableFieldType.Vector3 => nameof(ArgumentSetting._InputtableVector3Value),
+                    SelectableFieldType.Vector4 => nameof(ArgumentSetting._InputtableVector4Value),
+                    SelectableFieldType.Bounds => nameof(ArgumentSetting._InputtableBoundsValue),
+                    SelectableFieldType.Curve => nameof(ArgumentSetting._InputtableCurveValue),
+                    SelectableFieldType.Gradient => nameof(ArgumentSetting._InputtableGradientValue),
+                    var _ => "",
+                };
+
+                if (string.IsNullOrWhiteSpace(inputtableValuePath)) return null;
+                return property.SafeFindPropertyRelative(inputtableValuePath).boxedValue;
+            }
+        }
+
+        private (object selectFieldValue, Type selectFieldType) GetSelectFieldValueAndType(SerializedProperty property)
+        {
+            Type selectFieldType = null;
+            object selectFieldValue = null;
+
+            SerializedProperty selectFieldSP = GetSelectObjectFieldProperty(property);
+            if (selectFieldSP != null)
+            {
+                (bool success, Type type, string errorLog) = selectFieldSP.GetFieldType();
+                if (success)
+                {
+                    selectFieldType = type;
+                }
+                selectFieldValue = selectFieldSP.boxedValue;
+            }
+            return (selectFieldValue, selectFieldType);
+        }
+
+        private SerializedProperty GetSelectObjectFieldProperty(SerializedProperty property)
+        {
+            UnityEngine.Object selectObj = property.SafeFindPropertyRelative($"{nameof(ArgumentSetting._SourceField)}.{nameof(SingleFieldSelectorContainer._SelectObject)}").objectReferenceValue;
+            string selectFieldPath = property.SafeFindPropertyRelative(_fsSelectFieldPathPath).stringValue;
+
+            if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
+            {
+                return EditorUtil.OtherUtil.GetSelectPathSerializedProperty(selectObj, selectFieldPath);
+            }
+            return null;
         }
 
         /// <summary>
@@ -410,13 +462,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             property.serializedObject.ApplyModifiedProperties();
         }
 
-        private void TryUpdateArgumentValueDictionaryFromInputtableValue(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status, SelectableFieldType argumentType, object value)
+        private void TryUpdateArgumentValueDictionaryFromInputtableValue(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status, Type argumentType, object value)
         {
-            if (IsTargetInputtableValueFieldActive(property, argumentType))
+            if (IsTargetInputtableValueFieldActive(property, SelectableFieldTypeHelper.Parse2SelectableFieldType(argumentType)))
             {
                 // 更新したい値の型の入力可能フィールドが有効なら
-                FieldType argumentFieldType = argumentType.ToFieldType();
-                UpdateArgumentDatasDictionary(property, uxml, targetObject, status, null, argumentFieldType, value, true);
+                UpdateArgumentDatasDictionary(property, uxml, targetObject, status, Optional<string>.None, OptionalHelper.Some(argumentType), OptionalHelper.Some(value));
             }
         }
 
@@ -430,84 +481,28 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private void SelectedPropertyValueUpdate(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status, SerializedProperty selectedFieldProperty)
         {
-            FieldType selectedFieldValueType;
-            object selectedFieldValue;
-            if (selectedFieldProperty == null)
-            {
-                (selectedFieldValueType, selectedFieldValue) = (FieldType.Generic, null);
-            }
-            else
-            {
-                selectedFieldValueType = EditorUtil.OtherUtil.Parse2FieldType(selectedFieldProperty.propertyType);
-                selectedFieldValue = EditorUtil.SerializedObjectUtil.GetPropertyValue(selectedFieldProperty);
-            }
-
             bool isReferenceMode = property.SafeFindPropertyRelative(nameof(ArgumentSetting._IsReferenceMode)).boolValue;
             if (isReferenceMode)
             {
-                bool anyChanged = UpdateArgumentDatasDictionary(property, uxml, targetObject, status, null, selectedFieldValueType, selectedFieldValue, true);
+                Type selectedFieldValueType = null;
+                object selectedFieldValue = null;
+                if (selectedFieldProperty != null)
+                {
+                    (bool success, Type type, string errorLog) = selectedFieldProperty.GetFieldType();
+                    selectedFieldValueType = success ? type : null;
+                    selectedFieldValue = EditorUtil.SerializedObjectUtil.GetPropertyValue(selectedFieldProperty);
+                }
+
+                bool anyChanged = UpdateArgumentDatasDictionary(property, uxml, targetObject, status, Optional<string>.None, OptionalHelper.Some(selectedFieldValueType), OptionalHelper.Some(selectedFieldValue));
 
                 if (anyChanged)
                 {
                     // プレビュー用フィールドの表示を変更
-                    UpdateValueFieldsDisplaySettings(property, uxml, selectedFieldValue, selectedFieldValueType, true);
+                    FieldSPType selectedFieldValueSPType = FieldSPTypeHelper.Parse2FieldSPType(selectedFieldValueType);
+                    UpdateReferenceArgumentTypeField(uxml, selectedFieldValueSPType);
+                    UpdateValueFieldsDisplaySettings(property, uxml, selectedFieldValue, selectedFieldValueSPType, true);
+                    UpdateReferenceValueFields(uxml, selectedFieldValue, selectedFieldValueSPType);
                 }
-            }
-        }
-
-        /// <summary>
-        /// 値入力欄/参照値表示欄の表示を切り替える
-        /// </summary>
-        /// <param name="property"></param>
-        /// <param name="uxml"></param>
-        /// <param name="argumentType"></param>
-        /// <param name="isReferenceMode"></param>
-        private void UpdateValueFieldsDisplaySettings(SerializedProperty property, VisualElement uxml, object selectObject, FieldType argumentType, bool isReferenceMode)
-        {
-            property.serializedObject.Update();
-
-            // argumentTypeがIntegerならFloatにまとめる
-            FieldType fixedArgType = argumentType == FieldType.Integer ? FieldType.Float : argumentType;
-
-            // 表示を切り替える方のFieldの名前のリスト
-            List<string> fieldNames = isReferenceMode ? UxmlNames.ReferenceFields.List : UxmlNames.InputtableFields.List;
-            List<FieldType?> fieldCorrespondFieldTypes = new()
-            {
-                FieldType.Boolean,
-                FieldType.Float,
-                FieldType.String,
-                FieldType.Color,
-                FieldType.ObjectReference,
-                FieldType.Vector2,
-                FieldType.Vector3,
-                FieldType.Vector4,
-                FieldType.Bounds,
-                FieldType.AnimationCurve,
-                FieldType.Gradient,
-                null,
-            };
-
-            // 表示するかのフラグ
-            bool[] isDisplays = fieldCorrespondFieldTypes.Select(x => x == fixedArgType).ToArray();
-            // 表示するものが無いなら、最後の要素(Invalidラベル)を代わりに表示する
-            bool isInvalid = !isDisplays.Any(x => x);
-            if (isInvalid) isDisplays[^1] = true;
-
-            // 表示を切り替える
-            VisualElement curElement = null;
-            for (int i = 0; i < fieldNames.Count; i++)
-            {
-                curElement = UIQuery.Q<VisualElement>(uxml, fieldNames[i]);
-                EditorUtil.VisualElementHelper.SetDisplay(curElement, isDisplays[i]);
-            }
-
-            if (isInvalid && curElement is Label invalidLabel)
-            {
-                bool isObjNull = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObject);
-                string objInfo = isObjNull ? "Null" : selectObject.ToString();
-                string objTypeName = isObjNull ? "" : $"{selectObject?.GetType().FullName} : ";
-                string invalidText = $"Invalid ({objTypeName}{objInfo})";
-                invalidLabel.text = invalidText;
             }
         }
 
@@ -525,8 +520,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <returns>内容に変更があった場合 <see cref="true"/> を返す</returns>
         private bool UpdateArgumentDatasDictionary(
             SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status,
-            string argumentName = null, FieldType? argumentType = null, object value = null,
-            bool valueForceUpdate = false
+            Optional<string> argumentName, Optional<Type> argumentType, Optional<object> value
         )
         {
             bool newCreated = false;
@@ -543,17 +537,17 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 newCreated = true;
             }
 
-            if (argumentName != null && argumentData.ArgumentName != argumentName)
+            if (argumentName.HasValue && argumentData.ArgumentName != argumentName.Value)
             {
-                argumentData.ArgumentName = argumentName;
+                argumentData.ArgumentName = argumentName.Value;
                 nameChanged = true;
             }
-            if (argumentType.HasValue && argumentData.ArgumentFieldType != argumentType.Value)
+            if (argumentType.HasValue && argumentData.ArgumentType != argumentType.Value)
             {
-                argumentData.ArgumentFieldType = argumentType.Value;
+                argumentData.ArgumentType = argumentType.Value;
                 typeChanged = true;
             }
-            if (argumentData.Value != value && (value != null || valueForceUpdate))
+            if (value.HasValue && argumentData.Value.Value != value.Value)
             {
                 argumentData.Value = value;
                 valueChanged = true;
@@ -568,6 +562,132 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             ArgumentDataUpdatedEventArgs args = new(this, property, uxml, status, updatedArgumentData);
             ((IExpansionInspectorCustomizer)this).Publish(args);
+        }
+
+        private void UpdateReferenceArgumentTypeField(VisualElement uxml, FieldSPType argumentType)
+        {
+            EnumField u_ReferenceArgumentType = UIQuery.Q<EnumField>(uxml, UxmlNames.ReferenceArgumentType);
+            u_ReferenceArgumentType.value = argumentType;
+        }
+
+        /// <summary>
+        /// 値入力欄/参照値表示欄の表示を切り替える
+        /// </summary>
+        /// <param name="property"></param>
+        /// <param name="uxml"></param>
+        /// <param name="argumentType"></param>
+        /// <param name="isReferenceMode"></param>
+        private void UpdateValueFieldsDisplaySettings(SerializedProperty property, VisualElement uxml, object selectObject, FieldSPType argumentType, bool isReferenceMode)
+        {
+            property.serializedObject.Update();
+
+            // argumentTypeがIntegerならFloatにまとめる
+            FieldSPType fixedArgType = argumentType == FieldSPType.Integer ? FieldSPType.Float : argumentType;
+
+            // 表示を切り替える方のFieldの名前のリスト
+            List<string> fieldNames = isReferenceMode ? UxmlNames.ReferenceFields.List : UxmlNames.InputtableFields.List;
+            List<FieldSPType[]> fieldCorrespondFieldSPTypes = new()
+            {
+                new[] { FieldSPType.Boolean },
+                new[] { FieldSPType.Float, FieldSPType.Enum },
+                new[] { FieldSPType.String },
+                new[] { FieldSPType.Color },
+                new[] { FieldSPType.ObjectReference },
+                new[] { FieldSPType.Vector2, FieldSPType.Vector2Int },
+                new[] { FieldSPType.Vector3, FieldSPType.Vector3Int },
+                new[] { FieldSPType.Vector4, FieldSPType.Quaternion, FieldSPType.Rect, FieldSPType.RectInt},
+                new[] { FieldSPType.Bounds, FieldSPType.BoundsInt },
+                new[] { FieldSPType.AnimationCurve },
+                new[] { FieldSPType.Gradient },
+                new FieldSPType[]{ }
+            };
+
+            // 表示するかのフラグ
+            bool[] isDisplays = fieldCorrespondFieldSPTypes.Select(x => x.Contains(fixedArgType)).ToArray();
+            // 表示するものが無いなら、最後の要素(Invalidラベル)を代わりに表示する
+            bool isInvalid = !isDisplays.Any(x => x);
+            if (isInvalid) isDisplays[^1] = true;
+
+            // 表示を切り替える
+            VisualElement curElement = null;
+            for (int i = 0; i < fieldNames.Count; i++)
+            {
+                curElement = UIQuery.Q<VisualElement>(uxml, fieldNames[i]);
+                EditorUtil.VisualElementHelper.SetDisplay(curElement, isDisplays[i]);
+            }
+        }
+
+        private void UpdateReferenceValueFields(VisualElement uxml, object selectObject, FieldSPType argumentType)
+        {
+            // argumentTypeがIntegerならFloatにまとめる
+            FieldSPType fixedArgType = argumentType == FieldSPType.Integer ? FieldSPType.Float : argumentType;
+
+            switch (fixedArgType)
+            {
+                case FieldSPType.Boolean:
+                    BaseFieldValueChange<bool>(uxml, UxmlNames.ReferenceFields.BoolValueField, selectObject);
+                    break;
+                case FieldSPType.Enum:
+                case FieldSPType.Float:
+                    BaseFieldValueChange<double>(uxml, UxmlNames.ReferenceFields.NumberValueField, EditorUtil.OtherUtil.CustomCast<double>(selectObject));
+                    break;
+                case FieldSPType.String:
+                    BaseFieldValueChange<string>(uxml, UxmlNames.ReferenceFields.StringValueField, selectObject);
+                    break;
+                case FieldSPType.Color:
+                    BaseFieldValueChange<Color>(uxml, UxmlNames.ReferenceFields.ColorValueField, selectObject);
+                    break;
+                case FieldSPType.ObjectReference:
+                    BaseFieldValueChange<UnityEngine.Object>(uxml, UxmlNames.ReferenceFields.ObjectValueField, selectObject);
+                    break;
+                case FieldSPType.Vector2:
+                case FieldSPType.Vector2Int:
+                    BaseFieldValueChange<Vector2>(uxml, UxmlNames.ReferenceFields.Vector2ValueField, EditorUtil.OtherUtil.CustomCast<Vector2>(selectObject));
+                    break;
+                case FieldSPType.Vector3:
+                case FieldSPType.Vector3Int:
+                    BaseFieldValueChange<Vector3>(uxml, UxmlNames.ReferenceFields.Vector3ValueField, EditorUtil.OtherUtil.CustomCast<Vector3>(selectObject));
+                    break;
+                case FieldSPType.Vector4:
+                case FieldSPType.Quaternion:
+                case FieldSPType.Rect:
+                case FieldSPType.RectInt:
+                    BaseFieldValueChange<Vector4>(uxml, UxmlNames.ReferenceFields.Vector4ValueField, EditorUtil.OtherUtil.CustomCast<Vector4>(selectObject));
+                    break;
+                case FieldSPType.Bounds:
+                case FieldSPType.BoundsInt:
+                    BaseFieldValueChange<Bounds>(uxml, UxmlNames.ReferenceFields.BoundsValueField, EditorUtil.OtherUtil.CustomCast<Bounds>(selectObject));
+                    break;
+                case FieldSPType.AnimationCurve:
+                    BaseFieldValueChange<AnimationCurve>(uxml, UxmlNames.ReferenceFields.CurveValueField, selectObject);
+                    break;
+                case FieldSPType.Gradient:
+                    BaseFieldValueChange<Gradient>(uxml, UxmlNames.ReferenceFields.GradientValueField, selectObject);
+                    break;
+                default:
+                    Label u_ReferenceInvalidValueLabel = UIQuery.Q<Label>(uxml, UxmlNames.ReferenceFields.InvalidValueLabel);
+                    bool isObjNull = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObject);
+                    string objInfo = isObjNull ? "Null" : selectObject.ToString();
+                    string objTypeName = isObjNull ? "" : $"{selectObject?.GetType().FullName} : ";
+                    string invalidText = $"Invalid ({objTypeName}{objInfo})";
+                    u_ReferenceInvalidValueLabel.text = invalidText;
+                    break;
+            }
+        }
+
+        private void BaseFieldValueChange<T>(VisualElement uxml, string fieldElementName, object selectObject)
+        {
+            BaseField<T> valueField = UIQuery.Q<BaseField<T>>(uxml, fieldElementName);
+            object fixedObj = selectObject;
+            switch (valueField)
+            {
+                case BaseField<double> doubleField:
+                    doubleField.value = Convert.ToDouble(selectObject);
+                    break;
+                default:
+                    valueField.value = (T)fixedObj;
+                    break;
+            }
         }
 
         // ▲ メソッド ========================= ▲
