@@ -446,30 +446,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        [Obsolete]
-        public static void AddListElement(SerializedObject serializedObject, string listPropertyPath, IEnumerable<int> indexes, IExpansionInspectorCustomizerTargetMarker elementInstance)
-        {
-            SerializedProperty listProperty = serializedObject.FindProperty(listPropertyPath);
-            AddListElement(listProperty, indexes, elementInstance);
-        }
-        [Obsolete]
-        public static void AddListElement(SerializedProperty property, string listPropertyPath, IEnumerable<int> indexes, IExpansionInspectorCustomizerTargetMarker elementInstance)
-        {
-            SerializedProperty listProperty = property.FindPropertyRelative(listPropertyPath);
-            AddListElement(listProperty, indexes, elementInstance);
-        }
-
-        [Obsolete]
-        public static void AddListElement(SerializedProperty listProperty, IEnumerable<int> indexes, IExpansionInspectorCustomizerTargetMarker elementInstance)
-        {
-            foreach (int index in indexes)
-            {
-                SerializedProperty elementProperty = listProperty.GetArrayElementAtIndex(index);
-                elementProperty.managedReferenceValue = elementInstance;
-            }
-            listProperty.serializedObject.ApplyModifiedProperties();
-        }
-
         public static bool AddListElementWithClone<T>(List<T> list, IEnumerable<int> indexes) where T : ICloneable, new()
         {
             int[] addedIndexes = indexes.ToArray();

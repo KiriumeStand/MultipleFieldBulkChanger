@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
@@ -30,12 +29,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
         [SerializeReference]
         public SingleFieldSelectorContainer _SourceField = new();
 
-        public object Value => _IsReferenceMode switch
-        {
-            false => InputtableValue,
-            true => _SourceField._FieldSelector.Value
-        };
-
         public object InputtableValue => _InputtableArgumentType switch
         {
             SelectableFieldType.Boolean => _InputtableBoolValue,
@@ -51,8 +44,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
             SelectableFieldType.Gradient => _InputtableGradientValue,
             var _ => null,
         };
-
-        public FieldType ValueType => _IsReferenceMode ? _SourceField._FieldSelector.ValueType : _InputtableArgumentType.ToFieldType();
 
         public override string ValueTypeFieldName => nameof(_InputtableArgumentType);
         public override string BoolValueFieldName => nameof(_InputtableBoolValue);
