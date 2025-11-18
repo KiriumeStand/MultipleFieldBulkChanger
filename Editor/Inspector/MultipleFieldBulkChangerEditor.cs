@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -209,7 +208,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ 名前辞書 ========================= ▼
         // MARK: ==名前辞書==
 
-        public static class UxmlNames
+        public record UxmlNames
         {
             public static readonly string Enable = "MFBC_Enable";
             public static readonly string Arguments = "MFBC_Arguments";

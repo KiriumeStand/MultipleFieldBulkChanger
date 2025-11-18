@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using UnityEngine.Animations;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
 {

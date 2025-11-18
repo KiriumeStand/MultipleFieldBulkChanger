@@ -19,16 +19,23 @@
         <ui:VisualElement style="flex-direction: row;">
             <ui:VisualElement name="Spacer" style="flex-grow: 1; flex-basis: 1%;" />
             <ui:VisualElement style="flex-grow: 4; flex-basis: 0;">
-                <ui:VisualElement name="AS_InputtableValueSettingContainer" style="flex-direction: row;">
+                <ui:VisualElement name="AS_InputtableValueSettingContainer" style="flex-direction: row; flex-shrink: 0;">
                     <ui:Label text="=" style="-unity-text-align: lower-left; font-size: 20px;" />
                     <ui:VisualElement style="display: flex; flex-grow: 1;">
                         <ui:Label text="値" />
                         <ui:Toggle name="AS_InputtableBoolValueField" style="flex-shrink: 1;" />
                         <ui:DoubleField name="AS_InputtableNumberValueField" style="flex-shrink: 1; display: none;" />
-                        <ui:TextField picking-mode="Ignore" name="AS_InputtableStringValueField" style="flex-shrink: 1; display: none;" />
+                        <ui:TextField picking-mode="Ignore" name="AS_InputtableStringValueField" style="display: none; flex-shrink: 1;" />
+                        <uie:ColorField name="AS_InputtableColorValueField" value="#FFFFFFFF" hdr="true" style="flex-shrink: 1; display: none;" />
                         <uie:ObjectField name="AS_InputtableObjectValueField" style="flex-shrink: 1; display: none;" />
+                        <ui:Vector2Field name="AS_InputtableVector2ValueField" style="display: none; flex-shrink: 1;" />
+                        <ui:Vector3Field name="AS_InputtableVector3ValueField" style="flex-shrink: 1; display: none;" />
+                        <ui:Vector4Field name="AS_InputtableVector4ValueField" style="display: none; flex-shrink: 1;" />
+                        <ui:BoundsField name="AS_InputtableBoundsValueField" style="display: none; flex-shrink: 1;" />
+                        <uie:CurveField name="AS_InputtableCurveValueField" style="flex-shrink: 1; display: none;" />
+                        <uie:GradientField name="AS_InputtableGradientValueField" style="display: none; flex-shrink: 1;" />
                         <uie:PropertyField name="AS_InputtableOtherValueField" style="display: none;" />
-                        <ui:Label text="Invalid" name="AS_InputtableInvalidValueLabel" style="font-size: 20px; flex-shrink: 1; white-space: normal; -unity-text-align: middle-left; display: none;" />
+                        <ui:Label text="Invalid" name="AS_InputtableInvalidValueLabel" style="font-size: 20px; display: none; flex-shrink: 1; white-space: normal; -unity-text-align: middle-left;" />
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement name="AS_ReferenceValueSettingContainer" style="display: none;">
@@ -39,15 +46,22 @@
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement style="flex-direction: row;">
-                        <ui:Label text="=" style="-unity-text-align: lower-left; font-size: 20px;" />
+                        <ui:Label text="=" style="font-size: 20px;" />
                         <ui:VisualElement style="flex-grow: 1;">
                             <ui:VisualElement name="Spacer" style="flex-grow: 1;" />
                             <ui:Toggle name="AS_ReferenceBoolValueField" />
                             <ui:DoubleField name="AS_ReferenceNumberValueField" style="display: none;" />
                             <ui:TextField picking-mode="Ignore" name="AS_ReferenceStringValueField" style="display: none;" />
+                            <uie:ColorField name="AS_ReferenceColorValueField" value="#FFFFFFFF" hdr="true" style="display: none;" />
                             <uie:ObjectField name="AS_ReferenceObjectValueField" style="display: none;" />
                             <uie:PropertyField name="AS_ReferenceOtherValueField" style="display: none;" />
-                            <ui:Label text="Invalid" name="AS_ReferenceInvalidValueLabel" style="font-size: 20px; height: 24px; flex-shrink: 1; white-space: normal; -unity-text-align: middle-left; display: none;" />
+                            <ui:Vector2Field name="AS_ReferenceVector2ValueField" style="display: none;" />
+                            <ui:Vector3Field name="AS_ReferenceVector3ValueField" style="display: none;" />
+                            <ui:Vector4Field name="AS_ReferenceVector4ValueField" style="display: none;" />
+                            <ui:BoundsField name="AS_ReferenceBoundsValueField" style="display: none;" />
+                            <uie:CurveField name="AS_ReferenceCurveValueField" style="display: none;" />
+                            <uie:GradientField name="AS_ReferenceGradientValueField" style="display: none;" />
+                            <ui:Label text="Invalid" name="AS_ReferenceInvalidValueLabel" style="font-size: 20px; white-space: normal; -unity-text-align: middle-left; display: none;" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>

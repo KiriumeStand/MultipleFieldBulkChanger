@@ -1,7 +1,7 @@
-using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
-using nadena.dev.ndmf;
 using System;
 using System.Collections.Generic;
+using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
+using nadena.dev.ndmf;
 using UnityEditor;
 using UnityEngine;
 
@@ -61,11 +61,26 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     List<ArgumentData> argDatas = new();
                     foreach (ArgumentSetting asPropObj in mfbcComponent._ArgumentSettings)
                     {
+                        Optional<object> argValue = default;
+                        if (asPropObj._IsReferenceMode)
+                        {
+                            UnityEngine.Object selectObj = asPropObj._SourceField._SelectObject;
+                            string selectFieldPath = asPropObj._SourceField._FieldSelector.FixedSelectFieldPath;
+                            if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
+                            {
+                                argValue = EditorUtil.OtherUtil.GetSelectPathValue(selectObj, selectFieldPath);
+                            }
+                        }
+                        else
+                        {
+                            argValue = OptionalHelper.Some(asPropObj.InputtableValue);
+                        }
+
                         ArgumentData argData = new()
                         {
                             ArgumentName = asPropObj._ArgumentName,
-                            Value = asPropObj.Value,
-                            ArgumentType = asPropObj.ValueType,
+                            Value = argValue,
+                            ArgumentType = argValue.GetType(),
                         };
                         argDatas.Add(argData);
                     }
@@ -76,13 +91,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                         string expression = fcsPropObj._Expression;
                         // 代入式を解く
-                        (bool expressionSuccess, ValueTypeGroup valueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expression, argDatas);
+                        (bool expressionSuccess, Type resultValueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expression, argDatas);
 
                         if (expressionSuccess)
                         {
                             foreach (MultiFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
                             {
-                                if (!EditorUtil.FakeNullUtil.IsNullOrFakeNull(mfscPropObj._SelectObject))
+                                if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(mfscPropObj._SelectObject))
                                 {
                                     SerializedObject targetSerializedObject = new(mfscPropObj._SelectObject);
                                     if (mfscPropObj._SelectObject is Transform tf)
@@ -107,27 +122,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                                                 if (isValid)
                                                 {
-                                                    ValueTypeGroup targetFieldTypeGroup = EditorUtil.OtherUtil.Parse2ValueTypeGroup(targetFieldType);
-
-                                                    switch (targetFieldTypeGroup)
+                                                    // カスタムキャスト処理
+                                                    object customCastedResult = EditorUtil.OtherUtil.CustomCast(result, targetFieldType);
+                                                    if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(customCastedResult))
                                                     {
-                                                        case ValueTypeGroup.Bool:
-                                                            targetProperty.boolValue = (bool)result;
-                                                            break;
-                                                        case ValueTypeGroup.Number:
-                                                            targetProperty.doubleValue = (double)result;
-                                                            break;
-                                                        case ValueTypeGroup.String:
-                                                            targetProperty.stringValue = (string)result;
-                                                            break;
-                                                        case ValueTypeGroup.UnityObject:
-                                                            targetProperty.objectReferenceValue = (UnityEngine.Object)result;
-                                                            break;
-                                                        default:
-                                                            break;
+                                                        result = customCastedResult;
                                                     }
-                                                }
 
+                                                    targetProperty.boxedValue = result;
+                                                }
                                             }
                                         }
                                     }

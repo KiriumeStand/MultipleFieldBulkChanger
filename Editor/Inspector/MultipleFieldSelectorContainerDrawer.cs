@@ -20,7 +20,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             ListView u_SelectFields = BindHelper.BindRelative<ListView>(uxml, UxmlNames.FieldsSelector, property, nameof(MultiFieldSelectorContainer._FieldSelectors));
 
             // イベント発行の登録
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher<ObjectField, UnityEngine.Object>(u_SelectObject, this, property, status);
+            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectObject, this, property, status);
             u_SelectFields.itemsAdded += (e) =>
             {
                 IExpansionInspectorCustomizer.AddListElementWithClone(((MultiFieldSelectorContainer)targetObject)._FieldSelectors, e);
@@ -40,7 +40,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             ObjectField u_SelectObject = UIQuery.Q<ObjectField>(uxml, UxmlNames.SelectObject);
 
             // イベント購読の登録
-            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<ObjectField, UnityEngine.Object>(u_SelectObject, this, property, status,
+            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<UnityEngine.Object>(u_SelectObject, this, property, status,
                 (sender, args) => { OnFieldSelectorSelectObjectChangedEventHandler(args, uxml, status); });
 
             UpdateSerializedPropertiesCache(property, uxml, status, u_SelectObject.value);
@@ -52,7 +52,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ 名前辞書 ========================= ▼
         // MARK: ==名前辞書==
 
-        public static class UxmlNames
+        public record UxmlNames
         {
             public static readonly string SelectObject = "MFSC_SelectObject";
             public static readonly string FieldsSelector = "MFSC_FieldsSelector";

@@ -6,15 +6,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     /// <summary>
     /// <see cref="BaseField{TValueType}"/> の値が変更されたことを通知するイベントの基底クラス
     /// </summary>
-    /// <typeparam name="TFieldElementType">イベント発行元の <see cref="BaseField{TValueType}"/> の型。 <see cref="TextField"/> など。</typeparam>
     /// <typeparam name="TValueType">値の型。 例: <see cref="TextField"/> なら <see cref="string"/></typeparam>
-    public class FieldValueChangedEventArgs<TFieldElementType, TValueType> : BindableElementEventArgs<TFieldElementType> where TFieldElementType : BaseField<TValueType>
+    public class FieldValueChangedEventArgs<TValueType> : BindableElementEventArgs<BaseField<TValueType>>
     {
         public TValueType PreviousValue { get; }
         public TValueType NewValue { get; }
 
         public FieldValueChangedEventArgs(
-            IExpansionInspectorCustomizer inspectorCustomizer, SerializedObject editorSerializedObject, TFieldElementType senderElement, InspectorCustomizerStatus status, TValueType previousValue, TValueType newValue
+            IExpansionInspectorCustomizer inspectorCustomizer, SerializedObject editorSerializedObject, BaseField<TValueType> senderElement, InspectorCustomizerStatus status, TValueType previousValue, TValueType newValue
             ) : base(inspectorCustomizer, editorSerializedObject, senderElement, status)
         {
             PreviousValue = previousValue;
@@ -22,7 +21,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         }
 
         public FieldValueChangedEventArgs(
-            IExpansionInspectorCustomizer inspectorCustomizer, SerializedProperty drawerProperty, TFieldElementType senderElement, InspectorCustomizerStatus status, TValueType previousValue, TValueType newValue
+            IExpansionInspectorCustomizer inspectorCustomizer, SerializedProperty drawerProperty, BaseField<TValueType> senderElement, InspectorCustomizerStatus status, TValueType previousValue, TValueType newValue
             ) : base(inspectorCustomizer, drawerProperty, senderElement, status)
         {
             PreviousValue = previousValue;

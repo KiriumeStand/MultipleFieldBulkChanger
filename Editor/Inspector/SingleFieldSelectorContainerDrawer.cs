@@ -20,7 +20,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             PropertyField u_SelectField = BindHelper.BindRelative<PropertyField>(uxml, UxmlNames.FieldSelector, property, nameof(SingleFieldSelectorContainer._FieldSelector));
 
             // イベント発行の登録
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher<ObjectField, UnityEngine.Object>(u_SelectObject, this, property, status);
+            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectObject, this, property, status);
 
             // イベント購読の登録
             SubscribeListViewItemsRemovedEvent(property, uxml, status);
@@ -31,7 +31,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             ObjectField u_SelectObject = UIQuery.Q<ObjectField>(uxml, UxmlNames.SelectObject);
 
             // イベント購読の登録
-            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<ObjectField, UnityEngine.Object>(u_SelectObject, this, property, status,
+            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<UnityEngine.Object>(u_SelectObject, this, property, status,
                 (sender, args) => { OnFieldSelectorSelectObjectChangedEventHandler(args, uxml, status); });
 
             UpdateSerializedPropertiesCache(property, uxml, status, u_SelectObject.value);
@@ -43,7 +43,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ 名前辞書 ========================= ▼
         // MARK: ==名前辞書==
 
-        public static class UxmlNames
+        public record UxmlNames
         {
             public static readonly string SelectObject = "SFSC_SelectObject";
             public static readonly string FieldSelector = "SFSC_FieldSelector";

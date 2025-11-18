@@ -1,4 +1,4 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
@@ -70,7 +70,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public static readonly Dictionary<FieldSelectorContainerBase, SerializedObject> targetObjectRootSerializedObjectCache = new();
 
+        // MARK: TODO メモリリーク直す
         public static readonly Dictionary<FieldSelector, SerializedProperty> selectFieldPropertyCache = new();
+        public static readonly Dictionary<FieldChangeSetting, Optional<object>> expressionResultCache = new();
 
         // ▲ SerializedProperty系 ========================= ▲
 
@@ -131,8 +133,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     {
         public string ArgumentName { get; set; } = "";
 
-        public object Value { get; set; } = null;
+        public Optional<object> Value { get; set; } = Optional<object>.None;
 
-        public ValueTypeGroup ArgumentType { get; set; } = ValueTypeGroup.Other;
+        public Type ArgumentType { get; set; } = null;
+
+        public SerializedPropertyNumericType ArgumentSPNumericType { get; set; } = SerializedPropertyNumericType.Unknown;
+
+        public FieldSPType ArgumentFieldSPType => FieldSPTypeHelper.Parse2FieldSPType(ArgumentType);
     }
 }

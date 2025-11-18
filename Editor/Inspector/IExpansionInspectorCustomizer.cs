@@ -233,7 +233,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             IExpansionInspectorCustomizerTargetMarker targetObject,
             InspectorCustomizerStatus status)
         {
-            if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(this))
+            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(this))
             {
                 // MARK: デバッグ用
                 RuntimeUtil.Debugger.DebugLog($"ここは必要みたいです/OnDetachFromPanelEvent", LogType.Warning);
@@ -288,7 +288,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             EventHandlers.Add(eventHandler);
 
             string identifier = UniversalDataManager.IdentifierNames.UnsubscribeAction;
-            RegisterUnsubscribeAction<T>(serializedData, targetObject, identifier, eventHandler, unsubscribeAction, EditorUtil.ObjectIdUtil.GetObjectId(inspectorCustomizer));
+            RegisterUnsubscribeAction(serializedData, targetObject, identifier, eventHandler, unsubscribeAction, EditorUtil.ObjectIdUtil.GetObjectId(inspectorCustomizer));
             return unsubscribeAction;
         }
 
@@ -444,30 +444,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 default:
                     throw new ArgumentException($"{nameof(serializedData)}の型が不正です。", nameof(serializedData));
             }
-        }
-
-        [Obsolete]
-        public static void AddListElement(SerializedObject serializedObject, string listPropertyPath, IEnumerable<int> indexes, IExpansionInspectorCustomizerTargetMarker elementInstance)
-        {
-            SerializedProperty listProperty = serializedObject.FindProperty(listPropertyPath);
-            AddListElement(listProperty, indexes, elementInstance);
-        }
-        [Obsolete]
-        public static void AddListElement(SerializedProperty property, string listPropertyPath, IEnumerable<int> indexes, IExpansionInspectorCustomizerTargetMarker elementInstance)
-        {
-            SerializedProperty listProperty = property.FindPropertyRelative(listPropertyPath);
-            AddListElement(listProperty, indexes, elementInstance);
-        }
-
-        [Obsolete]
-        public static void AddListElement(SerializedProperty listProperty, IEnumerable<int> indexes, IExpansionInspectorCustomizerTargetMarker elementInstance)
-        {
-            foreach (int index in indexes)
-            {
-                SerializedProperty elementProperty = listProperty.GetArrayElementAtIndex(index);
-                elementProperty.managedReferenceValue = elementInstance;
-            }
-            listProperty.serializedObject.ApplyModifiedProperties();
         }
 
         public static bool AddListElementWithClone<T>(List<T> list, IEnumerable<int> indexes) where T : ICloneable, new()

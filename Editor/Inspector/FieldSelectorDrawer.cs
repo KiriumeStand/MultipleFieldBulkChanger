@@ -1,14 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using UnityEditor;
-using UnityEditor.UIElements;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
+using UnityEditor;
 using UnityEngine.UIElements;
-using System;
-using System.Collections.Immutable;
-using System.Reflection;
-using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
@@ -34,8 +30,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Label u_LogLabel = UIQuery.Q<Label>(uxml, UxmlNames.LogLabel);
 
             // イベント発行の登録
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher<DropdownField, string>(u_SelectField, this, property, status);
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher<TextField, string>(u_SelectFieldPath, this, property, status);
+            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectField, this, property, status);
+            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectFieldPath, this, property, status);
 
             // イベント購読の登録
             ((IExpansionInspectorCustomizer)this).Subscribe<SelectObjectSerializedPropertiesUpdateEventArgs>(this,
@@ -130,9 +126,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             TextField u_SelectFieldPath = UIQuery.Q<TextField>(uxml, UxmlNames.SelectFieldPath);
 
             // イベント購読の登録
-            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<DropdownField, string>(u_SelectField, this, property, status,
+            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent(u_SelectField, this, property, status,
                 (sender, args) => { OnFieldSelectorSelectFieldChangedEventHandler(args, property, uxml, status); });
-            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<TextField, string>(u_SelectFieldPath, this, property, status,
+            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent(u_SelectFieldPath, this, property, status,
                 (sender, args) => { OnFieldSelectorSelectFieldPathChangedEventHandler(args, property, uxml, status); });
 
             DelayInit(property, uxml, status);
@@ -168,7 +164,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <param name="args"></param>
         /// <param name="property"></param>
         /// <param name="propertyInstancePath"></param>
-        private void OnFieldSelectorSelectFieldChangedEventHandler(FieldValueChangedEventArgs<DropdownField, string> args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
+        private void OnFieldSelectorSelectFieldChangedEventHandler(FieldValueChangedEventArgs<string> args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
         {
             // 選択フィールドパスの内容を変更
             ChangeSelectFieldPathTextFieldValue(property, uxml, args.NewValue);
@@ -185,7 +181,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <param name="args"></param>
         /// <param name="property"></param>
         /// <param name="propertyInstancePath"></param>
-        private void OnFieldSelectorSelectFieldPathChangedEventHandler(FieldValueChangedEventArgs<TextField, string> args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
+        private void OnFieldSelectorSelectFieldPathChangedEventHandler(FieldValueChangedEventArgs<string> args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
         {
             // フィールド選択ドロップダウンの選択内容の変更
             ChangeSelectFieldDropdownFieldValue(property, uxml, args.NewValue);
@@ -223,7 +219,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             ((IExpansionInspectorCustomizer)this).OnDetachFromPanelEvent(property, uxml, targetObject, status);
         }
 
-        private void OnFieldSelectorLogChangeRequestEventHandler(FieldSelectorLogChangeRequestEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
+        private static void OnFieldSelectorLogChangeRequestEventHandler(FieldSelectorLogChangeRequestEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
         {
             Label u_LogLabel = UIQuery.Q<Label>(uxml, UxmlNames.LogLabel);
             u_LogLabel.text = args.LogMessage;
@@ -255,7 +251,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 (SerializedObject rootSerializedObject, SerializedProperty parentProperty) = EditorUtil.SerializedObjectUtil.GetParentPropertyAndRootObject(curProperty);
                 if (parentProperty == null) return false;
 
-                (ValueTypeGroup resultArgumentTypeValue, object resultValue) = EditorUtil.SerializedObjectUtil.GetPropertyValue(parentProperty);
+                object resultValue = EditorUtil.SerializedObjectUtil.GetPropertyValue(parentProperty);
                 if (AllowUneditableAncestorTypes.Contains(resultValue?.GetType())) return true;
 
                 curProperty = parentProperty;
@@ -285,7 +281,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// </summary>
         /// <param name="args"></param>
         /// <param name="property"></param>
-        private void ChangeSelectFieldPathTextFieldValue(SerializedProperty property, VisualElement uxml, string selectedFieldPath)
+        private static void ChangeSelectFieldPathTextFieldValue(SerializedProperty property, VisualElement uxml, string selectedFieldPath)
         {
             if (selectedFieldPath == "") return;
 
@@ -299,7 +295,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <param name="property"></param>
         /// <param name="uxml"></param>
         /// <param name="selectedFieldPath"></param>
-        private void ChangeSelectFieldDropdownFieldValue(SerializedProperty property, VisualElement uxml, string selectedFieldPath)
+        private static void ChangeSelectFieldDropdownFieldValue(SerializedProperty property, VisualElement uxml, string selectedFieldPath)
         {
             DropdownField u_SelectField = UIQuery.Q<DropdownField>(uxml, UxmlNames.SelectField);
             string newValue = u_SelectField.choices.Contains(selectedFieldPath) ? selectedFieldPath : "";
@@ -310,7 +306,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// フィールド選択ドロップダウンの選択項目を更新
         /// </summary>
         /// <param name="args"></param>
-        private void UpdateSelectFieldDropdownFieldChoices(SerializedProperty property, VisualElement uxml, SerializedProperty fieldSelectorContainerProperty, bool allowUneditable)
+        private static void UpdateSelectFieldDropdownFieldChoices(SerializedProperty property, VisualElement uxml, SerializedProperty fieldSelectorContainerProperty, bool allowUneditable)
         {
             FieldSelectorContainerBase fieldSelectorContainerObject = EditorUtil.SerializedObjectUtil.GetTargetObject(fieldSelectorContainerProperty) as FieldSelectorContainerBase;
             if (!UniversalDataManager.targetObjectAllPropertiesCache.ContainsKey(fieldSelectorContainerObject)) return;
@@ -354,57 +350,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
             }
 
-            // FieldSelector._OriginalValueを更新
-            UpdateOriginalValue(property, uxml, status, selectProperty, selectPropertyValueTypeFullName);
-
             FieldSelector targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property) as FieldSelector;
 
             UniversalDataManager.selectFieldPropertyCache[targetObject] = selectProperty;
 
             OnSelectFieldSerializedPropertyUpdateEventPublish(property, uxml, status, selectProperty, selectPropertyValueTypeFullName);
         }
-
-        private void UpdateOriginalValue(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedProperty selectProperty, string selectPropertyFieldTypeFullName)
-        {
-            ValueTypeGroup resultOriginalFieldType = ValueTypeGroup.Other;
-
-            bool resultOriginalBoolValue = false;
-            double resultOriginalNumberValue = 0.0;
-            string resultOriginalStringValue = "";
-            UnityEngine.Object resultOriginalObjectValue = null;
-
-            if (selectProperty != null)
-            {
-                (ValueTypeGroup selectedFieldValueType, object selectedFieldValue) = EditorUtil.SerializedObjectUtil.GetPropertyValue(selectProperty);
-                resultOriginalFieldType = selectedFieldValueType;
-                switch (selectedFieldValueType)
-                {
-                    case ValueTypeGroup.Bool:
-                        resultOriginalBoolValue = (bool)selectedFieldValue;
-                        break;
-                    case ValueTypeGroup.Number:
-                        resultOriginalNumberValue = (double)selectedFieldValue;
-                        break;
-                    case ValueTypeGroup.String:
-                        resultOriginalStringValue = (string)selectedFieldValue;
-                        break;
-                    case ValueTypeGroup.UnityObject:
-                        resultOriginalObjectValue = (UnityEngine.Object)selectedFieldValue;
-                        break;
-                }
-            }
-
-            property.SafeFindPropertyRelative(FieldSelector.PrivateFieldNames._OriginalFieldType).enumValueIndex = (int)resultOriginalFieldType;
-            property.SafeFindPropertyRelative(FieldSelector.PrivateFieldNames._OriginalFieldTypeFullName).stringValue = selectPropertyFieldTypeFullName;
-
-            property.SafeFindPropertyRelative(FieldSelector.PrivateFieldNames._OriginalBoolValue).boolValue = resultOriginalBoolValue;
-            property.SafeFindPropertyRelative(FieldSelector.PrivateFieldNames._OriginalNumberValue).doubleValue = resultOriginalNumberValue;
-            property.SafeFindPropertyRelative(FieldSelector.PrivateFieldNames._OriginalStringValue).stringValue = resultOriginalStringValue;
-            property.SafeFindPropertyRelative(FieldSelector.PrivateFieldNames._OriginalObjectValue).objectReferenceValue = resultOriginalObjectValue;
-
-            property.serializedObject.ApplyModifiedProperties();
-        }
-
         private void OnSelectFieldSerializedPropertyUpdateEventPublish(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedProperty newProperty, string newPropertyValueTypeFullName)
         {
             if (status.CurrentPhase <= InspectorCustomizerStatus.Phase.BeforeDelayCall) return;
@@ -419,7 +370,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ 名前辞書 ========================= ▼
         // MARK: ==名前辞書==
 
-        public static class UxmlNames
+        public record UxmlNames
         {
             public static readonly string SelectField = "FS_SelectField";
             public static readonly string SelectFieldPath = "FS_SelectFieldPath";

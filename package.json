@@ -1,7 +1,7 @@
 {
     "name": "io.github.kiriumestand.multiplefieldbulkchanger",
     "displayName": "Multiple Field Bulk Changer",
-    "version": "0.1.0-alpha.1",
+    "version": "0.1.0",
     "unity": "2022.3",
     "description": "複数のオブジェクトの値を非破壊に一括で変更するコンポーネント",
     "author": {

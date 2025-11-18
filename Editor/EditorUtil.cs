@@ -14,6 +14,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using xFunc.Maths;
 using xFunc.Maths.Expressions;
+using xFunc.Maths.Expressions.Matrices;
 using xFunc.Maths.Expressions.Parameters;
 using Object = UnityEngine.Object;
 
@@ -32,7 +33,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 // 重複登録を防ぐため、一度削除してから追加
                 //Application.logMessageReceived -= HandleLog;
                 //Application.logMessageReceived += HandleLog;
-
                 Debug.Log("エディターログ監視を開始しました");
             }
             public static int testCounter { get; set; } = 0;
@@ -108,31 +108,30 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             /// <param name="customizer"></param>
             /// <param name="property"></param>
             /// <param name="status"></param>
-            /// <typeparam name="TFieldElementType"></typeparam>
             /// <typeparam name="TValueType"></typeparam>
             /// <returns></returns>
-            public static void RegisterFieldValueChangeEventPublisher<TFieldElementType, TValueType>(
-                TFieldElementType fieldElement,
+            public static void RegisterFieldValueChangeEventPublisher<TValueType>(
+                BaseField<TValueType> fieldElement,
                 IExpansionInspectorCustomizer customizer,
                 SerializedProperty property,
                 InspectorCustomizerStatus status
-            ) where TFieldElementType : BaseField<TValueType>
+            )
             {
                 fieldElement.RegisterValueChangedCallback(e =>
                 {
                     if (EqualityComparer<TValueType>.Default.Equals(e.previousValue, e.newValue)) return;
-                    FieldValueChangedEventArgs<TFieldElementType, TValueType> args = new(customizer, property, fieldElement, status, e.previousValue, e.newValue);
+                    FieldValueChangedEventArgs<TValueType> args = new(customizer, property, fieldElement, status, e.previousValue, e.newValue);
                     customizer.Publish(args);
                 });
             }
 
-            public static Action SubscribeFieldValueChangedEvent<TFieldElementType, TValueType>(
-                TFieldElementType fieldElement,
+            public static Action SubscribeFieldValueChangedEvent<TValueType>(
+                BaseField<TValueType> fieldElement,
                 IExpansionInspectorCustomizer customizer,
                 SerializedProperty property,
                 InspectorCustomizerStatus status,
-                 EventHandler<FieldValueChangedEventArgs<TFieldElementType, TValueType>> handler
-            ) where TFieldElementType : BaseField<TValueType>
+                EventHandler<FieldValueChangedEventArgs<TValueType>> handler
+            )
             {
                 return customizer.Subscribe(customizer,
                     property, status,
@@ -221,12 +220,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     }
                 }
 
-                // MARK: デバッグ用 最終的には消す
-                if (result == null)
-                {
-                    RuntimeUtil.Debugger.DebugLog($"{type.Name}.IsValid/Null", LogType.Error, "red");
-                    return false;
-                }
+                if (result == null) return false;
                 return (bool)result;
             }
 
@@ -421,45 +415,17 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 _ => null,
             };
 
-            public static (ValueTypeGroup valueType, object value) GetPropertyValue(SerializedProperty property)
+            public static object GetPropertyValue(SerializedProperty property)
             {
+                if (property == null) return null;
                 property.serializedObject.Update();
 
-                ValueTypeGroup resultArgumentTypeValue = ValueTypeGroup.Other;
-                object resultValue = null;
-
-                switch (property.propertyType)
+                object resultValue = property.propertyType switch
                 {
-                    case SerializedPropertyType.Boolean:
-                        resultArgumentTypeValue = ValueTypeGroup.Bool;
-                        resultValue = property.boolValue;
-                        break;
-                    case SerializedPropertyType.Integer:
-                        resultArgumentTypeValue = ValueTypeGroup.Number;
-                        resultValue = Convert.ToDouble(property.intValue);
-                        break;
-                    case SerializedPropertyType.Float:
-                        resultArgumentTypeValue = ValueTypeGroup.Number;
-                        resultValue = Convert.ToDouble(property.doubleValue);
-                        break;
-                    case SerializedPropertyType.String:
-                        resultArgumentTypeValue = ValueTypeGroup.String;
-                        resultValue = property.stringValue;
-                        break;
-                    case SerializedPropertyType.ObjectReference:
-                        resultArgumentTypeValue = ValueTypeGroup.UnityObject;
-                        resultValue = property.objectReferenceValue;
-                        break;
-                    case SerializedPropertyType.ManagedReference:
-                        resultArgumentTypeValue = ValueTypeGroup.ManagedReference;
-                        resultValue = property.managedReferenceValue;
-                        break;
-                    default:
-                        resultArgumentTypeValue = ValueTypeGroup.Other;
-                        break;
-                }
-
-                return (resultArgumentTypeValue, resultValue);
+                    //SerializedPropertyType.Integer => Convert.ToDouble(property.intValue),
+                    _ => property.boxedValue,
+                };
+                return resultValue;
             }
 
             public static void SetPropertyValue(SerializedProperty property, object value)
@@ -470,10 +436,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         property.boolValue = (bool)value;
                         break;
                     case SerializedPropertyType.Integer:
-                        property.longValue = (long)value;
+                        property.longValue = Convert.ToInt64(value);
                         break;
                     case SerializedPropertyType.Float:
-                        property.doubleValue = (double)value;
+                        property.doubleValue = Convert.ToDouble(value);
                         break;
                     case SerializedPropertyType.String:
                         property.stringValue = (string)value;
@@ -487,60 +453,239 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
             }
 
-            public static SerializedProperty[] GetAllProperties(SerializedObject serializedObject)
+            public static SerializedProperty[] GetAllProperties(
+                SerializedObject serializedObject,
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = null,
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = null
+            )
             {
+                // nullなら空のリストにする
+                enterChildrenFilters ??= new();
+
                 SerializedProperty[] properties = Array.Empty<SerializedProperty>();
-                if (FakeNullUtil.IsNullOrFakeNull(serializedObject.targetObject))
-                {
-                    return properties;
-                }
-                if (serializedObject.targetObject is Mesh)
-                {
-                    return properties;
-                }
 
                 SerializedProperty curProperty = serializedObject.GetIterator();
 
-                bool enterChildren = true;
-                curProperty.Next(enterChildren);
+                enterChildrenFilters.Add(ExcludeFilters.EnterChildrenObjectDefault);
 
-                properties = GetProperties(curProperty, null);
+                // serializedObjectをフィルターにかける
+                bool enterChildren = enterChildrenFilters.All(x => x(serializedObject, new()));
+
+                if (enterChildren)
+                {
+                    curProperty.Next(enterChildren);
+                    properties = GetProperties(curProperty, null, addListFilters, enterChildrenFilters);
+                }
                 return properties;
             }
 
-            public static SerializedProperty[] GetAllProperties(SerializedProperty property)
+            public static SerializedProperty[] GetAllProperties(
+                SerializedProperty property,
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = null,
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = null)
             {
+                bool includeInvisible = true;
+                // このプロパティの子または孫ではない次のプロパティ
+                SerializedProperty cancelProperty = property.GetEndProperty(includeInvisible);
+
+                SerializedProperty[] properties = GetProperties(property, cancelProperty, addListFilters, enterChildrenFilters);
+                return properties;
+            }
+
+            private static SerializedProperty[] GetProperties(
+                SerializedProperty property,
+                SerializedProperty cancelProperty = null,
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = null,
+                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = null)
+            {
+                addListFilters ??= new();
+                enterChildrenFilters ??= new();
+                addListFilters.Add(ExcludeFilters.AddListPropertyDefault);
+                enterChildrenFilters.Add(ExcludeFilters.EnterChildrenPropertyDefault);
+
                 SerializedProperty curProperty = property.Copy();
 
-                bool includeInvisible = true;
-                // このプロパティ内の最後のプロパティの次のプロパティ、つまり、現在のプロパティ外のプロパティで次に来るもの
-                SerializedProperty endProperty = curProperty.GetEndProperty(includeInvisible);
-
-                SerializedProperty[] properties = GetProperties(curProperty, endProperty);
-                return properties;
-            }
-
-            private static SerializedProperty[] GetProperties(SerializedProperty property, SerializedProperty endProperty = null)
-            {
                 List<SerializedProperty> properties = new();
 
-                bool enterChildren;
+                List<SerializedProperty> propertyStack = new();
+                List<SerializedProperty> endPropertyStack = new();
+
+                bool doLoop;
                 do
                 {
-                    enterChildren = true;
-                    if (property.name == "m_GameObject") continue;
+                    doLoop = false;
 
-                    if (property.propertyType == SerializedPropertyType.String || property.propertyType == SerializedPropertyType.AnimationCurve)
-                        enterChildren = false;
+                    SerializedProperty spCopy = curProperty.Copy();
 
-                    properties.Add(property.Copy());
+                    // スタックを追加
+                    propertyStack.Add(spCopy);
+                    bool includeInvisible = true;
+                    // このプロパティの子または孫ではない次のプロパティ
+                    endPropertyStack.Add(curProperty.GetEndProperty(includeInvisible));
+
+                    // serializedPropertyをフィルターにかける
+                    bool addList = addListFilters.All(filter => filter(curProperty.serializedObject, propertyStack));
+                    bool enterChildren = enterChildrenFilters.All(filter => filter(curProperty.serializedObject, propertyStack));
+
+                    // リストに追加する
+                    if (addList) { properties.Add(spCopy); }
+
+                    // 次の要素を取得
+                    bool existNext = curProperty.Next(enterChildren);
+
+                    while (endPropertyStack.Count() > 0 && SerializedProperty.EqualContents(curProperty, endPropertyStack.Last()))
+                    {
+                        // 次の要素が子でないならendPropertyStackから一致するものが無くなるまでスタックを遡る
+                        propertyStack.RemoveAt(propertyStack.Count() - 1);
+                        endPropertyStack.RemoveAt(endPropertyStack.Count() - 1);
+                    }
+
+                    // ループを続けるか
+                    doLoop = existNext && (cancelProperty == null || !SerializedProperty.EqualContents(curProperty, cancelProperty));
                 }
-                while (property.Next(enterChildren) && (endProperty == null || !SerializedProperty.EqualContents(property, endProperty)));
+                while (doLoop);
 
                 return properties.ToArray();
             }
-        }
 
+
+            public record ExcludeFilters
+            {
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> AddListPropertyDefault = (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty lastStack = spStack.Last();
+                    }
+                    return true;
+                };
+
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> EnterChildrenObjectDefault = (root, spStack) =>
+                {
+                    if (spStack.Count() == 0)
+                    {
+                        // ルートオブジェクトを見ているなら
+                        if (
+                            RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(root.targetObject) ||
+                            root.targetObject is Mesh)
+                        {
+                            // ルートオブジェクトがnullなら or
+                            // ルートオブジェクトがMeshなら中を探索しない
+                            return false;
+                        }
+                    }
+                    return true;
+                };
+
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> EnterChildrenPropertyDefault = (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty curProperty = spStack.Last();
+                        // フィールドが文字列かAnimationCurveなら中を探索しない
+                        return !(
+                            curProperty.propertyType == SerializedPropertyType.String ||
+                            curProperty.propertyType == SerializedPropertyType.AnimationCurve ||
+                            false
+                            );
+                    }
+                    return true;
+                };
+
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> ReadOnly = (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty lastStack = spStack.Last();
+                        // Transformの最上層のフィールドか
+                        if (root.targetObject is Transform && lastStack.depth == 0)
+                        {
+                            // Transformのm_LocalEulerAnglesHintフィールドならfalse
+                            if (
+                                lastStack.name == "m_LocalEulerAnglesHint"
+                            ) return false;
+                        }
+                    }
+                    return true;
+                };
+
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> HighRisk = (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty lastStack = spStack.Last();
+                        // 最上層のフィールドか
+                        if (lastStack.depth == 0)
+                        {
+                            if (
+                                lastStack.name == "m_ObjectHideFlags" ||
+                                lastStack.name == "m_EditorHideFlags" ||
+                                lastStack.name == "m_StaticEditorFlags"
+                            ) return false;
+                        }
+                    }
+                    return true;
+                };
+
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> SafetyUnknown = (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty lastStack = spStack.Last();
+                        // 最上層のフィールドか
+                        if (lastStack.depth == 0)
+                        {
+                            if (
+                                lastStack.name == "m_Script" || // テキスト本文 or コンポーネントの本体csファイル
+                                lastStack.name == "m_CorrespondingSourceObject" ||
+                                lastStack.name == "m_PrefabInstance" ||
+                                lastStack.name == "m_PrefabAsset"
+                            ) return false;
+
+                            if (root.targetObject is GameObject)
+                            {
+                                if (
+                                    lastStack.name == "m_Component"
+                                ) return false;
+                            }
+                            if (root.targetObject is ScriptableObject)
+                            {
+                                if (
+                                    lastStack.name == "m_GameObject" ||
+                                    lastStack.name == "m_EditorClassIdentifier"
+                                ) return false;
+                            }
+                            if (root.targetObject is Component)
+                            {
+                                if (
+                                    lastStack.name == "m_GameObject" ||
+                                    lastStack.name == "m_EditorClassIdentifier"
+                                ) return false;
+                            }
+                            if (root.targetObject is Transform)
+                            {
+                                if (
+                                    lastStack.name == "m_ConstrainProportionsScale" ||
+                                    lastStack.name == "m_Children" ||
+                                    lastStack.name == "m_Father"
+                                ) return false;
+                            }
+                        }
+                    }
+                    return true;
+                };
+
+                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> OtherThanObjectReference = (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty lastStack = spStack.Last();
+                        return lastStack.propertyType == SerializedPropertyType.ObjectReference;
+                    }
+                    return true;
+                };
+            }
+        }
         // ▲ SerializedObject関連 ========================= ▲
 
 
@@ -553,13 +698,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             public static long GetObjectId(object obj)
             {
-                if (FakeNullUtil.IsNullOrFakeNull(obj)) return -1;
+                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(obj)) return -1;
                 return _objectIDGenerator.GetId(obj, out _);
             }
 
             public static long GetObjectId(object obj, out bool firstTime)
             {
-                if (FakeNullUtil.IsNullOrFakeNull(obj))
+                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(obj))
                 {
                     firstTime = false;
                     return -1;
@@ -569,63 +714,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         }
 
         // ▲ ObjectID関連 ========================= ▲
-
-
-
-        // ▼ 偽装Null関連 ========================= ▼
-        // MARK: ==偽装Null関連==
-
-        public static class FakeNullUtil
-        {
-            public static NullType GetNullType(Object obj)
-            {
-                bool isTrueNull = ((object)obj) == null;
-                // "=="演算子のオーバーライドのせいで独自のNullチェックが行われる
-                bool isNull = obj == null;
-
-                if (isTrueNull)
-                {
-                    return NullType.TrueNull;
-                }
-                else if (isNull)
-                {
-                    return NullType.FakeNull;
-                }
-                else
-                {
-                    return NullType.NotNull;
-                }
-            }
-
-            public static bool IsNullOrFakeNull(Object obj)
-            {
-                NullType result = GetNullType(obj);
-                if (result == NullType.FakeNull || result == NullType.TrueNull)
-                {
-                    // 偽装NullかNullなら戻る
-                    return true;
-                }
-                return false;
-            }
-            public static bool IsNullOrFakeNull(object obj)
-            {
-
-                if (obj == null || (obj is Object uObj && IsNullOrFakeNull(uObj)))
-                {
-                    // 偽装NullかNullなら戻る
-                    return true;
-                }
-                return false;
-            }
-
-            public enum NullType
-            {
-                NotNull,
-                FakeNull,
-                TrueNull,
-            }
-        }
-        // ▲ 偽装Null関連 ========================= ▲
 
 
         // ▼ VisualElement関連 ========================= ▼
@@ -769,7 +857,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 using (var so = new SerializedObject(obj))
                 {
-                    foreach (var prop in SerializedObjectUtil.GetAllProperties(so).Where(x => x.propertyType == SerializedPropertyType.ObjectReference))
+                    HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = new() {
+                        SerializedObjectUtil.ExcludeFilters.ReadOnly,
+                        SerializedObjectUtil.ExcludeFilters.OtherThanObjectReference,
+                        };
+                    HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = new() {
+                        SerializedObjectUtil.ExcludeFilters.ReadOnly,
+                        };
+                    SerializedProperty[] props = SerializedObjectUtil.GetAllProperties(so, addListFilters, enterChildrenFilters);
+                    foreach (var prop in props)
                         prop.objectReferenceValue = ReplaceClonedObjectImpl(prop.objectReferenceValue, cache, checkedCache);
 
                     so.ApplyModifiedPropertiesWithoutUndo();
@@ -1030,85 +1126,27 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public static class OtherUtil
         {
-            public static ValueTypeGroup GetValueTypeGroup(object obj) => obj switch
-            {
-                bool => ValueTypeGroup.Bool,
-                sbyte or byte or
-                short or ushort or
-                int or uint or
-                long or ulong or
-                float or double => ValueTypeGroup.Number,
-                string => ValueTypeGroup.String,
-                Object => ValueTypeGroup.UnityObject,
-                _ => ValueTypeGroup.Other,
-            };
+            public static SerializedPropertyType Parse2SerializedPropertyType(FieldSPType fieldSPType) => (SerializedPropertyType)fieldSPType;
 
-            public static ValueTypeGroup Parse2ValueTypeGroup(Type type) => Type.GetTypeCode(type) switch
+            public static (bool success, Type type) GetValueHolderValueType<T>(SerializedProperty valueHolderProperty) where T : ValueHolderBase<T>, new()
             {
-                TypeCode.Boolean => ValueTypeGroup.Bool,
-                TypeCode.SByte or TypeCode.Byte or
-                TypeCode.Int16 or TypeCode.UInt16 or
-                TypeCode.Int32 or TypeCode.UInt32 or
-                TypeCode.Int64 or TypeCode.UInt64 or
-                TypeCode.Single or TypeCode.Double => ValueTypeGroup.Number,
-                TypeCode.String => ValueTypeGroup.String,
-                TypeCode.Object when typeof(Object).IsAssignableFrom(type) => ValueTypeGroup.UnityObject,
-                _ => ValueTypeGroup.Other,
-            };
+                T valueHolder = (T)valueHolderProperty.managedReferenceValue;
+                // 現在の値のフィールドの名前
+                string currentValueFieldName = valueHolder.GetCurrentValueFieldName();
 
-            public static ValueTypeGroup Parse2ValueTypeGroup(SerializedPropertyType propType) => propType switch
-            {
-                SerializedPropertyType.Boolean => ValueTypeGroup.Bool,
-                SerializedPropertyType.Float or SerializedPropertyType.Integer => ValueTypeGroup.Number,
-                SerializedPropertyType.String => ValueTypeGroup.String,
-                SerializedPropertyType.ObjectReference => ValueTypeGroup.UnityObject,
-                _ => ValueTypeGroup.Other,
-            };
+                if (currentValueFieldName == null) return (false, null);
 
-            public static Type Parse2Type(ValueTypeGroup typeGroup) => typeGroup switch
-            {
-                ValueTypeGroup.Bool => typeof(bool),
-                ValueTypeGroup.Number => typeof(double),
-                ValueTypeGroup.String => typeof(string),
-                ValueTypeGroup.UnityObject => typeof(Object),
-                _ => null,
-            };
+                // 現在の値を取得
+                SerializedProperty currentValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(currentValueFieldName);
+                object boxedValue = currentValueFieldProperty.boxedValue;
 
-            public static Type GetValueHolderValueType<T>(SerializedProperty valueHolderProperty) where T : ValueHolderBase, new()
-            {
-                T valueHolderInstance = new();
-                ValueTypeGroup fieldValueTypeGroup = (ValueTypeGroup)valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.ValueTypeFieldName).enumValueIndex;
-                Type valueType = null;
-                switch (fieldValueTypeGroup)
-                {
-                    case ValueTypeGroup.Bool:
-                        SerializedProperty boolvalueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.BoolValueFieldName);
-                        valueType = boolvalueFieldProperty.boolValue.GetType();
-                        break;
-                    case ValueTypeGroup.Number:
-                        SerializedProperty numbervalueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.NumberValueFieldName);
-                        valueType = numbervalueFieldProperty.doubleValue.GetType();
-                        break;
-                    case ValueTypeGroup.String:
-                        SerializedProperty stringvalueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.StringValueFieldName);
-                        valueType = stringvalueFieldProperty.stringValue.GetType();
-                        break;
-                    case ValueTypeGroup.UnityObject:
-                        SerializedProperty ObjectvalueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(valueHolderInstance.ObjectValueFieldName);
-                        Object objectValue = ObjectvalueFieldProperty.objectReferenceValue;
-                        if (!FakeNullUtil.IsNullOrFakeNull(objectValue))
-                            valueType = objectValue.GetType();
-                        break;
-                    default:
-                        break;
-                }
-
-                return valueType;
+                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(boxedValue)) return (true, null);
+                return (true, boxedValue.GetType());
             }
 
             private static readonly Regex BlankCharRegex = new(@"\s+", RegexOptions.Compiled);
 
-            public static (bool success, ValueTypeGroup valueType, object result) CalculateExpression(string expressionString, List<ArgumentData> argumentDatas)
+            public static (bool success, Type valueType, object result) CalculateExpression(string expressionString, List<ArgumentData> argumentDatas)
             {
                 // 数式パーサー
                 Processor processor = new();
@@ -1119,7 +1157,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     expression = processor.Parse(expressionString);
                 }
-                catch (Exception ex) { return (false, ValueTypeGroup.Other, ex.Message); }
+                catch (Exception ex) { return (false, null, ex.Message); }
 
                 IEnumerable<Variable> needVariables = GetAllVariables(expression).GroupBy(x => x.Name).Select(x => x.First());
 
@@ -1130,13 +1168,19 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     // 該当する引数が無ければエラーを返す
                     string varibleNames = string.Join("', '", missingVariables.Select(x => x.Name));
-                    return (false, ValueTypeGroup.Other, $"引数'{varibleNames}'が設定されていません。");
+                    return (false, null, $"引数'{varibleNames}'が設定されていません。");
                 }
 
-                // ArgumentTypeがUnityObjectのArgumentDataのリスト
-                IEnumerable<ArgumentData> unityObjectTypeArgumentDatas = filteredArgumentDatas.Where(x => x.ArgumentType == ValueTypeGroup.UnityObject);
-                // ArgumentTypeがUnityObjectのArgumentDataが存在するか確認
-                if (unityObjectTypeArgumentDatas.Count() > 0)
+                // 計算式に利用できるFieldSPTypeのリスト
+                HashSet<FieldSPType> allowCalcFieldSPTypes = new() {
+                    FieldSPType.Integer, FieldSPType.Boolean, FieldSPType.Float, FieldSPType.String, FieldSPType.Color, FieldSPType.Enum,
+                    FieldSPType.Vector2, FieldSPType.Vector3, FieldSPType.Vector4, FieldSPType.Rect, FieldSPType.ArraySize, FieldSPType.Quaternion };
+                // 計算式に利用できないArgumentTypeのArgumentDataのリスト
+                IEnumerable<ArgumentData> notAllowCalcArgumentDatas = filteredArgumentDatas.Where(
+                    x => !allowCalcFieldSPTypes.Contains(x.ArgumentFieldSPType)
+                );
+                // 計算式に利用できないArgumentFieldSPTypeのArgumentDataが存在するか確認
+                if (notAllowCalcArgumentDatas.Count() > 0)
                 {
                     // 空白文字を削除した式文字列
                     string NonBlankLowerExpressionString = BlankCharRegex.Replace(expressionString, "").ToLower();
@@ -1145,38 +1189,31 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     {
                         // 必要な変数が1つのみで余計な計算式も無い(=空白文字無し代入式が唯一の変数名と完全一致する)なら
 
-                        // UnityObjectを代入する場合の特殊処理
-                        ArgumentData argumentData = unityObjectTypeArgumentDatas.First();
-                        object valueObj = argumentData.Value;
-                        if (FakeNullUtil.IsNullOrFakeNull(valueObj))
+                        // 計算式に利用できないデータを代入する場合の特殊処理
+                        ArgumentData argumentData = notAllowCalcArgumentDatas.First();
+                        object valueObj = argumentData.Value.Value;
+                        if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(valueObj))
                         {
-                            return (true, ValueTypeGroup.UnityObject, null);
+                            return (true, argumentData.ArgumentType, null);
                         }
 
-                        if (valueObj is not Object gameObject)
-                        {
-                            return (false, ValueTypeGroup.Other, $"'{argumentData.ArgumentName}'の{typeof(Object)}へのキャストに失敗しました。");
-                        }
-                        else
-                        {
-                            return (true, ValueTypeGroup.UnityObject, gameObject);
-                        }
+                        return (true, argumentData.ArgumentType, valueObj);
                     }
                     else
                     {
-                        // UnityObjectを引数に指定しながら不正な代入式なら
-                        string unityObjectTypeArgumentDataNames = string.Join("', '", unityObjectTypeArgumentDatas.Select(x => x.ArgumentName));
-                        return (false, ValueTypeGroup.Other, $"引数'{unityObjectTypeArgumentDataNames}'は値がUnityObjectであり、代入式に計算を必要とする式を指定することはできません。\n単一の引数名のみを入力してください。(例:代入式 = 'x1')");
+                        // 計算式に利用できないデータを引数に指定しながら不正な代入式なら
+                        string unityObjectTypeArgumentDataNames = string.Join("', '", notAllowCalcArgumentDatas.Select(x => x.ArgumentName));
+                        return (false, null, $"引数'{unityObjectTypeArgumentDataNames}'は計算に使用できない値であり、代入式に計算を必要とする式を指定することはできません。\n単一の引数名のみを入力してください。(例:代入式 = 'x1')");
                     }
                 }
 
-                // ArgumentTypeがOtherのArgumentDataのリスト
-                IEnumerable<ArgumentData> otherTypeArgumentDatas = filteredArgumentDatas.Where(x => x.ArgumentType == ValueTypeGroup.Other);
-                // ArgumentTypeがOtherのArgumentDataが存在するか確認
-                if (otherTypeArgumentDatas.Count() > 0)
+                // ArgumentFieldSPTypeが使用できないタイプのArgumentDataのリスト
+                IEnumerable<ArgumentData> notAllowUseTypeArgumentDatas = filteredArgumentDatas.Where(x => !FieldSPTypeHelper.AllowCalculateFieldSPType(x.ArgumentFieldSPType));
+                // ArgumentFieldSPTypeが使用できないタイプのArgumentDataが存在するか確認
+                if (notAllowUseTypeArgumentDatas.Count() > 0)
                 {
-                    string otherTypeArgumentDataNames = string.Join("', '", otherTypeArgumentDatas.Select(x => x.ArgumentName));
-                    return (false, ValueTypeGroup.Other, $"引数'{otherTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
+                    string notAllowUseTypeArgumentDataNames = string.Join("', '", notAllowUseTypeArgumentDatas.Select(x => x.ArgumentName));
+                    return (false, null, $"引数'{notAllowUseTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
                 }
 
                 // ArgumentDataをParameterに変換
@@ -1189,22 +1226,42 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     result = expression.Execute(parameters);
                 }
-                catch (Exception ex) { return (false, ValueTypeGroup.Other, ex.Message); }
+                catch (Exception ex) { return (false, null, ex.Message); }
 
-                ValueTypeGroup resultValueType = result switch
+                object fixedResult = result;
+                switch (result)
                 {
-                    bool => ValueTypeGroup.Bool,
-                    NumberValue => ValueTypeGroup.Number,
-                    double => ValueTypeGroup.Number,
-                    string => ValueTypeGroup.String,
-                    _ => ValueTypeGroup.Other,
-                };
+                    case bool:
+                    case double:
+                    case string:
+                        break;
+                    case NumberValue numberValue:
+                        fixedResult = numberValue.Number;
+                        break;
+                    case VectorValue vectorValue:
+                        switch (vectorValue.Size)
+                        {
+                            case 1:
+                                fixedResult = CustomCast<double>(vectorValue);
+                                break;
+                            case 2:
+                                fixedResult = CustomCast<Vector2>(vectorValue);
+                                break;
+                            case 3:
+                                fixedResult = CustomCast<Vector3>(vectorValue);
+                                break;
+                            case 4:
+                                fixedResult = CustomCast<Vector4>(vectorValue);
+                                break;
+                            default:
+                                return (false, null, $"ベクトルの次元数`{vectorValue.Size}`が異常です。");
+                        }
+                        break;
+                    default:
+                        return (false, null, $"不明な型が返されました。{fixedResult.GetType().Name}/{fixedResult}");
+                }
 
-                if (resultValueType == ValueTypeGroup.Other) return (false, resultValueType, $"不明な型が返されました。{result.GetType().Name}/{result}");
-
-                if (resultValueType == ValueTypeGroup.Number && result is NumberValue numberValue) result = numberValue.Number;
-
-                return (true, resultValueType, result);
+                return (true, fixedResult.GetType(), fixedResult);
             }
 
             private static IEnumerable<Variable> GetAllVariables(IExpression expression)
@@ -1273,23 +1330,34 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 List<Parameter> arguments = new();
                 foreach (ArgumentData argumentData in argumentDatas)
                 {
-                    switch (argumentData.ArgumentType)
+                    switch (argumentData.ArgumentFieldSPType)
                     {
                         // 変数データを追加
-                        case ValueTypeGroup.Bool:
-                            bool? valueBool = (bool?)argumentData.Value;
-                            if (valueBool != null)
-                                arguments.Add(new(argumentData.ArgumentName, valueBool.Value));
+                        case FieldSPType.Boolean:
+                            if (argumentData.Value.HasValue)
+                                arguments.Add(new(argumentData.ArgumentName, (bool)argumentData.Value.Value));
                             break;
-                        case ValueTypeGroup.Number:
-                            string valueNumberStr = argumentData.Value?.ToString();
+                        case FieldSPType.Integer:
+                        case FieldSPType.Float:
+                            string valueNumberStr = argumentData.Value.Value.ToString();
                             if (double.TryParse(valueNumberStr, out double doubleValue))
                                 arguments.Add(new(argumentData.ArgumentName, doubleValue));
                             break;
-                        case ValueTypeGroup.String:
-                            string valueStr = (string)argumentData.Value;
-                            if (valueStr != null)
-                                arguments.Add(new(argumentData.ArgumentName, valueStr));
+                        case FieldSPType.String:
+                            if (argumentData.Value.HasValue)
+                                arguments.Add(new(argumentData.ArgumentName, (string)argumentData.Value.Value));
+                            break;
+                        case FieldSPType.Vector2:
+                        case FieldSPType.Vector3:
+                        case FieldSPType.Vector4:
+                        case FieldSPType.Rect:
+                        case FieldSPType.Color:
+                        case FieldSPType.Quaternion:
+                            arguments.Add(new(argumentData.ArgumentName, CustomCast<VectorValue>(argumentData.Value.Value)));
+                            break;
+                        case FieldSPType.Enum:
+                            if (argumentData.Value.HasValue)
+                                arguments.Add(new(argumentData.ArgumentName, (int)argumentData.Value.Value));
                             break;
                         default:
                             break;
@@ -1311,91 +1379,289 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 return parameters;
             }
 
-            public static bool ValidationTypeAssignable(Type assignValueType, Type targetValueType)
-            {
-                ValueTypeGroup assignValueTypeGroup = Parse2ValueTypeGroup(assignValueType);
-                ValueTypeGroup targetValueTypeGroup = Parse2ValueTypeGroup(targetValueType);
-
-                return ValidationTypeAssignable(assignValueType, assignValueTypeGroup, targetValueType, targetValueTypeGroup);
-            }
-
-            public static bool ValidationTypeAssignable(Type assignValueType, ValueTypeGroup assignValueTypeGroup, Type targetType, ValueTypeGroup targetTypeGroup)
+            public static bool ValidationTypeAssignable(Type assignType, Type targetType)
             {
                 bool typeCheckResult = false;
-                switch (assignValueTypeGroup)
+                if (targetType != null)
                 {
-                    case ValueTypeGroup.Bool:
-                        typeCheckResult = targetTypeGroup == assignValueTypeGroup || targetTypeGroup == ValueTypeGroup.Number || targetTypeGroup == ValueTypeGroup.String;
-                        break;
-                    case ValueTypeGroup.Number:
-                        typeCheckResult = targetTypeGroup == assignValueTypeGroup || targetTypeGroup == ValueTypeGroup.String;
-                        break;
-                    case ValueTypeGroup.String:
-                        typeCheckResult = targetTypeGroup == assignValueTypeGroup;
-                        break;
-                    case ValueTypeGroup.UnityObject:
-                        if (targetType != null)
-                        {
-                            if (assignValueType == null) typeCheckResult = true;
-                            else typeCheckResult = targetType.IsAssignableFrom(assignValueType);
-                        }
-                        break;
+                    if (assignType == null)
+                    {
+                        // 代入先がEnum型なら代入不可
+                        if (targetType == typeof(Enum)) typeCheckResult = false;
+                        // 代入先がnull許容型か確認
+                        else typeCheckResult = !targetType.IsValueType || Nullable.GetUnderlyingType(targetType) != null;
+                    }
+                    else
+                    {
+                        typeCheckResult = targetType.IsAssignableFrom(assignType) ||
+                            CustomCastFuncDic.Any(x => x.AssignType.IsAssignableFrom(assignType) && x.TargetType.IsAssignableFrom(targetType));
+                    }
                 }
 
                 return typeCheckResult;
+            }
+
+            public static T CustomCast<T>(object assignValue)
+            {
+                object castedObj = CustomCast(assignValue, typeof(T));
+                return (T)castedObj;
+            }
+
+            public static object CustomCast(object assignValue, Type targetType)
+            {
+                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(assignValue))
+                {
+                    return null;
+                }
+                else
+                {
+                    Type assignValueType = assignValue.GetType();
+
+                    // そのまま代入できるなら
+                    if (targetType.IsAssignableFrom(assignValueType)) return assignValue;
+
+                    ITypeConverter converter = CustomCastFuncDic.FirstOrDefault(
+                        x => x.AssignType.IsAssignableFrom(assignValueType) && x.TargetType.IsAssignableFrom(targetType));
+
+                    return converter?.DoConvert(assignValue, assignValueType, targetType);
+                }
+            }
+
+            private static readonly List<ITypeConverter> CustomCastFuncDic = new()
+            {
+                new TypeConverter<byte, sbyte>((v) => (sbyte)v),
+                new TypeConverter<short, sbyte>((v) => (sbyte)v),
+                new TypeConverter<ushort, sbyte>((v) => (sbyte)v),
+                new TypeConverter<int, sbyte>((v) => (sbyte)v),
+                new TypeConverter<uint, sbyte>((v) => (sbyte)v),
+                new TypeConverter<long, sbyte>((v) => (sbyte)v),
+                new TypeConverter<ulong, sbyte>((v) => (sbyte)v),
+                new TypeConverter<float, sbyte>((v) => (sbyte)v),
+                new TypeConverter<double, sbyte>((v) => (sbyte)v),
+
+                new TypeConverter<sbyte, byte>((v) => (byte)v),
+                new TypeConverter<short, byte>((v) => (byte)v),
+                new TypeConverter<ushort, byte>((v) => (byte)v),
+                new TypeConverter<int, byte>((v) => (byte)v),
+                new TypeConverter<uint, byte>((v) => (byte)v),
+                new TypeConverter<long, byte>((v) => (byte)v),
+                new TypeConverter<ulong, byte>((v) => (byte)v),
+                new TypeConverter<float, byte>((v) => (byte)v),
+                new TypeConverter<double, byte>((v) => (byte)v),
+
+                new TypeConverter<byte, short>((v) => v),
+                new TypeConverter<sbyte, short>((v) => v),
+                new TypeConverter<ushort, short>((v) => (short)v),
+                new TypeConverter<int, short>((v) => (short)v),
+                new TypeConverter<uint, short>((v) => (short)v),
+                new TypeConverter<long, short>((v) => (short)v),
+                new TypeConverter<ulong, short>((v) => (short)v),
+                new TypeConverter<float, short>((v) => (short)v),
+                new TypeConverter<double, short>((v) => (short)v),
+
+                new TypeConverter<byte, ushort>((v) => v),
+                new TypeConverter<sbyte, ushort>((v) => (ushort)v),
+                new TypeConverter<short, ushort>((v) => (ushort)v),
+                new TypeConverter<int, ushort>((v) => (ushort)v),
+                new TypeConverter<uint, ushort>((v) => (ushort)v),
+                new TypeConverter<long, ushort>((v) => (ushort)v),
+                new TypeConverter<ulong, ushort>((v) => (ushort)v),
+                new TypeConverter<float, ushort>((v) => (ushort)v),
+                new TypeConverter<double, ushort>((v) => (ushort)v),
+
+                new TypeConverter<byte, int>((v) => v),
+                new TypeConverter<sbyte, int>((v) => v),
+                new TypeConverter<short, int>((v) => v),
+                new TypeConverter<ushort, int>((v) => v),
+                new TypeConverter<uint, int>((v) => (int)v),
+                new TypeConverter<long, int>((v) => (int)v),
+                new TypeConverter<ulong, int>((v) => (int)v),
+                new TypeConverter<float, int>((v) => (int)v),
+                new TypeConverter<double, int>((v) => (int)v),
+
+                new TypeConverter<byte, uint>((v) => v),
+                new TypeConverter<sbyte, uint>((v) => (uint)v),
+                new TypeConverter<short, uint>((v) => (uint)v),
+                new TypeConverter<ushort, uint>((v) => v),
+                new TypeConverter<int, uint>((v) => (uint)v),
+                new TypeConverter<long, uint>((v) => (uint)v),
+                new TypeConverter<ulong, uint>((v) => (uint)v),
+                new TypeConverter<float, uint>((v) => (uint)v),
+                new TypeConverter<double, uint>((v) => (uint)v),
+
+                new TypeConverter<byte, long>((v) => v),
+                new TypeConverter<sbyte, long>((v) => v),
+                new TypeConverter<short, long>((v) => v),
+                new TypeConverter<ushort, long>((v) => v),
+                new TypeConverter<int, long>((v) => v),
+                new TypeConverter<uint, long>((v) => v),
+                new TypeConverter<ulong, long>((v) => (long)v),
+                new TypeConverter<float, long>((v) => (long)v),
+                new TypeConverter<double, long>((v) => (long)v),
+
+                new TypeConverter<byte, ulong>((v) => v),
+                new TypeConverter<sbyte, ulong>((v) => (ulong)v),
+                new TypeConverter<short, ulong>((v) => (ulong)v),
+                new TypeConverter<ushort, ulong>((v) => v),
+                new TypeConverter<int, ulong>((v) => (ulong)v),
+                new TypeConverter<uint, ulong>((v) => v),
+                new TypeConverter<long, ulong>((v) => (ulong)v),
+                new TypeConverter<float, ulong>((v) => (ulong)v),
+                new TypeConverter<double, ulong>((v) => (ulong)v),
+
+                new TypeConverter<byte, float>((v) => v),
+                new TypeConverter<sbyte, float>((v) => v),
+                new TypeConverter<short, float>((v) => v),
+                new TypeConverter<ushort, float>((v) => v),
+                new TypeConverter<int, float>((v) => v),
+                new TypeConverter<uint, float>((v) => v),
+                new TypeConverter<long, float>((v) => v),
+                new TypeConverter<ulong, float>((v) => v),
+                new TypeConverter<double, float>((v) => (float)v),
+
+                new TypeConverter<byte, double>((v) => v),
+                new TypeConverter<sbyte, double>((v) => v),
+                new TypeConverter<short, double>((v) => v),
+                new TypeConverter<ushort, double>((v) => v),
+                new TypeConverter<int, double>((v) => v),
+                new TypeConverter<uint, double>((v) => v),
+                new TypeConverter<long, double>((v) => v),
+                new TypeConverter<ulong, double>((v) => v),
+                new TypeConverter<float, double>((v) => (double)v),
+
+                new TypeConverter<sbyte, string>((v) => v.ToString()),
+                new TypeConverter<byte, string>((v) => v.ToString()),
+                new TypeConverter<short, string>((v) => v.ToString()),
+                new TypeConverter<ushort, string>((v) => v.ToString()),
+                new TypeConverter<int, string>((v) => v.ToString()),
+                new TypeConverter<uint, string>((v) => v.ToString()),
+                new TypeConverter<long, string>((v) => v.ToString()),
+                new TypeConverter<ulong, string>((v) => v.ToString()),
+                new TypeConverter<float, string>((v) => v.ToString()),
+                new TypeConverter<double, string>((v) => v.ToString()),
+
+                new TypeConverter<Enum, string>((v) => v.ToString()),
+
+                new TypeConverter<sbyte, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<byte, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<short, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<ushort, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<int, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, v)),
+                new TypeConverter<uint, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<long, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<ulong, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<float, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+                new TypeConverter<double, Enum>((v, assignType, targetType) => (Enum)Enum.ToObject(targetType, (int)v)),
+
+                new TypeConverter<Enum, sbyte>((v) => Convert.ToSByte(v)),
+                new TypeConverter<Enum, byte>((v) => Convert.ToByte(v)),
+                new TypeConverter<Enum, short>((v) => Convert.ToInt16(v)),
+                new TypeConverter<Enum, ushort>((v) => Convert.ToUInt16(v)),
+                new TypeConverter<Enum, int>((v) => Convert.ToInt32(v)),
+                new TypeConverter<Enum, uint>((v) => Convert.ToUInt32(v)),
+                new TypeConverter<Enum, long>((v) => Convert.ToInt64(v)),
+                new TypeConverter<Enum, ulong>((v) => Convert.ToUInt64(v)),
+                new TypeConverter<Enum, float>((v) => Convert.ToSingle(v)),
+                new TypeConverter<Enum, double>((v) => Convert.ToDouble(v)),
+
+                new TypeConverter<Vector2Int,Vector2>((v) => v),
+                new TypeConverter<Vector2,Vector2Int>((v) => new((int)v[0], (int)v[1])),
+
+                new TypeConverter<Vector3Int,Vector3>((v) => v),
+                new TypeConverter<Vector3,Vector3Int>((v) => new((int)v[0], (int)v[1], (int)v[2])),
+
+                new TypeConverter<Quaternion, Vector4>((v) => new(v[0], v[1], v[2], v[3])),
+                new TypeConverter<Rect, Vector4>((v) => new(v.x, v.y, v.width, v.height)),
+                new TypeConverter<RectInt, Vector4>((v) => new(v.x, v.y, v.width, v.height)),
+                new TypeConverter<Color, Vector4>((v) => new(v[0], v[1], v[2], v[3])),
+
+                new TypeConverter<Vector4,Quaternion>((v) => new(v[0], v[1], v[2], v[3])),
+                new TypeConverter<Vector4,Rect>((v) => new(v[0], v[1], v[2], v[3])),
+                new TypeConverter<Vector4,RectInt>((v) => new((int)v[0], (int)v[1], (int)v[2], (int)v[3])),
+                new TypeConverter<Vector4,Color>((v) => new(v[0], v[1], v[2], v[3])),
+
+                new TypeConverter<BoundsInt,Bounds>((v) => new(v.center, v.size)),
+                new TypeConverter<Bounds,BoundsInt>((v) => new(CustomCast<Vector3Int>(v.min), CustomCast<Vector3Int>(v.size))),
+
+
+                new TypeConverter<double, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v) })),
+                new TypeConverter<Vector2, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]) })),
+                new TypeConverter<Vector3, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]), new(v[2]) })),
+                new TypeConverter<Vector4, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]), new(v[2]), new(v[3]) })),
+                new TypeConverter<Vector4, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]), new(v[2]), new(v[3]) })),
+                new TypeConverter<Quaternion, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]), new(v[2]), new(v[3]) })),
+                new TypeConverter<Color, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v[0]), new(v[1]), new(v[2]), new(v[3]) })),
+                new TypeConverter<Rect, VectorValue>((v) => VectorValue.Create(new NumberValue[]{ new(v.x), new(v.y), new(v.width), new(v.height) })),
+
+                new TypeConverter<VectorValue, double>((v) => (float)v[0].Number),
+                new TypeConverter<VectorValue, Vector2>((v) => new((float)v[0].Number, (float)v[1].Number)),
+                new TypeConverter<VectorValue, Vector3>((v) => new((float)v[0].Number, (float)v[1].Number, (float)v[2].Number)),
+                new TypeConverter<VectorValue, Vector4>((v) => new((float)v[0].Number, (float)v[1].Number, (float)v[2].Number, (float)v[3].Number)),
+                new TypeConverter<VectorValue, Quaternion>((v) => new((float)v[0].Number, (float)v[1].Number, (float)v[2].Number, (float)v[3].Number)),
+                new TypeConverter<VectorValue, Color>((v) => new((float)v[0].Number, (float)v[1].Number, (float)v[2].Number, (float)v[3].Number)),
+                new TypeConverter<VectorValue, Rect>((v) => new((float)v[0].Number, (float)v[1].Number, (float)v[2].Number, (float)v[3].Number)),
+            };
+
+            private interface ITypeConverter
+            {
+                public Type AssignType { get; }
+                public Type TargetType { get; }
+
+                public object DoConvert(object assignValue, Type assignType = null, Type targetType = null);
+            }
+
+            private class TypeConverter<T1, T2> : ITypeConverter
+            {
+                public TypeConverter(Func<T1, Type, Type, T2> converter)
+                {
+                    Converter1 = converter;
+                }
+
+                public TypeConverter(Func<T1, T2> converter)
+                {
+                    Converter2 = converter;
+                }
+
+                public Type AssignType { get; } = typeof(T1);
+                public Type TargetType { get; } = typeof(T2);
+
+                private Func<T1, Type, Type, T2> Converter1 { get; } = null;
+                private Func<T1, T2> Converter2 { get; } = null;
+
+                public object DoConvert(object assignValue, Type assignType = null, Type targetType = null)
+                {
+                    if (assignValue is not T1 castedValue)
+                    {
+                        throw new Exception("型が不正です");
+                    }
+
+                    if (Converter1 != null) return Converter1(castedValue, assignType, targetType);
+                    else if (Converter2 != null) return Converter2(castedValue);
+                    else throw new Exception("TypeConverter.DoConvert()を実行中にエラーが発生しました。");
+                }
+            }
+
+            public static Optional<object> GetSelectPathValue(Object unityObj, string propertyPath)
+            {
+                SerializedProperty selectSP = GetSelectPathSerializedProperty(unityObj, propertyPath);
+                if (selectSP == null)
+                {
+                    return Optional<object>.None;
+                }
+                return OptionalHelper.Some(selectSP.boxedValue);
+            }
+
+            public static SerializedProperty GetSelectPathSerializedProperty(Object unityObj, string propertyPath)
+            {
+                SerializedObject so = new(unityObj);
+                if (so != null && !string.IsNullOrWhiteSpace(propertyPath))
+                {
+                    return so.FindProperty(propertyPath);
+                }
+                return null;
             }
         }
 
         // ▲ その他 ========================= ▲
     }
-
-    //public class ToNumberExpression : UnaryExpression
-    //{
-    //    public ToNumberExpression(IExpression expression) : base(expression)
-    //    { }
-    //
-    //    public ToNumberExpression(double expression) : base(new Number(expression))
-    //    { }
-    //
-    //    public override object Execute(ExpressionParameters? parameters)
-    //    {
-    //        object result = Argument.Execute(parameters);
-    //        return result;
-    //    }
-    //
-    //    protected override TResult AnalyzeInternal<TResult>(IAnalyzer<TResult> analyzer)
-    //        => analyzer.Analyze(this);
-    //
-    //    protected override TResult AnalyzeInternal<TResult, TContext>(
-    //        IAnalyzer<TResult, TContext> analyzer,
-    //        TContext context)
-    //        => analyzer.Analyze(this, context);
-    //
-    //    public override IExpression Clone(IExpression? argument = null)
-    //        => new ToNumberExpression(argument ?? Argument);
-    //}
-    //
-    //public class UserFunctionEx : UserFunction
-    //{
-    //    public UserFunctionEx(string function, IEnumerable<object> arguments)
-    //    : base(function, ParseArguments(arguments))
-    //    { }
-    //
-    //    private static IEnumerable<IExpression> ParseArguments(IEnumerable<object> arguments)
-    //    {
-    //        List<IExpression> parsedArguments = new();
-    //        foreach (object argument in arguments)
-    //        {
-    //            if (argument is double doubleArg)
-    //            {
-    //                parsedArguments.Add(new Number(doubleArg));
-    //            }
-    //            else if (argument is IExpression iExpressionArg)
-    //            {
-    //                parsedArguments.Add(iExpressionArg);
-    //            }
-    //        }
-    //        return parsedArguments;
-    //    }
-    //}
 }
