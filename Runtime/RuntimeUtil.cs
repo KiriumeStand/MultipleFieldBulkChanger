@@ -6,7 +6,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
     public static class RuntimeUtil
     {
         public static bool DebugMode = false;
-        public static bool DebugLogOn = true;
+        public static bool DebugLogOn = false;
 
         // ▼ デバッグ用 ========================= ▼
         // MARK: ==デバッグ用==
