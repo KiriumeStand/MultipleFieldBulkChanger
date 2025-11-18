@@ -5,9 +5,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
-using UnityEditor.U2D;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {

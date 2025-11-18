@@ -1,6 +1,5 @@
 using io.github.kiriumestand.multiplefieldbulkchanger.editor;
 using nadena.dev.ndmf;
-using nadena.dev.ndmf.animator;
 using nadena.dev.ndmf.fluent;
 
 [assembly: ExportsPlugin(typeof(MultipleFieldBulkChangerPlugin))]

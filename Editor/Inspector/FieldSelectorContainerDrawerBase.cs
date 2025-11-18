@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
-using UnityEditor.UIElements;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor

@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
@@ -49,8 +48,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             public static readonly string UnsubscribeAction = "UnsubscribeAction";
             public static readonly string EditorApplicationUpdateIdentifier = "EditorApplication.update";
             public static readonly string ArgumentData = "ArgumentData";
-            [Obsolete]
-            public static readonly string CalculateResult = "CalculateResult";
         }
 
         /// <summary>

@@ -1662,7 +1662,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-
         // ▲ その他 ========================= ▲
     }
 }

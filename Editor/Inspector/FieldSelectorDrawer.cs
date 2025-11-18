@@ -1,14 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using UnityEditor;
-using UnityEditor.UIElements;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
+using UnityEditor;
 using UnityEngine.UIElements;
-using System;
-using System.Collections.Immutable;
-using System.Reflection;
-using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
