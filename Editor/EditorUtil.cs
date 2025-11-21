@@ -22,9 +22,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     public static class EditorUtil
     {
-        public static bool DebugMode = false;
-
         // ▼ デバッグ用 ========================= ▼
+
         public static class Debugger
         {
             [InitializeOnLoadMethod]
@@ -79,6 +78,50 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 if (u_DebugLabel != null)
                 {
                     u_DebugLabel.text = text;
+                }
+            }
+
+            public static void DebugLog(string mes, LogType logType, string color = "white")
+            {
+                if (!DebugSettings.Instance._DebugLog) return;
+
+                mes = $"<color={color}>{mes}</color>";
+
+                switch (logType)
+                {
+                    case LogType.Log:
+                        Debug.Log(mes);
+                        break;
+                    case LogType.Warning:
+                        Debug.LogWarning(mes);
+                        break;
+                    case LogType.Error:
+                        Debug.LogError(mes);
+                        break;
+                    case LogType.Assert:
+                    case LogType.Exception:
+                        Debug.LogError("logTypeの指定が不正です!!!!!!!!!!!");
+                        break;
+                }
+            }
+
+            public static void ErrorDebugLog(string mes, LogType logType)
+            {
+                switch (logType)
+                {
+                    case LogType.Log:
+                        Debug.Log(mes);
+                        break;
+                    case LogType.Warning:
+                        Debug.LogWarning(mes);
+                        break;
+                    case LogType.Error:
+                        Debug.LogError(mes);
+                        break;
+                    case LogType.Assert:
+                    case LogType.Exception:
+                        Debug.LogError("logTypeの指定が不正です!!!!!!!!!!!");
+                        break;
                 }
             }
         }
@@ -175,7 +218,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     }
                     catch (Exception e)
                     {
-                        RuntimeUtil.Debugger.DebugLog($"Failed to cache {nameof(T)}.isValid property: {e.Message}", LogType.Error);
+                        EditorUtil.Debugger.DebugLog($"Failed to cache {nameof(T)}.isValid property: {e.Message}", LogType.Error);
                     }
                 }
             }
@@ -234,7 +277,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return (null, null);
                 }
             }
@@ -273,7 +316,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return (null, null);
                 }
             }
@@ -286,7 +329,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return "";
                 }
             }
@@ -310,7 +353,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return "";
                 }
             }
@@ -328,7 +371,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return "";
                 }
             }
@@ -341,7 +384,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return "";
                 }
             }
@@ -355,7 +398,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return "";
                 }
             }
@@ -375,12 +418,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return null;
                 }
                 catch (NullReferenceException ex)
                 {
-                    RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return null;
                 }
             }
@@ -393,17 +436,17 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return null;
                 }
                 catch (NullReferenceException ex)
                 {
-                    RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return null;
                 }
                 catch (InvalidOperationException ex)
                 {
-                    RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return null;
                 }
             }

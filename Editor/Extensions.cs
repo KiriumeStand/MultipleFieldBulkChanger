@@ -33,7 +33,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             DateTime time = DateTime.Now;
             _nativeUnityObjectAndSubTypes = GetAllNativeUnityObjectAndSubTypes();
             TimeSpan timeSpan = DateTime.Now - time;
-            RuntimeUtil.Debugger.DebugLog($"GetAllNativeUnityObjectAndSubTypes TimeSpan/{timeSpan}", LogType.Log, "blue");
+            EditorUtil.Debugger.DebugLog($"GetAllNativeUnityObjectAndSubTypes TimeSpan/{timeSpan}", LogType.Log, "blue");
 
             _nativeUnityObjectAndSubTypeNames = _nativeUnityObjectAndSubTypes.Select(t => t.FullName).ToHashSet();
         }
@@ -160,7 +160,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (systemType != null) return (true, systemType, "");
 
             // MARK: デバッグ用
-            RuntimeUtil.Debugger.DebugLog($"Failed to get type/ SerializedProperty.type:{property.type}\nSerializedProperty.propertyType:{property.propertyType}", LogType.Log, "red");
+            EditorUtil.Debugger.DebugLog($"Failed to get type/ SerializedProperty.type:{property.type}\nSerializedProperty.propertyType:{property.propertyType}", LogType.Log, "red");
             return (false, null, "Failed to get type");
         }
 
@@ -179,7 +179,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
             catch (ObjectDisposedException ex)
             {
-                RuntimeUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                 return null;
             }
         }

@@ -27,13 +27,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Button u_DebugButton = UIQuery.Q<Button>(uxml, "MFBC_DebugButton");
             u_DebugButton.clicked += () =>
             {
-                RuntimeUtil.Debugger.DebugLog(
+                EditorUtil.Debugger.DebugLog(
                     $"drawerId:{EditorUtil.ObjectIdUtil.GetObjectId(this)}/targetId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedObject.targetObject)}/propertyId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedObject)}/Unsubscriptions/ManagedEventCount:{UniversalEventManager.ManagedEventCount}/\r\n" +
                     $"\r\n" +
                     $"{UniversalDataManager.Debugger.UnsubscribeActionsInfoList}"
                     , LogType.Log);
             };
-            EditorUtil.VisualElementHelper.SetDisplay(u_DebugButton, RuntimeUtil.DebugMode);
+            EditorUtil.VisualElementHelper.SetDisplay(u_DebugButton, DebugSettings.Instance._DebugMode);
 
             Toggle u_Enable = BindHelper.Bind<Toggle>(uxml, UxmlNames.Enable, serializedObject, nameof(MultipleFieldBulkChanger._Enable));
             ListView u_Arguments = BindHelper.Bind<ListView>(uxml, UxmlNames.Arguments, serializedObject, nameof(MultipleFieldBulkChanger._ArgumentSettings));
@@ -65,11 +65,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             };
             u_Arguments.itemIndexChanged += (e1, e2) =>
             {
-                //RuntimeUtil.Debugger.DebugLog($"u_Arguments.itemIndexChanged/{e1}/{e2}", LogType.Warning);
+                //EditorUtil.Debugger.DebugLog($"u_Arguments.itemIndexChanged/{e1}/{e2}", LogType.Warning);
             };
             u_Arguments.itemsSourceChanged += () =>
             {
-                //RuntimeUtil.Debugger.DebugLog($"u_Arguments.itemsSourceChanged", LogType.Error);
+                //EditorUtil.Debugger.DebugLog($"u_Arguments.itemsSourceChanged", LogType.Error);
             };
 
             u_ChangeSettings.itemsAdded += (e) =>
@@ -107,7 +107,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             };
             u_ChangeSettings.itemIndexChanged += (e1, e2) =>
             {
-                RuntimeUtil.Debugger.DebugLog($"u_ChangeSettings.itemIndexChanged/{e1}/{e2}", LogType.Warning);
+                EditorUtil.Debugger.DebugLog($"u_ChangeSettings.itemIndexChanged/{e1}/{e2}", LogType.Warning);
             };
 
             // このオブジェクトをウィンドウ要素にバインド
@@ -122,13 +122,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 if (!EditorUtil.SerializedObjectUtil.IsValid(serializedObject))
                 {
                     // MARK: デバッグ用
-                    RuntimeUtil.Debugger.DebugLog($"serializedObject/IsValid == false/editorApplicationUpdateCallback", LogType.Warning);
+                    EditorUtil.Debugger.DebugLog($"serializedObject/IsValid == false/editorApplicationUpdateCallback", LogType.Warning);
                     return;
                 }
                 if (serializedObject == null)
                 {
                     // MARK: デバッグ用
-                    RuntimeUtil.Debugger.DebugLog($"ここは必要みたいです/editorApplicationUpdateCallback", LogType.Warning);
+                    EditorUtil.Debugger.DebugLog($"ここは必要みたいです/editorApplicationUpdateCallback", LogType.Warning);
                     return;
                 }
 
