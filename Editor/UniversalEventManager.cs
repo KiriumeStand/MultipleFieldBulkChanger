@@ -123,7 +123,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (Exception ex)
                 {
-                    RuntimeUtil.Debugger.DebugLog($"{ex.GetType().Name} in {args.EventName}: {ex.Message}\r\n*----Stack Trace----*\r\n{ex.StackTrace}\r\n*----Stack Trace End----*\r\n", LogType.Error);
+                    EditorUtil.Debugger.DebugLog($"{ex.GetType().Name} in {args.EventName}: {ex.Message}\r\n*----Stack Trace----*\r\n{ex.StackTrace}\r\n*----Stack Trace End----*\r\n", LogType.Error);
                 }
                 finally
                 {
@@ -140,7 +140,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             // MARK: デバッグ用
             if (removeWeakHandlers.Count > 0)
             {
-                RuntimeUtil.Debugger.DebugLog($"{ManagedEventCount}/removeWeakHandlers", LogType.Warning);
+                EditorUtil.Debugger.DebugLog($"{ManagedEventCount}/removeWeakHandlers", LogType.Warning);
             }
         }
     }

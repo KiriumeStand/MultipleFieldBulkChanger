@@ -60,7 +60,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (u_DebugLabel != null)
             {
                 u_DebugLabel.text = $"drawerId:{EditorUtil.ObjectIdUtil.GetObjectId(this)}/targetId:{EditorUtil.ObjectIdUtil.GetObjectId(targetObject)}/serializedDataId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedData)}";
-                EditorUtil.VisualElementHelper.SetDisplay(u_DebugLabel, RuntimeUtil.DebugMode);
+                EditorUtil.VisualElementHelper.SetDisplay(u_DebugLabel, DebugSettings.Instance._DebugMode);
             }
 
             status.SetPhase(InspectorCustomizerStatus.Phase.BeforeDelayCall);
@@ -236,7 +236,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(this))
             {
                 // MARK: デバッグ用
-                RuntimeUtil.Debugger.DebugLog($"ここは必要みたいです/OnDetachFromPanelEvent", LogType.Warning);
+                EditorUtil.Debugger.DebugLog($"ここは必要みたいです/OnDetachFromPanelEvent", LogType.Warning);
                 //return;
             }
 
@@ -266,7 +266,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (EditorUtil.SerializedObjectUtil.IsValid(serializedData) != true)
             {
                 // MARK: デバッグ用 
-                RuntimeUtil.Debugger.DebugLog($"ここは必要みたいです/Subscribe", LogType.Warning);
+                EditorUtil.Debugger.DebugLog($"ここは必要みたいです/Subscribe", LogType.Warning);
                 return () => { };
             }
 
@@ -277,7 +277,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (targetObject == null)
             {
                 // MARK: デバッグ用
-                RuntimeUtil.Debugger.DebugLog($"ここは必要みたいです/Subscribe", LogType.Warning);
+                EditorUtil.Debugger.DebugLog($"ここは必要みたいです/Subscribe", LogType.Warning);
                 return () => { };
             }
 

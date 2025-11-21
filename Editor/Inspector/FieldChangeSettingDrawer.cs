@@ -278,7 +278,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
             else
             {
-                if (RuntimeUtil.DebugMode)
+                if (DebugSettings.Instance._DebugMode)
                 {
                     logMessage = $"代入先の型:'{selectedFieldTypeFullName}'\n代入式の結果の型:'{expressionResultTypeFullName}'";
                     logColor = new StyleColor(Color.white);
