@@ -17,6 +17,7 @@ using xFunc.Maths.Expressions;
 using xFunc.Maths.Expressions.Matrices;
 using xFunc.Maths.Expressions.Parameters;
 using Object = UnityEngine.Object;
+using FilterFuncType = System.Func<UnityEditor.SerializedObject, System.Collections.Generic.List<UnityEditor.SerializedProperty>, bool>;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
@@ -498,8 +499,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             public static SerializedProperty[] GetAllProperties(
                 SerializedObject serializedObject,
-                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = null,
-                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = null
+                HashSet<Filter> addListFilters = null,
+                HashSet<Filter> enterChildrenFilters = null
             )
             {
                 // nullなら空のリストにする
@@ -509,10 +510,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 SerializedProperty curProperty = serializedObject.GetIterator();
 
-                enterChildrenFilters.Add(ExcludeFilters.EnterChildrenObjectDefault);
+                enterChildrenFilters.Add(new(FilterFuncs.EnterChildrenObjectDefault, false));
 
                 // serializedObjectをフィルターにかける
-                bool enterChildren = enterChildrenFilters.All(x => x(serializedObject, new()));
+                bool enterChildren = enterChildrenFilters.All(x => x.Calc(serializedObject, new()));
 
                 if (enterChildren)
                 {
@@ -524,8 +525,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             public static SerializedProperty[] GetAllProperties(
                 SerializedProperty property,
-                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = null,
-                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = null)
+                HashSet<Filter> addListFilters = null,
+                HashSet<Filter> enterChildrenFilters = null)
             {
                 bool includeInvisible = true;
                 // このプロパティの子または孫ではない次のプロパティ
@@ -538,13 +539,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             private static SerializedProperty[] GetProperties(
                 SerializedProperty property,
                 SerializedProperty cancelProperty = null,
-                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = null,
-                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = null)
+                HashSet<Filter> addListFilters = null,
+                HashSet<Filter> enterChildrenFilters = null)
             {
                 addListFilters ??= new();
                 enterChildrenFilters ??= new();
-                addListFilters.Add(ExcludeFilters.AddListPropertyDefault);
-                enterChildrenFilters.Add(ExcludeFilters.EnterChildrenPropertyDefault);
+                addListFilters.Add(new(FilterFuncs.AddListPropertyDefault, false));
+                enterChildrenFilters.Add(new(FilterFuncs.EnterChildrenPropertyDefault, false));
 
                 SerializedProperty curProperty = property.Copy();
 
@@ -567,8 +568,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     endPropertyStack.Add(curProperty.GetEndProperty(includeInvisible));
 
                     // serializedPropertyをフィルターにかける
-                    bool addList = addListFilters.All(filter => filter(curProperty.serializedObject, propertyStack));
-                    bool enterChildren = enterChildrenFilters.All(filter => filter(curProperty.serializedObject, propertyStack));
+                    bool addList = addListFilters.All(filter => filter.Calc(curProperty.serializedObject, propertyStack));
+                    bool enterChildren = enterChildrenFilters.All(filter => filter.Calc(curProperty.serializedObject, propertyStack));
 
                     // リストに追加する
                     if (addList) { properties.Add(spCopy); }
@@ -591,19 +592,139 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 return properties.ToArray();
             }
 
-
-            public record ExcludeFilters
+            public static SerializedPropertyTreeNode GetPropertyTree(
+                SerializedObject serializedObject,
+                HashSet<Filter> addListFilters,
+                HashSet<Filter> enterChildrenFilters,
+                HashSet<Filter> selectableNodeFilters,
+                HashSet<Filter> editableFilters
+            )
             {
-                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> AddListPropertyDefault = (root, spStack) =>
+                // nullなら空のリストにする
+                enterChildrenFilters.Add(new(FilterFuncs.EnterChildrenObjectDefault, false));
+
+                SerializedProperty curProperty = serializedObject.GetIterator();
+
+                // serializedObjectをフィルターにかける
+                bool enterChildren = enterChildrenFilters.All(x => x.Calc(serializedObject, new()));
+
+                if (enterChildren)
                 {
-                    if (spStack.Count() > 0)
+                    curProperty.Next(enterChildren);
+                    SerializedPropertyTreeNode root = GetPropertyTreeInternal(curProperty, null, addListFilters, enterChildrenFilters, selectableNodeFilters, editableFilters);
+                    return root;
+                }
+
+                return new(null, null, false, false);
+            }
+
+            public static SerializedPropertyTreeNode GetPropertyTree(
+                SerializedProperty property,
+                HashSet<Filter> addListFilters,
+                HashSet<Filter> enterChildrenFilters,
+                HashSet<Filter> selectableNodeFilters,
+                HashSet<Filter> readonlyFilters
+            )
+            {
+                bool includeInvisible = true;
+                // このプロパティの子または孫ではない次のプロパティ
+                SerializedProperty cancelProperty = property.GetEndProperty(includeInvisible);
+
+                SerializedPropertyTreeNode root = GetPropertyTreeInternal(property, cancelProperty, addListFilters, enterChildrenFilters, selectableNodeFilters, readonlyFilters);
+                return root;
+            }
+
+            private static SerializedPropertyTreeNode GetPropertyTreeInternal(
+                SerializedProperty property,
+                SerializedProperty cancelProperty,
+                HashSet<Filter> addListFilters,
+                HashSet<Filter> enterChildrenFilters,
+                HashSet<Filter> selectableNodeFilters,
+                HashSet<Filter> editableFilters
+            )
+            {
+                addListFilters.Add(new(FilterFuncs.AddListPropertyDefault, false));
+                enterChildrenFilters.Add(new(FilterFuncs.EnterChildrenPropertyDefault, false));
+
+                SerializedProperty curProperty = property.Copy();
+
+                List<SerializedProperty> propertyStack = new();
+                List<SerializedProperty> endPropertyStack = new();
+
+                SerializedPropertyTreeNode root = new(null, null, false, false);
+                SerializedPropertyTreeNode curParentNode = root;
+
+                bool doLoop;
+                do
+                {
+                    doLoop = false;
+
+                    SerializedProperty spCopy = curProperty.Copy();
+
+                    // スタックを追加
+                    propertyStack.Add(spCopy);
+                    bool includeInvisible = true;
+                    // このプロパティの子または孫ではない次のプロパティ
+                    endPropertyStack.Add(curProperty.GetEndProperty(includeInvisible));
+
+                    // serializedPropertyをフィルターにかける
+                    bool addList = addListFilters.All(filter => filter.Calc(curProperty.serializedObject, propertyStack));
+                    bool enterChildren = enterChildrenFilters.All(filter => filter.Calc(curProperty.serializedObject, propertyStack));
+                    bool isSelectable = selectableNodeFilters.All(filter => filter.Calc(curProperty.serializedObject, propertyStack));
+                    bool isEditable = editableFilters.All(filter => filter.Calc(curProperty.serializedObject, propertyStack));
+
+                    // ノードを作成する
+                    if (addList || enterChildren) { curParentNode = new(spCopy, curParentNode, isSelectable, isEditable); }
+
+                    // 次の要素を取得
+                    bool existNext = curProperty.Next(enterChildren);
+
+                    while (endPropertyStack.Count() > 0 && SerializedProperty.EqualContents(curProperty, endPropertyStack.Last()))
                     {
-                        SerializedProperty lastStack = spStack.Last();
+                        if (SerializedProperty.EqualContents(propertyStack.Last(), curParentNode.Property)) curParentNode = curParentNode.Parent;
+                        // 次の要素が子でないならendPropertyStackから一致するものが無くなるまでスタックを遡る
+                        propertyStack.RemoveAt(propertyStack.Count() - 1);
+                        endPropertyStack.RemoveAt(endPropertyStack.Count() - 1);
                     }
-                    return true;
+
+                    // ループを続けるか
+                    doLoop = existNext && (cancelProperty == null || !SerializedProperty.EqualContents(curProperty, cancelProperty));
+                }
+                while (doLoop);
+
+                return root;
+            }
+
+            public class Filter
+            {
+                public FilterFuncType Func { get; }
+
+                public bool Inverse { get; }
+
+                public Filter(FilterFuncType func, bool inverse)
+                {
+                    Func = func;
+                    Inverse = inverse;
+                }
+
+                public bool Calc(SerializedObject so, List<SerializedProperty> spStack)
+                {
+                    bool result = Func(so, spStack);
+                    if (Inverse) result = !result;
+                    return result;
+                }
+            }
+
+            public record FilterFuncs
+            {
+                public static readonly FilterFuncType AnyTrue = static (root, spStack) => { return true; };
+
+                public static readonly FilterFuncType AddListPropertyDefault = static (root, spStack) =>
+                {
+                    return spStack.Count() > 0;
                 };
 
-                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> EnterChildrenObjectDefault = (root, spStack) =>
+                public static readonly FilterFuncType EnterChildrenObjectDefault = static (root, spStack) =>
                 {
                     if (spStack.Count() == 0)
                     {
@@ -620,39 +741,44 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     return true;
                 };
 
-                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> EnterChildrenPropertyDefault = (root, spStack) =>
+                public static readonly FilterFuncType EnterChildrenPropertyDefault = static (root, spStack) =>
                 {
                     if (spStack.Count() > 0)
                     {
                         SerializedProperty curProperty = spStack.Last();
                         // フィールドが文字列かAnimationCurveなら中を探索しない
-                        return !(
+                        if (
                             curProperty.propertyType == SerializedPropertyType.String ||
-                            curProperty.propertyType == SerializedPropertyType.AnimationCurve ||
-                            false
-                            );
+                            curProperty.propertyType == SerializedPropertyType.AnimationCurve
+                        )
+                        {
+                            return false;
+                        }
                     }
                     return true;
                 };
 
-                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> ReadOnly = (root, spStack) =>
+                public static readonly FilterFuncType IsReadonly = static (root, spStack) =>
                 {
                     if (spStack.Count() > 0)
                     {
                         SerializedProperty lastStack = spStack.Last();
+
+                        if (!lastStack.editable) return true;
+
                         // Transformの最上層のフィールドか
                         if (root.targetObject is Transform && lastStack.depth == 0)
                         {
                             // Transformのm_LocalEulerAnglesHintフィールドならfalse
                             if (
                                 lastStack.name == "m_LocalEulerAnglesHint"
-                            ) return false;
+                            ) return true;
                         }
                     }
-                    return true;
+                    return false;
                 };
 
-                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> HighRisk = (root, spStack) =>
+                public static readonly FilterFuncType IsHighRisk = static (root, spStack) =>
                 {
                     if (spStack.Count() > 0)
                     {
@@ -664,13 +790,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                 lastStack.name == "m_ObjectHideFlags" ||
                                 lastStack.name == "m_EditorHideFlags" ||
                                 lastStack.name == "m_StaticEditorFlags"
-                            ) return false;
+                            ) return true;
                         }
                     }
-                    return true;
+                    return false;
                 };
 
-                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> SafetyUnknown = (root, spStack) =>
+                public static readonly FilterFuncType IsSafetyUnknown = static (root, spStack) =>
                 {
                     if (spStack.Count() > 0)
                     {
@@ -683,27 +809,27 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                 lastStack.name == "m_CorrespondingSourceObject" ||
                                 lastStack.name == "m_PrefabInstance" ||
                                 lastStack.name == "m_PrefabAsset"
-                            ) return false;
+                            ) return true;
 
                             if (root.targetObject is GameObject)
                             {
                                 if (
                                     lastStack.name == "m_Component"
-                                ) return false;
+                                ) return true;
                             }
                             if (root.targetObject is ScriptableObject)
                             {
                                 if (
                                     lastStack.name == "m_GameObject" ||
                                     lastStack.name == "m_EditorClassIdentifier"
-                                ) return false;
+                                ) return true;
                             }
                             if (root.targetObject is Component)
                             {
                                 if (
                                     lastStack.name == "m_GameObject" ||
                                     lastStack.name == "m_EditorClassIdentifier"
-                                ) return false;
+                                ) return true;
                             }
                             if (root.targetObject is Transform)
                             {
@@ -711,21 +837,37 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                     lastStack.name == "m_ConstrainProportionsScale" ||
                                     lastStack.name == "m_Children" ||
                                     lastStack.name == "m_Father"
-                                ) return false;
+                                ) return true;
                             }
                         }
                     }
-                    return true;
+                    return false;
                 };
 
-                public static readonly Func<SerializedObject, List<SerializedProperty>, bool> OtherThanObjectReference = (root, spStack) =>
+                public static readonly FilterFuncType IsObjectReferenceType = static (root, spStack) =>
                 {
                     if (spStack.Count() > 0)
                     {
                         SerializedProperty lastStack = spStack.Last();
-                        return lastStack.propertyType == SerializedPropertyType.ObjectReference;
+                        if (lastStack.propertyType == SerializedPropertyType.ObjectReference)
+                        {
+                            return true;
+                        }
                     }
-                    return true;
+                    return false;
+                };
+
+                public static readonly FilterFuncType IsGenericType = static (root, spStack) =>
+                {
+                    if (spStack.Count() > 0)
+                    {
+                        SerializedProperty lastStack = spStack.Last();
+                        if (lastStack.propertyType == SerializedPropertyType.Generic)
+                        {
+                            return true;
+                        }
+                    }
+                    return false;
                 };
             }
         }
@@ -900,12 +1042,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 using (var so = new SerializedObject(obj))
                 {
-                    HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = new() {
-                        SerializedObjectUtil.ExcludeFilters.ReadOnly,
-                        SerializedObjectUtil.ExcludeFilters.OtherThanObjectReference,
+                    HashSet<SerializedObjectUtil.Filter> addListFilters = new() {
+                        new(SerializedObjectUtil.FilterFuncs.IsReadonly, true),
+                        new(SerializedObjectUtil.FilterFuncs.IsObjectReferenceType, true),
                         };
-                    HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = new() {
-                        SerializedObjectUtil.ExcludeFilters.ReadOnly,
+                    HashSet<SerializedObjectUtil.Filter> enterChildrenFilters = new() {
+                        new(SerializedObjectUtil.FilterFuncs.IsReadonly, true),
                         };
                     SerializedProperty[] props = SerializedObjectUtil.GetAllProperties(so, addListFilters, enterChildrenFilters);
                     foreach (var prop in props)

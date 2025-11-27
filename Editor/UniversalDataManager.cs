@@ -66,7 +66,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ SerializedProperty系 ========================= ▼
         // MARK: ==SerializedProperty系==
 
-        public static readonly Dictionary<FieldSelectorContainerBase, SerializedProperty[]> targetObjectAllPropertiesCache = new();
+        public static readonly Dictionary<FieldSelectorContainerBase, HashSet<SerializedPropertyTreeNode>> targetObjectAllPropertieNodesCache = new();
+
+        public static readonly Dictionary<FieldSelectorContainerBase, SerializedPropertyTreeNode> targetObjectPropertiyTreeRootCache = new();
 
         public static readonly Dictionary<FieldSelectorContainerBase, SerializedObject> targetObjectRootSerializedObjectCache = new();
 
@@ -127,18 +129,5 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         }
 
         // ▲ メソッド ========================= ▲
-    }
-
-    public class ArgumentData
-    {
-        public string ArgumentName { get; set; } = "";
-
-        public Optional<object> Value { get; set; } = Optional<object>.None;
-
-        public Type ArgumentType { get; set; } = null;
-
-        public SerializedPropertyNumericType ArgumentSPNumericType { get; set; } = SerializedPropertyNumericType.Unknown;
-
-        public FieldSPType ArgumentFieldSPType => FieldSPTypeHelper.Parse2FieldSPType(ArgumentType);
     }
 }

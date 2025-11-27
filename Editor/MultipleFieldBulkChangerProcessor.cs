@@ -65,7 +65,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         if (asPropObj._IsReferenceMode)
                         {
                             UnityEngine.Object selectObj = asPropObj._SourceField._SelectObject;
-                            string selectFieldPath = asPropObj._SourceField._FieldSelector.FixedSelectFieldPath;
+                            string selectFieldPath = asPropObj._SourceField._FieldSelector._SelectFieldPath;
                             if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
                             {
                                 argValue = EditorUtil.OtherUtil.GetSelectPathValue(selectObj, selectFieldPath);
@@ -110,7 +110,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                     foreach (FieldSelector fsPropObj in mfscPropObj._FieldSelectors)
                                     {
                                         // 代入先の SerializedProperty
-                                        SerializedProperty targetProperty = targetSerializedObject.FindProperty(fsPropObj.FixedSelectFieldPath);
+                                        SerializedProperty targetProperty = targetSerializedObject.FindProperty(fsPropObj._SelectFieldPath);
 
                                         if (targetProperty != null)
                                         {

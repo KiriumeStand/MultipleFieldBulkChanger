@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEngine.UIElements;
@@ -89,27 +90,33 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             selectedObject = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject) ? null : selectedObject;
 
             SerializedObject selectedSerializedObject = null;
-            SerializedProperty[] properties = Array.Empty<SerializedProperty>();
+            SerializedPropertyTreeNode propertyRoot = new(null, null, false, false);
             if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject))
             {
                 selectedSerializedObject = new(selectedObject);
-                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> addListFilters = new() {
-                        EditorUtil.SerializedObjectUtil.ExcludeFilters.ReadOnly,
-                        EditorUtil.SerializedObjectUtil.ExcludeFilters.HighRisk,
-                        EditorUtil.SerializedObjectUtil.ExcludeFilters.SafetyUnknown,
-                        };
-                HashSet<Func<SerializedObject, List<SerializedProperty>, bool>> enterChildrenFilters = new() {
-                        EditorUtil.SerializedObjectUtil.ExcludeFilters.ReadOnly,
-                        EditorUtil.SerializedObjectUtil.ExcludeFilters.HighRisk,
-                        EditorUtil.SerializedObjectUtil.ExcludeFilters.SafetyUnknown,
-                        };
-                properties = EditorUtil.SerializedObjectUtil.GetAllProperties(selectedSerializedObject, addListFilters, enterChildrenFilters);
+                HashSet<EditorUtil.SerializedObjectUtil.Filter> addListFilters = new() {
+                        new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsHighRisk, true),
+                        new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsSafetyUnknown, true),
+                };
+                HashSet<EditorUtil.SerializedObjectUtil.Filter> enterChildrenFilters = new() {
+                        new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsHighRisk, true),
+                        new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsSafetyUnknown, true),
+                };
+                HashSet<EditorUtil.SerializedObjectUtil.Filter> selectableNodeFilters = new() {
+                        new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsGenericType, true),
+                };
+                HashSet<EditorUtil.SerializedObjectUtil.Filter> editableFilters = new() {
+                        new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsReadonly, true),
+                };
+                propertyRoot = EditorUtil.SerializedObjectUtil.GetPropertyTree(selectedSerializedObject, addListFilters, enterChildrenFilters, selectableNodeFilters, editableFilters);
             }
 
             FieldSelectorContainerBase targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property) as FieldSelectorContainerBase;
 
-            UniversalDataManager.targetObjectAllPropertiesCache[targetObject] = properties;
+            UniversalDataManager.targetObjectAllPropertieNodesCache[targetObject] = propertyRoot.GetAllNode().ToHashSet();
             UniversalDataManager.targetObjectRootSerializedObjectCache[targetObject] = selectedSerializedObject;
+
+            UniversalDataManager.targetObjectPropertiyTreeRootCache[targetObject] = propertyRoot;
 
             OnSelectObjectSerializedPropertiesUpdateEventPublish(property, uxml, status, selectedSerializedObject);
         }
