@@ -59,7 +59,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    //string senderBindingPropertyInstancePath = $"{EditorUtil.SerializedObjectUtil.GetSerializedObjectInstanceId(senderSerializedObject)}.{e.SenderBindingPath}";
                     string senderBindingPropertyInstancePath = EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
@@ -191,10 +190,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             var expressionResultCache = UniversalDataManager.expressionResultCache;
             var fcs = (FieldChangeSetting)property.managedReferenceValue;
-            if (success) expressionResultCache[fcs] = OptionalHelper.Some(result);
-            else expressionResultCache[fcs] = Optional<object>.None;
+            expressionResultCache.AddOrUpdate(fcs, success ? new Optional<object>(result) : Optional<object>.None);
 
-            return (OptionalHelper.Some(result), result?.ToString() ?? "Null");
+            return (new Optional<object>(result), result?.ToString() ?? "Null");
         }
 
         private static List<ArgumentData> GetArgumentList(SerializedProperty property)

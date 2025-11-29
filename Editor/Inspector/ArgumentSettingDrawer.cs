@@ -146,7 +146,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    //string senderBindingPropertyInstancePath = $"{EditorUtil.SerializedObjectUtil.GetSerializedObjectInstanceId(senderSerializedObject)}.{e.SenderBindingPath}";
                     string senderBindingPropertyInstancePath = EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
@@ -239,7 +238,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Type currentArgumentType = isReferenceMode ? referenceArgumentType : FieldSPTypeHelper.Parse2Type(inputtableArgumentFieldSPType);
             GetCurrentArgumentValueAndUpdateArgumentDatasDictionary(
                 property, uxml, targetObject, status,
-                OptionalHelper.Some(argumentName), OptionalHelper.Some(currentArgumentType), isReferenceMode);
+                new Optional<string>(argumentName), new Optional<Type>(currentArgumentType), isReferenceMode);
         }
 
         // ▲ 初期化定義 ========================= ▲
@@ -275,7 +274,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             GetCurrentArgumentValueAndUpdateArgumentDatasDictionary(
                 property, uxml, targetObject, status,
-                Optional<string>.None, OptionalHelper.Some(valueType), isReferenceMode);
+                Optional<string>.None, new Optional<Type>(valueType), isReferenceMode);
         }
 
         /// <summary>
@@ -294,7 +293,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 Type newType = newValue.ToType();
                 GetCurrentArgumentValueAndUpdateArgumentDatasDictionary(
                     property, uxml, targetObject, status,
-                    Optional<string>.None, OptionalHelper.Some(newType), null);
+                    Optional<string>.None, new Optional<Type>(newType), null);
             }
         }
 
@@ -305,7 +304,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <param name="property"></param>
         private void OnArgumentSettingArgumentNameChangedEventHandler(FieldValueChangedEventArgs<string> args, SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
-            UpdateArgumentDatasDictionary(property, uxml, targetObject, status, OptionalHelper.Some(args.NewValue), Optional<Type>.None, Optional<object>.None);
+            UpdateArgumentDatasDictionary(property, uxml, targetObject, status, new Optional<string>(args.NewValue), Optional<Type>.None, Optional<object>.None);
         }
 
         private void OnArgumentSettingValueFieldChangedEventHandler<T1>(
@@ -362,7 +361,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             object value = GetCurrentArgumentValue(property, isReferenceMode);
             // 引数DBに登録
-            UpdateArgumentDatasDictionary(property, uxml, targetObject, status, argumentName, argumentType, OptionalHelper.Some(value));
+            UpdateArgumentDatasDictionary(property, uxml, targetObject, status, argumentName, argumentType, new Optional<object>(value));
         }
 
         private object GetCurrentArgumentValue(SerializedProperty property, bool? isReferenceMode = null)
@@ -467,7 +466,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (IsTargetInputtableValueFieldActive(property, SelectableFieldTypeHelper.Parse2SelectableFieldType(argumentType)))
             {
                 // 更新したい値の型の入力可能フィールドが有効なら
-                UpdateArgumentDatasDictionary(property, uxml, targetObject, status, Optional<string>.None, OptionalHelper.Some(argumentType), OptionalHelper.Some(value));
+                UpdateArgumentDatasDictionary(property, uxml, targetObject, status, Optional<string>.None, new Optional<Type>(argumentType), new Optional<object>(value));
             }
         }
 
@@ -490,10 +489,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     (bool success, Type type, string errorLog) = selectedFieldProperty.GetFieldType();
                     selectedFieldValueType = success ? type : null;
-                    selectedFieldValue = EditorUtil.SerializedObjectUtil.GetPropertyValue(selectedFieldProperty);
+                    selectedFieldValue = selectedFieldProperty.boxedValue;
                 }
 
-                bool anyChanged = UpdateArgumentDatasDictionary(property, uxml, targetObject, status, Optional<string>.None, OptionalHelper.Some(selectedFieldValueType), OptionalHelper.Some(selectedFieldValue));
+                bool anyChanged = UpdateArgumentDatasDictionary(property, uxml, targetObject, status, Optional<string>.None, new Optional<Type>(selectedFieldValueType), new Optional<object>(selectedFieldValue));
 
                 if (anyChanged)
                 {

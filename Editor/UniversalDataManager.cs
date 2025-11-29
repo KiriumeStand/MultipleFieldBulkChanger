@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 
@@ -56,25 +57,18 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <returns></returns>
         public static readonly Dictionary<UniqueObjectIdentifier, Dictionary<InspectorCustomizerIdentifier, object>> UniversalUniqueObjectDictionaries = new();
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        //public static readonly Dictionary<MultipleFieldBulkChanger, Dictionary<ArgumentSetting, ArgumentData>> ArgumentDatasDictionary = new();
-
-
         // ▼ SerializedProperty系 ========================= ▼
         // MARK: ==SerializedProperty系==
 
-        public static readonly Dictionary<FieldSelectorContainerBase, HashSet<SerializedPropertyTreeNode>> targetObjectAllPropertieNodesCache = new();
+        public static readonly ConditionalWeakTable<FieldSelectorContainerBase, HashSet<SerializedPropertyTreeNode>> targetObjectAllPropertieNodesCache = new();
 
-        public static readonly Dictionary<FieldSelectorContainerBase, SerializedPropertyTreeNode> targetObjectPropertiyTreeRootCache = new();
+        public static readonly ConditionalWeakTable<FieldSelectorContainerBase, SerializedPropertyTreeNode> targetObjectPropertiyTreeRootCache = new();
 
-        public static readonly Dictionary<FieldSelectorContainerBase, SerializedObject> targetObjectRootSerializedObjectCache = new();
+        public static readonly ConditionalWeakTable<FieldSelectorContainerBase, SerializedObject> targetObjectRootSerializedObjectCache = new();
 
-        // MARK: TODO メモリリーク直す
-        public static readonly Dictionary<FieldSelector, SerializedProperty> selectFieldPropertyCache = new();
-        public static readonly Dictionary<FieldChangeSetting, Optional<object>> expressionResultCache = new();
+        public static readonly ConditionalWeakTable<FieldSelector, SerializedProperty> selectFieldPropertyCache = new();
+
+        public static readonly ConditionalWeakTable<FieldChangeSetting, Optional<object>> expressionResultCache = new();
 
         // ▲ SerializedProperty系 ========================= ▲
 

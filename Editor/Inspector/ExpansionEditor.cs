@@ -12,8 +12,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     /// </summary>
     public abstract class ExpansionEditor : Editor, IExpansionInspectorCustomizer
     {
-        public List<Delegate> EventHandlers { get; } = new();
-
         public string SourceFilePath { get; }
 
         private VisualElement _uxml;
@@ -70,8 +68,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public void OnDisable()
         {
-            //if (serializedObject == null) return;
-
             IExpansionInspectorCustomizerTargetMarker targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(serializedObject);
             VisualElement uxml = _uxml;
             InspectorCustomizerStatus status = _status;

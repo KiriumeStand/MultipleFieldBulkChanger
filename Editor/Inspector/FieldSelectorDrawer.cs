@@ -241,7 +241,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             FieldSelector targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property) as FieldSelector;
 
-            UniversalDataManager.selectFieldPropertyCache[targetObject] = selectProperty;
+            UniversalDataManager.selectFieldPropertyCache.AddOrUpdate(targetObject, selectProperty);
 
             OnSelectFieldSerializedPropertyUpdateEventPublish(property, uxml, status, selectProperty, selectPropertyValueTypeFullName);
         }

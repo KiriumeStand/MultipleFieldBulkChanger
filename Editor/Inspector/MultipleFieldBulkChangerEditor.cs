@@ -27,8 +27,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Button u_DebugButton = UIQuery.Q<Button>(uxml, "MFBC_DebugButton");
             u_DebugButton.clicked += () =>
             {
+                (int count, int validCount) = UniversalEventManager.ManagedEventCount;
                 EditorUtil.Debugger.DebugLog(
-                    $"drawerId:{EditorUtil.ObjectIdUtil.GetObjectId(this)}/targetId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedObject.targetObject)}/propertyId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedObject)}/Unsubscriptions/ManagedEventCount:{UniversalEventManager.ManagedEventCount}/\r\n" +
+                    $"drawerId:{EditorUtil.ObjectIdUtil.GetObjectId(this)}/targetId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedObject.targetObject)}/propertyId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedObject)}/Unsubscriptions/ManagedEventCount:{count}/valid:{validCount}/\r\n" +
                     $"\r\n" +
                     $"{UniversalDataManager.Debugger.UnsubscribeActionsInfoList}"
                     , LogType.Log);
@@ -62,14 +63,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             {
                 ListViewItemsRemovedEventArgs args = new(this, serializedObject, u_Arguments, status, e);
                 ((IExpansionInspectorCustomizer)this).Publish(args);
-            };
-            u_Arguments.itemIndexChanged += (e1, e2) =>
-            {
-                //EditorUtil.Debugger.DebugLog($"u_Arguments.itemIndexChanged/{e1}/{e2}", LogType.Warning);
-            };
-            u_Arguments.itemsSourceChanged += () =>
-            {
-                //EditorUtil.Debugger.DebugLog($"u_Arguments.itemsSourceChanged", LogType.Error);
             };
 
             u_ChangeSettings.itemsAdded += (e) =>

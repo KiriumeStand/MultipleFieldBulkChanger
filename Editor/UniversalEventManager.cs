@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
+using System.Linq;
 using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
@@ -11,7 +11,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         private static readonly List<(Type type, BaseEventArgs args)> eventStacks = new();
         public static ImmutableList<(Type type, BaseEventArgs args)> EventStacks => eventStacks.ToImmutableList();
 
-        private static readonly Dictionary<Type, List<WeakReference<Delegate>>> eventHandlers = new();
+        private static readonly Dictionary<Type, List<Delegate>> eventHandlers = new();
 
         /// <summary>
         /// 現在実行中のイベント数
@@ -28,16 +28,17 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// </summary>
         public static bool IsNowNestEventing => EventStacks.Count > 1;
 
-        public static int ManagedEventCount
+        public static (int count, int validCount) ManagedEventCount
         {
             get
             {
                 int counter = 0;
-                foreach (List<WeakReference<Delegate>> item in eventHandlers.Values)
+                int validCounter = 0;
+                foreach (List<Delegate> list in eventHandlers.Values)
                 {
-                    counter += item.Count;
+                    counter += list.Count;
                 }
-                return counter;
+                return (counter, validCounter);
             }
         }
 
@@ -65,31 +66,28 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
             };
 
-            // 弱参照でアクションを保有
-            WeakReference<Delegate> weakFilterdHandler = new(filteredHandler);
-
             Type eventType = typeof(T);
 
             // 該当するイベントのリストが無ければ追加
             if (!eventHandlers.ContainsKey(eventType))
                 eventHandlers[eventType] = new();
             // ハンドラーのリストに追加
-            eventHandlers[eventType].Add(weakFilterdHandler);
+            eventHandlers[eventType].Add(filteredHandler);
 
             // 購読解除のアクションを作成
-            void unsubscribeAction() => Unsubscribe<T>(weakFilterdHandler);
+            void unsubscribeAction() => Unsubscribe<T>(filteredHandler);
 
             // フィルター付きイベントハンドラーと購読解除アクションを返す
             return (filteredHandler, unsubscribeAction);
         }
 
-        public static void Unsubscribe<T>(WeakReference<Delegate> weakHandler) where T : BaseEventArgs
+        public static void Unsubscribe<T>(Delegate handler) where T : BaseEventArgs
         {
             Type eventType = typeof(T);
 
             if (eventHandlers.ContainsKey(eventType))
             {
-                eventHandlers[eventType].Remove(weakHandler);
+                eventHandlers[eventType].Remove(handler);
 
                 // ハンドラーのリストが空になった場合は辞書からも削除
                 if (eventHandlers[eventType].Count == 0)
@@ -104,43 +102,48 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (!eventHandlers.ContainsKey(eventType)) return;
 
             // 無効になり購読解除するハンドラー
-            List<WeakReference<Delegate>> removeWeakHandlers = new();
+            List<Delegate> removeHandlers = new();
 
-            foreach (var weakHandler in eventHandlers[eventType].ToArray())
+            foreach (Delegate handler in eventHandlers[eventType].ToArray())
             {
-                if (!(weakHandler.TryGetTarget(out Delegate handler) && handler is EventHandler<T> eventHandler))
+                if (handler is not EventHandler<T> eventHandler)
                 {
                     // 無効なイベントなら購読解除リストに追加
-                    removeWeakHandlers.Add(weakHandler);
+                    removeHandlers.Add(handler);
                     continue;
                 }
 
                 (Type type, BaseEventArgs args) stack = (eventType, args);
                 eventStacks.Add(stack);
-                try
-                {
-                    eventHandler?.Invoke(null, args);
-                }
-                catch (Exception ex)
-                {
-                    EditorUtil.Debugger.DebugLog($"{ex.GetType().Name} in {args.EventName}: {ex.Message}\r\n*----Stack Trace----*\r\n{ex.StackTrace}\r\n*----Stack Trace End----*\r\n", LogType.Error);
-                }
-                finally
-                {
-                    eventStacks.RemoveAt(eventStacks.Count - 1);
-                }
+                // MARK: デバッグ中
+                eventHandler?.Invoke(null, args);
+                eventStacks.RemoveAt(eventStacks.Count - 1);
+                // MARK: 本来のコード
+                //try
+                //{
+                //    eventHandler?.Invoke(null, args);
+                //}
+                //catch (Exception ex)
+                //{
+                //    EditorUtil.Debugger.DebugLog($"{ex.GetType().Name} in {args.EventName}: {ex.Message}\r\n*----Stack Trace----*\r\n{ex.StackTrace}\r\n*----Stack Trace End----*\r\n", LogType.Error);
+                //}
+                //finally
+                //{
+                //    eventStacks.RemoveAt(eventStacks.Count - 1);
+                //}
             }
 
             // 無効なイベントの購読を解除
-            foreach (WeakReference<Delegate> removeHandler in removeWeakHandlers)
+            foreach (Delegate removeHandler in removeHandlers)
             {
                 Unsubscribe<T>(removeHandler);
             }
 
             // MARK: デバッグ用
-            if (removeWeakHandlers.Count > 0)
+            if (removeHandlers.Count > 0)
             {
-                EditorUtil.Debugger.DebugLog($"{ManagedEventCount}/removeWeakHandlers", LogType.Warning);
+                (int count, int validCount) = ManagedEventCount;
+                EditorUtil.Debugger.DebugLog($"{count}/valid:{validCount}/removeWeakHandlers", LogType.Warning);
             }
         }
     }

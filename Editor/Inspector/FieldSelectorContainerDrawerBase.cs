@@ -31,7 +31,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    //string senderBindingPropertyInstancePath = $"{EditorUtil.SerializedObjectUtil.GetSerializedObjectInstanceId(senderSerializedObject)}.{e.SenderBindingPath}";
                     string senderBindingPropertyInstancePath = EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
@@ -113,10 +112,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             FieldSelectorContainerBase targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property) as FieldSelectorContainerBase;
 
-            UniversalDataManager.targetObjectAllPropertieNodesCache[targetObject] = propertyRoot.GetAllNode().ToHashSet();
-            UniversalDataManager.targetObjectRootSerializedObjectCache[targetObject] = selectedSerializedObject;
+            UniversalDataManager.targetObjectAllPropertieNodesCache.AddOrUpdate(targetObject, propertyRoot.GetAllNode().ToHashSet());
+            UniversalDataManager.targetObjectRootSerializedObjectCache.AddOrUpdate(targetObject, selectedSerializedObject);
 
-            UniversalDataManager.targetObjectPropertiyTreeRootCache[targetObject] = propertyRoot;
+            UniversalDataManager.targetObjectPropertiyTreeRootCache.AddOrUpdate(targetObject, propertyRoot);
 
             OnSelectObjectSerializedPropertiesUpdateEventPublish(property, uxml, status, selectedSerializedObject);
         }

@@ -31,8 +31,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             public static void Init()
             {
                 // 重複登録を防ぐため、一度削除してから追加
-                //Application.logMessageReceived -= HandleLog;
-                //Application.logMessageReceived += HandleLog;
                 Debug.Log("エディターログ監視を開始しました");
             }
             public static int testCounter { get; set; } = 0;
@@ -437,17 +435,17 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return null;
                 }
                 catch (NullReferenceException ex)
                 {
-                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return null;
                 }
                 catch (InvalidOperationException ex)
                 {
-                    EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                    Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
                     return null;
                 }
             }
@@ -458,19 +456,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 SerializedProperty property => property.serializedObject,
                 _ => null,
             };
-
-            public static object GetPropertyValue(SerializedProperty property)
-            {
-                if (property == null) return null;
-                property.serializedObject.Update();
-
-                object resultValue = property.propertyType switch
-                {
-                    //SerializedPropertyType.Integer => Convert.ToDouble(property.intValue),
-                    _ => property.boxedValue,
-                };
-                return resultValue;
-            }
 
             public static void SetPropertyValue(SerializedProperty property, object value)
             {
@@ -993,13 +978,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 cache[original] = clone;
                 cache[clone] = clone;
 
-                using (var so = new SerializedObject(clone))
+                using (SerializedObject so = new(clone))
                 {
-                    // MARK: 要確認 ここ要らないのでは？
-                    //foreach (var prop in SerializedObjectUtil.GetAllProperties(so).Where(x => x.propertyType == SerializedPropertyType.ObjectReference))
-                    //{
-                    //    prop.objectReferenceValue = DeepCloneImpl(prop.objectReferenceValue, cache);
-                    //}
                     so.ApplyModifiedPropertiesWithoutUndo();
                 }
 
@@ -1542,7 +1522,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                             break;
                         case FieldSPType.Enum:
                             if (argumentData.Value.HasValue)
-                                arguments.Add(new(argumentData.ArgumentName, (int)argumentData.Value.Value));
+                                arguments.Add(new(argumentData.ArgumentName, Convert.ToInt32(argumentData.Value.Value)));
                             break;
                         default:
                             break;
@@ -1833,7 +1813,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     return Optional<object>.None;
                 }
-                return OptionalHelper.Some(selectSP.boxedValue);
+                return new Optional<object>(selectSP.boxedValue);
             }
 
             public static SerializedProperty GetSelectPathSerializedProperty(Object unityObj, string propertyPath)

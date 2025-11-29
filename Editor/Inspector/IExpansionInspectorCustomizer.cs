@@ -10,13 +10,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     public interface IExpansionInspectorCustomizer
     {
-        /// <summary>
-        /// イベントハンドラーの管理は基本弱参照なので、ドロワーより先に消えないようにするためのリスト
-        /// MARK: TODO 大した規模じゃないがUnityの仕様的に恐らくメモリリークする。方法もスマートじゃない気がするので要修正
-        /// </summary>
-        /// <returns></returns>
-        public List<Delegate> EventHandlers { get; }
-
         public string SourceFilePath { get; }
 
 
@@ -81,9 +74,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             VisualElement uxml = visualTreeAsset.CloneTree();
             // ussを適用
             uxml.styleSheets.Add(styleSheet);
-            // ウィンドウ全体に要素が広がるように設定
-            // MARK: TODO ここ不要かも
-            //uxml.style.flexGrow = 1;
 
             return uxml;
         }
@@ -285,10 +275,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             bool wrapedFilter(T e) { return (status.CurrentPhase < InspectorCustomizerStatus.Phase.Cleanup) && filter(e); }
 
             (EventHandler<T> eventHandler, Action unsubscribeAction) = UniversalEventManager.Subscribe(handler, wrapedFilter, allowNestEvent);
-            EventHandlers.Add(eventHandler);
 
             string identifier = UniversalDataManager.IdentifierNames.UnsubscribeAction;
-            RegisterUnsubscribeAction(serializedData, targetObject, identifier, eventHandler, unsubscribeAction, EditorUtil.ObjectIdUtil.GetObjectId(inspectorCustomizer));
+            RegisterUnsubscribeAction<T>(serializedData, targetObject, identifier, unsubscribeAction, EditorUtil.ObjectIdUtil.GetObjectId(inspectorCustomizer));
             return unsubscribeAction;
         }
 
@@ -303,7 +292,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <typeparam name="T"></typeparam>
         private void RegisterUnsubscribeAction<T>(
             IDisposable serializedData, IExpansionInspectorCustomizerTargetMarker targetObject, string identifier,
-            EventHandler<T> eventHandler, Action unsubscribeAction, long drawerId) where T : BaseEventArgs
+            Action unsubscribeAction, long drawerId) where T : BaseEventArgs
         {
             // 目的の辞書を取り出す
             var unsubscribeActionListDictionary = UniversalDataManager.GetUniqueObjectDictionary<List<Action>>(identifier);
@@ -315,14 +304,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 UniversalDataManager.Debugger.UnsubscribeActionInfosDictionary[(this, targetObject, serializedData)] = new();
             }
 
-            // 購読をクリーンアップする処理
-            void cleanupSubscribe()
-            {
-                unsubscribeAction();
-                EventHandlers.Remove(eventHandler);
-            }
-
-            ((List<Action>)unsubscribeActionListDictionary[(this, targetObject, serializedData)]).Add(cleanupSubscribe);
+            ((List<Action>)unsubscribeActionListDictionary[(this, targetObject, serializedData)]).Add(unsubscribeAction);
             UniversalDataManager.Debugger.UnsubscribeActionInfosDictionary[(this, targetObject, serializedData)].Add((drawerId, GetType().Name, typeof(T).Name));
         }
 

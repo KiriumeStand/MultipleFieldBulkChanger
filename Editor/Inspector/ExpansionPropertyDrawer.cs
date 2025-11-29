@@ -12,8 +12,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     /// </summary>
     public abstract class ExpansionPropertyDrawer : PropertyDrawer, IExpansionInspectorCustomizer
     {
-        public List<Delegate> EventHandlers { get; } = new();
-
         public string SourceFilePath { get; }
 
         /// <summary>

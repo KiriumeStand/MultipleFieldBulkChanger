@@ -23,7 +23,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             TargetFieldSelectorPropertyInstancePath = targetFieldSelectorPropertyInstancePath;
             LogMessage = logMessage;
-            //LogColor = logColor ?? new StyleColor(Color.white);
             LogColor = logColor ?? new StyleColor();
             FontStyle = fontStyle ?? FontStyle.Normal;
             FontSize = fontSize ?? 12;

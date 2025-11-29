@@ -1,6 +1,8 @@
+using System;
+
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public readonly struct Optional<T>
+    public record Optional<T>
     {
         public bool HasValue { get; }
         public T Value { get; }
@@ -18,13 +20,5 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         }
 
         public static Optional<T> None => new(default, false);
-    }
-
-    public static class OptionalHelper
-    {
-        public static Optional<T> Some<T>(T value)
-        {
-            return new(value);
-        }
     }
 }
