@@ -60,9 +60,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ SerializedProperty系 ========================= ▼
         // MARK: ==SerializedProperty系==
 
-        public static readonly ConditionalWeakTable<FieldSelectorContainerBase, HashSet<SerializedPropertyTreeNode>> targetObjectAllPropertieNodesCache = new();
+        public static readonly ConditionalWeakTable<FieldSelectorContainerBase, List<SerializedPropertyTreeNode>> targetObjectAllPropertiesNodesCache = new();
 
-        public static readonly ConditionalWeakTable<FieldSelectorContainerBase, SerializedPropertyTreeNode> targetObjectPropertiyTreeRootCache = new();
+        public static readonly ConditionalWeakTable<FieldSelectorContainerBase, SerializedPropertyTreeNode> targetObjectPropertyTreeRootCache = new();
 
         public static readonly ConditionalWeakTable<FieldSelectorContainerBase, SerializedObject> targetObjectRootSerializedObjectCache = new();
 

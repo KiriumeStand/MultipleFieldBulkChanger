@@ -34,7 +34,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     $"{UniversalDataManager.Debugger.UnsubscribeActionsInfoList}"
                     , LogType.Log);
             };
-            EditorUtil.VisualElementHelper.SetDisplay(u_DebugButton, DebugSettings.Instance._DebugMode);
+            EditorUtil.VisualElementHelper.SetDisplay(u_DebugButton, Settings.Instance._DebugMode);
 
             Toggle u_Enable = BindHelper.Bind<Toggle>(uxml, UxmlNames.Enable, serializedObject, nameof(MultipleFieldBulkChanger._Enable));
             ListView u_Arguments = BindHelper.Bind<ListView>(uxml, UxmlNames.Arguments, serializedObject, nameof(MultipleFieldBulkChanger._ArgumentSettings));

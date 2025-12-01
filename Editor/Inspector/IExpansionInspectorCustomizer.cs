@@ -43,9 +43,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 OnDetachFromPanelEvent(serializedData, uxml, targetObject, status);
             });
 
+            int tempCount = 0;
             EditorApplication.delayCall += () =>
             {
                 DelayCall(serializedData, uxml, targetObject, status);
+                tempCount++;
             };
 
             // MARK: デバッグ用
@@ -53,7 +55,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (u_DebugLabel != null)
             {
                 u_DebugLabel.text = $"drawerId:{EditorUtil.ObjectIdUtil.GetObjectId(this)}/targetId:{EditorUtil.ObjectIdUtil.GetObjectId(targetObject)}/serializedDataId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedData)}";
-                EditorUtil.VisualElementHelper.SetDisplay(u_DebugLabel, DebugSettings.Instance._DebugMode);
+                EditorUtil.VisualElementHelper.SetDisplay(u_DebugLabel, Settings.Instance._DebugMode);
             }
 
             status.SetPhase(InspectorCustomizerStatus.Phase.BeforeDelayCall);

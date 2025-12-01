@@ -93,29 +93,23 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject))
             {
                 selectedSerializedObject = new(selectedObject);
-                HashSet<EditorUtil.SerializedObjectUtil.Filter> addListFilters = new() {
-                        new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsHighRisk, true),
-                        new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsSafetyUnknown, true),
-                };
-                HashSet<EditorUtil.SerializedObjectUtil.Filter> enterChildrenFilters = new() {
-                        new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsHighRisk, true),
-                        new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsSafetyUnknown, true),
-                };
+                HashSet<EditorUtil.SerializedObjectUtil.Filter> addListFilters = new() { };
+                HashSet<EditorUtil.SerializedObjectUtil.Filter> enterChildrenFilters = new() { };
                 HashSet<EditorUtil.SerializedObjectUtil.Filter> selectableNodeFilters = new() {
-                        new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsGenericType, true),
+                    new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsGenericType, true),
                 };
                 HashSet<EditorUtil.SerializedObjectUtil.Filter> editableFilters = new() {
-                        new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsReadonly, true),
+                    new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsReadonly, true),
                 };
                 propertyRoot = EditorUtil.SerializedObjectUtil.GetPropertyTree(selectedSerializedObject, addListFilters, enterChildrenFilters, selectableNodeFilters, editableFilters);
             }
 
             FieldSelectorContainerBase targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property) as FieldSelectorContainerBase;
 
-            UniversalDataManager.targetObjectAllPropertieNodesCache.AddOrUpdate(targetObject, propertyRoot.GetAllNode().ToHashSet());
+            UniversalDataManager.targetObjectAllPropertiesNodesCache.AddOrUpdate(targetObject, propertyRoot.GetAllNode());
             UniversalDataManager.targetObjectRootSerializedObjectCache.AddOrUpdate(targetObject, selectedSerializedObject);
 
-            UniversalDataManager.targetObjectPropertiyTreeRootCache.AddOrUpdate(targetObject, propertyRoot);
+            UniversalDataManager.targetObjectPropertyTreeRootCache.AddOrUpdate(targetObject, propertyRoot);
 
             OnSelectObjectSerializedPropertiesUpdateEventPublish(property, uxml, status, selectedSerializedObject);
         }

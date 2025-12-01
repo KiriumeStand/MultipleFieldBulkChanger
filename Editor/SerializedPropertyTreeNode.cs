@@ -9,7 +9,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public SerializedPropertyTreeNode Parent { get; }
 
-        public HashSet<SerializedPropertyTreeNode> Childlen { get; } = new();
+        public List<SerializedPropertyTreeNode> Children { get; } = new();
 
         public bool IsSelectable { get; }
 
@@ -19,7 +19,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             Property = property;
             Parent = parent;
-            Parent?.Childlen.Add(this);
+            Parent?.Children.Add(this);
             IsSelectable = isSelectable;
             IsEditable = isEditable;
         }
@@ -29,7 +29,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         private static List<SerializedPropertyTreeNode> GetAllNode(SerializedPropertyTreeNode root)
         {
             List<SerializedPropertyTreeNode> list = new() { root };
-            foreach (SerializedPropertyTreeNode child in root.Childlen)
+            foreach (SerializedPropertyTreeNode child in root.Children)
             {
                 list.AddRange(GetAllNode(child));
             }

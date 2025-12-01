@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using UnityEditor.IMGUI.Controls;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
@@ -15,5 +17,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         public void UpdateId() => id = GetHashCode();
 
         public override int GetHashCode() => FullName.GetHashCode();
+
+        public new void SortChildren(Comparison<AdvancedDropdownItem> comparer, bool recursive = false)
+        {
+            base.SortChildren(comparer, recursive);
+        }
     }
 }

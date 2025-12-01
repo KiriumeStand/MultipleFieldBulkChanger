@@ -5,28 +5,29 @@ using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public class DebugSettings : ScriptableObject
+    public class Settings : ScriptableObject
     {
         public const string DebugSettingsPath = "Assets/MultipleFieldBulkChangerDebugSettings.asset";
 
-        private static DebugSettings _instance;
+        private static Settings _instance;
 
-        [SerializeField]
+        public bool _Limitter = true;
         public bool _DebugMode = false;
-        [SerializeField]
         public bool _DebugLog = false;
 
+        private Settings() { }
 
-        public static DebugSettings Instance
+
+        public static Settings Instance
         {
             get
             {
                 if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(_instance))
                 {
-                    DebugSettings loadedSettings = AssetDatabase.LoadAssetAtPath<DebugSettings>(DebugSettingsPath);
+                    Settings loadedSettings = AssetDatabase.LoadAssetAtPath<Settings>(DebugSettingsPath);
                     if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(loadedSettings))
                     {
-                        _instance = CreateInstance<DebugSettings>();
+                        _instance = CreateInstance<Settings>();
                         AssetDatabase.CreateAsset(_instance, DebugSettingsPath);
                         AssetDatabase.SaveAssets();
                     }
@@ -52,9 +53,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 // GUI描画
                 guiHandler = searchContext =>
                 {
-                    SerializedObject debugSettingsSO = new(DebugSettings.Instance);
-                    EditorGUILayout.PropertyField(debugSettingsSO.FindProperty(nameof(DebugSettings._DebugMode)), new GUIContent("Debug Mode"));
-                    EditorGUILayout.PropertyField(debugSettingsSO.FindProperty(nameof(DebugSettings._DebugLog)), new GUIContent("Debug Log"));
+                    SerializedObject debugSettingsSO = new(Settings.Instance);
+                    EditorGUILayout.PropertyField(debugSettingsSO.FindProperty(nameof(Settings._Limitter)), new GUIContent("Limitter"));
+                    EditorGUILayout.PropertyField(debugSettingsSO.FindProperty(nameof(Settings._DebugMode)), new GUIContent("Debug Mode"));
+                    EditorGUILayout.PropertyField(debugSettingsSO.FindProperty(nameof(Settings._DebugLog)), new GUIContent("Debug Log"));
                     debugSettingsSO.ApplyModifiedPropertiesWithoutUndo();
                 },
                 // 検索時のキーワード

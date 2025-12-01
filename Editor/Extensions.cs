@@ -23,7 +23,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         private static readonly GetFieldInfoAndStaticTypeFromProperty _fieldInfoAndTypeGetter;
 
         private static readonly HashSet<Type> _nativeUnityObjectAndSubTypes;
-        private static readonly HashSet<string> _nativeUnityObjectAndSubTypeNames;
 
         // 初期化処理
         static Extensions()
@@ -34,8 +33,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             _nativeUnityObjectAndSubTypes = GetAllNativeUnityObjectAndSubTypes();
             TimeSpan timeSpan = DateTime.Now - time;
             EditorUtil.Debugger.DebugLog($"GetAllNativeUnityObjectAndSubTypes TimeSpan/{timeSpan}", LogType.Log, "blue");
-
-            _nativeUnityObjectAndSubTypeNames = _nativeUnityObjectAndSubTypes.Select(t => t.FullName).ToHashSet();
         }
 
         private static GetFieldInfoAndStaticTypeFromProperty GetFieldInfoAndTypeGetter()
@@ -117,10 +114,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public static (bool success, Type type, string errorLog) GetFieldType(this SerializedProperty property)
         {
-            if (property == null || _fieldInfoAndTypeGetter == null)
+            if (_fieldInfoAndTypeGetter == null)
             {
-                // nullが渡されたり、デリゲートの処理がうまくいかなかった場合は失敗
-                return default;
+                // デリゲートの処理がうまくいかなかった場合は失敗
+                return (default, default, "ScriptAttributeUtility.GetFieldInfoAndStaticTypeFromProperty is not retrieved");
             }
 
             // プロパティのフィールド情報の取得を試みる
@@ -159,8 +156,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Type systemType = Type.GetType(propertyTypeName);
             if (systemType != null) return (true, systemType, "");
 
-            // MARK: デバッグ用
-            EditorUtil.Debugger.DebugLog($"Failed to get type/ SerializedProperty.type:{property.type}\nSerializedProperty.propertyType:{property.propertyType}", LogType.Log, "red");
             return (false, null, "Failed to get type");
         }
 

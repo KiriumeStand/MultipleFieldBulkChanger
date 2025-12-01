@@ -123,16 +123,19 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 (sender, args) => { OnFieldSelectorSelectFieldPathChangedEventHandler(args, property, uxml, status); });
             u_SelectFieldButton.clicked += () =>
             {
-                EditorUtil.Debugger.DebugLog("u_SelectFieldButton.clicked", LogType.Log, "red");
                 SerializedProperty fieldSelectorContainerProperty = EditorUtil.SerializedObjectUtil.GetParentProperty(property);
                 FieldSelectorContainerBase fieldSelectorContainerObject = EditorUtil.SerializedObjectUtil.GetTargetObject(fieldSelectorContainerProperty) as FieldSelectorContainerBase;
 
-                UniversalDataManager.targetObjectPropertiyTreeRootCache.TryGetValue(fieldSelectorContainerObject, out SerializedPropertyTreeNode rootNode);
+                SerializedProperty grandparentProperty = EditorUtil.SerializedObjectUtil.GetParentProperty(fieldSelectorContainerProperty);
+                IExpansionInspectorCustomizerTargetMarker grandparentObject = EditorUtil.SerializedObjectUtil.GetTargetObject(fieldSelectorContainerProperty);
+                bool ddItemEditableOnly = grandparentObject is FieldChangeSetting;
+
+                UniversalDataManager.targetObjectPropertyTreeRootCache.TryGetValue(fieldSelectorContainerObject, out SerializedPropertyTreeNode rootNode);
                 UniversalDataManager.targetObjectRootSerializedObjectCache.TryGetValue(fieldSelectorContainerObject, out SerializedObject rootObject);
                 SerializedProperty selectFieldPathProp = property.SafeFindPropertyRelative(nameof(FieldSelector._SelectFieldPath));
                 FieldSelectorAdvancedDropdown dropdown = new(
                     new List<int>() { new FieldSelectorAdvancedDropdownItem("", u_SelectFieldPath.value, true, null).GetHashCode() },
-                    new AdvancedDropdownState(), rootNode, rootObject, selectFieldPathProp
+                    new AdvancedDropdownState(), rootNode, rootObject, selectFieldPathProp, ddItemEditableOnly
                 );
                 dropdown.Show(u_SelectFieldButton.parent.worldBound);
             };
@@ -207,7 +210,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             SerializedProperty fieldSelectorContainerProperty = EditorUtil.SerializedObjectUtil.GetParentProperty(property);
             FieldSelectorContainerBase fieldSelectorContainerObject = EditorUtil.SerializedObjectUtil.GetTargetObject(fieldSelectorContainerProperty) as FieldSelectorContainerBase;
 
-            if (!UniversalDataManager.targetObjectAllPropertieNodesCache.TryGetValue(fieldSelectorContainerObject, out HashSet<SerializedPropertyTreeNode> nodeHashSet))
+            if (!UniversalDataManager.targetObjectAllPropertiesNodesCache.TryGetValue(fieldSelectorContainerObject, out List<SerializedPropertyTreeNode> nodeList))
             {
                 return null;
             }
@@ -215,7 +218,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             TextField u_SelectFieldPath = UIQuery.Q<TextField>(uxml, UxmlNames.SelectFieldPath);
             string propertyPath = u_SelectFieldPath.value;
             SerializedProperty selectingSerializedProperty =
-                nodeHashSet.FirstOrDefault(x => x.Property != null && x.Property.propertyPath == propertyPath)?.Property;
+                nodeList.FirstOrDefault(x => x.Property != null && x.Property.propertyPath == propertyPath)?.Property;
 
             return selectingSerializedProperty;
         }
@@ -270,63 +273,114 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▲ 名前辞書 ========================= ▲
 
 
+        // ▼ 拡張AdvancedDropdown ========================= ▼
+        // MARK: ==拡張AdvancedDropdown==
+
         private class FieldSelectorAdvancedDropdown : ExpantionAdvancedDropdown<FieldSelectorAdvancedDropdownItem>
         {
+            public int temp = 0;
+
             protected override FieldSelectorAdvancedDropdownItem GetNewSearchTreeRoot() => new("Search Results", "", false, null);
 
-            SerializedObject RootObject { get; }
+            private readonly SerializedObject _rootObject;
 
-            SerializedPropertyTreeNode RootNode { get; }
+            private readonly SerializedPropertyTreeNode _rootNode;
 
-            SerializedProperty BindingProperty { get; }
+            private readonly SerializedProperty _bindingProperty;
 
-            public FieldSelectorAdvancedDropdown(List<int> selectedItemIds, AdvancedDropdownState state, SerializedPropertyTreeNode root, SerializedObject rootObject, SerializedProperty bindingProperty) : base(selectedItemIds, state)
+            private readonly bool _editableOnly;
+
+            public FieldSelectorAdvancedDropdown(List<int> selectedItemIds, AdvancedDropdownState state, SerializedPropertyTreeNode root, SerializedObject rootObject, SerializedProperty bindingProperty, bool editableOnly) : base(selectedItemIds, state)
             {
                 CurrentFolderContextualSearch = true;
                 Vector2 minSize = minimumSize;
                 minSize.y = 200;
                 minimumSize = minSize;
 
-                RootNode = root;
-                RootObject = rootObject;
-                BindingProperty = bindingProperty;
+                _rootNode = root;
+                _rootObject = rootObject;
+                _bindingProperty = bindingProperty;
+                _editableOnly = editableOnly;
             }
 
             protected override FieldSelectorAdvancedDropdownItem GenericBuildRoot()
             {
-                if (RootNode == null || RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(RootObject)) return new("Empty", "", false, RootNode);
+                if (_rootNode == null || RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(_rootObject))
+                    return new("Empty", "", false, _rootNode);
 
-                SerializedPropertyTreeNode[] Nodes = RootNode.GetAllNode().ToArray();
-                Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs = new() { { RootNode, new(RootObject.targetObject.name, "", false, RootNode) } };
-                if (Nodes.Length > 1)
+                Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs = new() { { _rootNode, new(_rootObject.targetObject.name, "", false, _rootNode) } };
+                List<SerializedProperty> spStack = new();
+                foreach (var child in _rootNode.Children)
                 {
-                    foreach (SerializedPropertyTreeNode node in Nodes[1..])
+                    spStack.Add(child.Property);
+                    BuildRootInternal(child, spStack, nodeADItemPairs);
+                    spStack.Remove(spStack[^1]);
+                }
+                temp = nodeADItemPairs.Count();
+                return nodeADItemPairs[_rootNode];
+            }
+
+            private void BuildRootInternal(
+                SerializedPropertyTreeNode curNode, List<SerializedProperty> spStack,
+                Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs
+            )
+            {
+                HashSet<EditorUtil.SerializedObjectUtil.Filter> isSelectableFilters = new();
+                HashSet<EditorUtil.SerializedObjectUtil.Filter> isInnerNodeFilters = new();
+                isSelectableFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsGenericType, true));
+                isInnerNodeFilters.Add(new((so, stack) => { return curNode.Children.Any(); }, false));
+
+                if (Settings.Instance._Limitter)
+                {
+                    isSelectableFilters.Add(new((so, stack) => { return curNode.IsSelectable; }, false));
+                    isSelectableFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsHighRisk, true));
+                    isSelectableFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsSafetyUnknown, true));
+
+                    isInnerNodeFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsHighRisk, true));
+                    isInnerNodeFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsSafetyUnknown, true));
+
+                    if (_editableOnly)
                     {
-                        string path = "." + node.Property.propertyPath;
-                        int lastDotIndex = path.LastIndexOf('.');
-                        string propName = path[(lastDotIndex + 1)..];
-
-                        FieldSelectorAdvancedDropdownItem innerItem = null;
-                        bool isInnerNode = node.Childlen.Any();
-                        if (isInnerNode)
-                        {
-                            innerItem = new(propName, node.Property.propertyPath, false, node);
-                            nodeADItemPairs[node.Parent].AddChild(innerItem);
-                        }
-
-                        FieldSelectorAdvancedDropdownItem selectableItem = null;
-                        bool isSelectable = node.IsSelectable;
-                        if (isSelectable)
-                        {
-                            selectableItem = new(propName, node.Property.propertyPath, true, node);
-                            nodeADItemPairs[node.Parent].AddChild(selectableItem);
-                        }
-
-                        FieldSelectorAdvancedDropdownItem dictRegisterItem = innerItem ?? selectableItem;
-                        nodeADItemPairs.Add(node, dictRegisterItem);
+                        isSelectableFilters.Add(new((so, stack) => { return curNode.IsEditable; }, false));
                     }
                 }
-                return nodeADItemPairs[RootNode];
+
+                bool isSelectable = isSelectableFilters.All(x => x.Calc(curNode.Property.serializedObject, spStack));
+                bool isInnerNode = isInnerNodeFilters.All(x => x.Calc(curNode.Property.serializedObject, spStack));
+
+                if (isSelectable || isInnerNode)
+                {
+                    string path = "." + curNode.Property.propertyPath;
+                    int lastDotIndex = path.LastIndexOf('.');
+                    string propName = path[(lastDotIndex + 1)..];
+
+                    FieldSelectorAdvancedDropdownItem selectableItem = null;
+                    if (isSelectable)
+                    {
+                        selectableItem = new(propName, curNode.Property.propertyPath, true, curNode);
+                        nodeADItemPairs[curNode.Parent].AddChild(selectableItem);
+                    }
+
+                    FieldSelectorAdvancedDropdownItem innerItem = null;
+                    if (isInnerNode)
+                    {
+                        innerItem = new($"{propName} ->", curNode.Property.propertyPath, false, curNode);
+                        nodeADItemPairs[curNode.Parent].AddChild(innerItem);
+                    }
+
+                    FieldSelectorAdvancedDropdownItem dictRegisterItem = innerItem ?? selectableItem;
+                    nodeADItemPairs.Add(curNode, dictRegisterItem);
+
+                    if (isInnerNode)
+                    {
+                        foreach (SerializedPropertyTreeNode child in curNode.Children)
+                        {
+                            spStack.Add(child.Property);
+                            BuildRootInternal(child, spStack, nodeADItemPairs);
+                            spStack.Remove(spStack[^1]);
+                        }
+                    }
+                }
             }
 
             protected override (string itemName, string description, string tooltip) BuildDisplayTexts(
@@ -348,39 +402,132 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     }
                     else
                     {
-                        UnityEngine.Object targetObject = prop.serializedObject.targetObject;
-                        bool isNull = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(targetObject);
-                        if (!isNull)
+                        if (item.name.StartsWith("data["))
                         {
-                            switch (targetObject)
+                            string[] nameFieldNames = new[] { "m_name", "_name", "name" };
+                            IEnumerable<SerializedPropertyTreeNode> nameNodes = item.Node.Children.Where(x => nameFieldNames.Contains(x.Property.name.ToLower()));
+
+                            foreach (SerializedPropertyTreeNode node in nameNodes)
                             {
-                                case Material:
-                                    string[] pathStack;
-                                    // マテリアルの m_SavedPropertiesの要素か
-                                    if (
-                                        prop.name == "data" &&
-                                        (item.Node.Parent.Property?.isArray ?? false) &&
-                                        item.Node.Parent.Parent.Property.arrayElementType == "pair" &&
-                                        (pathStack = path.Split('.')).Length == 4 &&
-                                        pathStack[0] == "m_SavedProperties" &&
-                                        new[] { "m_TexEnvs", "m_Ints", "m_Floats", "m_Colors" }.Contains(pathStack[1])
-                                    )
-                                    {
-                                        // マテリアルのプロパティ名を description に表示
-                                        description = $"({prop.displayName})";
-                                    }
+                                if (node.Property.propertyType == SerializedPropertyType.String)
+                                {
+                                    // マテリアルのプロパティ名を description に表示
+                                    description = $"({node.Property.stringValue})";
                                     break;
+                                }
+                            }
+                        }
+
+                        {
+                            UnityEngine.Object targetObject = prop.serializedObject.targetObject;
+                            bool isNull = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(targetObject);
+                            if (!isNull)
+                            {
+                                string[] pathStack;
+                                switch (targetObject)
+                                {
+                                    case Material:
+                                        // マテリアルの m_SavedPropertiesの要素か
+                                        if (
+                                            prop.name == "data" &&
+                                            (item.Node.Parent.Property?.isArray ?? false) &&
+                                            item.Node.Parent.Parent.Property.arrayElementType == "pair" &&
+                                            (pathStack = path.Split('.')).Length == 4 &&
+                                            pathStack[0] == "m_SavedProperties" &&
+                                            new[] { "m_TexEnvs", "m_Ints", "m_Floats", "m_Colors" }.Contains(pathStack[1])
+                                        )
+                                        {
+                                            // マテリアルのプロパティ名を description に表示
+                                            description = $"({prop.displayName})";
+                                        }
+                                        break;
+                                    case AnimationClip:
+                                        if (
+                                            prop.name == "data" &&
+                                            (item.Node.Parent.Property?.isArray ?? false) &&
+                                            item.Node.Parent.Parent.Property.arrayElementType.EndsWith("Curve") &&
+                                            (pathStack = path.Split('.')).Length == 3 &&
+                                            pathStack[0].EndsWith("Curves") &&
+                                            true
+                                        )
+                                        {
+                                            string pathString = "";
+                                            string attributeString = "";
+
+                                            SerializedPropertyTreeNode pathPropNode = item.Node.Children.FirstOrDefault(x => x.Property.name == "path");
+                                            if (pathPropNode != null && pathPropNode.Property.propertyType == SerializedPropertyType.String)
+                                            {
+                                                pathString = pathPropNode.Property.stringValue;
+                                            }
+
+                                            switch (item.Node.Parent.Parent.Property.arrayElementType)
+                                            {
+                                                case "FloatCurve":
+                                                case "PPtrCurve":
+                                                    SerializedPropertyTreeNode attributePropNode = item.Node.Children.FirstOrDefault(x => x.Property.name == "attribute");
+
+                                                    if (attributePropNode != null && attributePropNode.Property.propertyType == SerializedPropertyType.String)
+                                                    {
+                                                        attributeString = attributePropNode.Property.stringValue;
+                                                    }
+                                                    break;
+                                                case "Vector3Curve":
+                                                    switch (pathStack[0])
+                                                    {
+                                                        case "m_PositionCurves":
+                                                            attributeString = "Position";
+                                                            break;
+                                                        case "m_EulerCurves":
+                                                            attributeString = "Rotation";
+                                                            break;
+                                                        case "m_ScaleCurves":
+                                                            attributeString = "Scale";
+                                                            break;
+                                                    }
+                                                    break;
+                                                case "QuaternionCurve":
+                                                    switch (pathStack[0])
+                                                    {
+                                                        case "m_RotationCurves":
+                                                            attributeString = "Quaternion";
+                                                            break;
+                                                    }
+                                                    break;
+                                                case "CompressedAnimationCurve":
+                                                    switch (pathStack[0])
+                                                    {
+                                                        case "m_CompressedRotationCurves":
+                                                            attributeString = "CompressedAnimation";
+                                                            break;
+                                                    }
+                                                    break;
+                                            }
+                                            description = $"{pathString} : {attributeString}";
+                                        }
+                                        if (
+                                            prop.name == "size" &&
+                                            (item.Node.Parent.Property?.isArray ?? false) &&
+                                            item.Node.Parent.Parent.Property.arrayElementType.EndsWith("Curve") &&
+                                            (pathStack = path.Split('.')).Length == 3 &&
+                                            pathStack[0].EndsWith("Curves")
+                                        )
+                                        {
+                                            description = $"({item.Node.Parent.Parent.Property.arrayElementType})";
+                                        }
+                                        break;
+                                }
                             }
                         }
                     }
                 }
+
                 return (itemName, description, tooltip);
             }
 
             protected override void GenericItemSelected(FieldSelectorAdvancedDropdownItem item)
             {
-                BindingProperty.stringValue = item.Node?.Property.propertyPath ?? "";
-                BindingProperty.serializedObject.ApplyModifiedProperties();
+                _bindingProperty.stringValue = item.Node?.Property.propertyPath ?? "";
+                _bindingProperty.serializedObject.ApplyModifiedProperties();
 
                 EditorUtil.Debugger.DebugLog($"Selected: {item.name}", LogType.Log);
             }
@@ -400,5 +547,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             public override int GetHashCode() => (FullName + (IsValue ? "@value" : "")).GetHashCode();
         }
+
+        // ▲ 拡張AdvancedDropdown ========================= ▲
     }
 }

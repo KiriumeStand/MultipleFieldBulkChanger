@@ -82,7 +82,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             public static void DebugLog(string mes, LogType logType, string color = "white")
             {
-                if (!DebugSettings.Instance._DebugLog) return;
+                if (!Settings.Instance._DebugLog) return;
 
                 mes = $"<color={color}>{mes}</color>";
 
@@ -565,8 +565,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     while (endPropertyStack.Count() > 0 && SerializedProperty.EqualContents(curProperty, endPropertyStack.Last()))
                     {
                         // 次の要素が子でないならendPropertyStackから一致するものが無くなるまでスタックを遡る
-                        propertyStack.RemoveAt(propertyStack.Count() - 1);
-                        endPropertyStack.RemoveAt(endPropertyStack.Count() - 1);
+                        propertyStack.Remove(propertyStack[^1]);
+                        endPropertyStack.Remove(endPropertyStack[^1]);
                     }
 
                     // ループを続けるか
@@ -668,8 +668,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     {
                         if (SerializedProperty.EqualContents(propertyStack.Last(), curParentNode.Property)) curParentNode = curParentNode.Parent;
                         // 次の要素が子でないならendPropertyStackから一致するものが無くなるまでスタックを遡る
-                        propertyStack.RemoveAt(propertyStack.Count() - 1);
-                        endPropertyStack.RemoveAt(endPropertyStack.Count() - 1);
+                        propertyStack.Remove(propertyStack[^1]);
+                        endPropertyStack.Remove(endPropertyStack[^1]);
                     }
 
                     // ループを続けるか
@@ -1303,7 +1303,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 // 現在の値を取得
                 SerializedProperty currentValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(currentValueFieldName);
-                object boxedValue = currentValueFieldProperty.boxedValue;
+                object boxedValue = null;
+                try
+                {
+                    boxedValue = currentValueFieldProperty.boxedValue;
+                }
+                catch
+                {
+                    return (false, null);
+                }
 
                 if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(boxedValue)) return (true, null);
                 return (true, boxedValue.GetType());
@@ -1813,7 +1821,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     return Optional<object>.None;
                 }
-                return new Optional<object>(selectSP.boxedValue);
+
+                try
+                {
+                    return new Optional<object>(selectSP.boxedValue);
+                }
+                catch
+                {
+                    return Optional<object>.None;
+                }
             }
 
             public static SerializedProperty GetSelectPathSerializedProperty(Object unityObj, string propertyPath)

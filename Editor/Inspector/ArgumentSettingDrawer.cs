@@ -67,19 +67,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
 
             EditorUtil.VisualElementHelper.SetEnableds(
-                (u_ReferenceArgumentType, false),
-
-                (u_ReferenceBoolValueField, false),
-                (u_ReferenceNumberValueField, false),
-                (u_ReferenceStringValueField, false),
-                (u_ReferenceColorValueField, false),
-                (u_ReferenceObjectValueField, false),
-                (u_ReferenceVector2ValueField, false),
-                (u_ReferenceVector3ValueField, false),
-                (u_ReferenceVector4ValueField, false),
-                (u_ReferenceBoundsValueField, false),
-                (u_ReferenceCurveValueField, false),
-                (u_ReferenceGradientValueField, false)
+                (u_ReferenceArgumentType, false)
             );
 
             // イベント発行の登録
@@ -374,7 +362,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (isReferenceMode.Value)
             {
                 SerializedProperty selectFieldSP = GetSelectObjectFieldProperty(property);
-                return selectFieldSP?.boxedValue;
+                object resultBoxedValue = null;
+                try
+                {
+                    resultBoxedValue = selectFieldSP?.boxedValue;
+                }
+                catch { }
+                return resultBoxedValue;
             }
             else
             {
@@ -397,7 +391,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 };
 
                 if (string.IsNullOrWhiteSpace(inputtableValuePath)) return null;
-                return property.SafeFindPropertyRelative(inputtableValuePath).boxedValue;
+                object resultBoxedValue = null;
+                try
+                {
+                    resultBoxedValue = property.SafeFindPropertyRelative(inputtableValuePath).boxedValue;
+                }
+                catch { }
+                return resultBoxedValue;
             }
         }
 
@@ -414,7 +414,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     selectFieldType = type;
                 }
-                selectFieldValue = selectFieldSP.boxedValue;
+                try
+                {
+                    selectFieldValue = selectFieldSP.boxedValue;
+                }
+                catch { }
             }
             return (selectFieldValue, selectFieldType);
         }
@@ -489,7 +493,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     (bool success, Type type, string errorLog) = selectedFieldProperty.GetFieldType();
                     selectedFieldValueType = success ? type : null;
-                    selectedFieldValue = selectedFieldProperty.boxedValue;
+                    try
+                    {
+                        selectedFieldValue = selectedFieldProperty.boxedValue;
+                    }
+                    catch { }
                 }
 
                 bool anyChanged = UpdateArgumentDatasDictionary(property, uxml, targetObject, status, Optional<string>.None, new Optional<Type>(selectedFieldValueType), new Optional<object>(selectedFieldValue));
