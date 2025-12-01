@@ -116,7 +116,20 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                                         result = customCastedResult;
                                                     }
 
-                                                    targetProperty.boxedValue = result;
+                                                    try
+                                                    {
+                                                        targetProperty.boxedValue = result;
+                                                    }
+                                                    catch (Exception e)
+                                                    {
+                                                        EditorUtil.Debugger.DebugLog(
+                                                            $"Value change error !!! Object:{targetProperty.serializedObject.targetObject.name}({targetProperty.serializedObject.targetObject.GetType().Name})\r\n" +
+                                                            $"{targetProperty.propertyPath} to {result}\r\n" +
+                                                            $"Exception Type:{e.GetType().FullName}\r\n" +
+                                                            $"{e.Message}\r\n" +
+                                                            $"{e.StackTrace}",
+                                                            LogType.Error, "red");
+                                                    }
                                                 }
                                             }
                                         }
