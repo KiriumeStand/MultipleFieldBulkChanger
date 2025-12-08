@@ -1,5 +1,3 @@
-using System;
-
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     public record Optional<T>

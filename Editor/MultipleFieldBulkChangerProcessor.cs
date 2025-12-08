@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using nadena.dev.ndmf;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
@@ -11,12 +13,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     {
         public static void Execute(BuildContext ctx)
         {
-            EditorUtil.Cloner cloner = new();
-
+            Object.FindObjectOfType<Object>(true);
             // MultipleFieldBulkChanger の一覧を取得
             MultipleFieldBulkChanger[] mfbcComponents = ctx.AvatarRootObject.GetComponentsInChildren<MultipleFieldBulkChanger>(true);
 
-            // 必要なものをクローンする
+            // 変更予定のオブジェクトのリストを取得
+            List<Object> willEditObjects = new();
             foreach (MultipleFieldBulkChanger mfbcComponent in mfbcComponents)
             {
                 if (!mfbcComponent._Enable) continue;
@@ -27,18 +29,66 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     foreach (MultiFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
                     {
-                        mfscPropObj._SelectObject = cloner.DeepClone(mfscPropObj._SelectObject);
+                        willEditObjects.Add(mfscPropObj._SelectObject);
                     }
                 }
             }
 
-            // クローンしたオブジェクトで差し替え
-            Component[] allComponent = ctx.AvatarRootObject.GetComponentsInChildren<Component>(true);
-            foreach (Component component in allComponent)
+            HashSet<Object> needsCloneAssetObjects = new();
+
+            HashSet<string> willEditAssetPathes = new();
+            HashSet<string> willEditAssetGUIDs = new();
+
+            // 変更予定のオブジェクトの内、アセットであるものを抽出
+            foreach (Object willEditObject in willEditObjects)
             {
-                cloner.ReplaceClonedObject(component);
+                if (AssetDatabase.Contains(willEditObject))
+                {
+                    string willEditAssetPath = AssetDatabase.GetAssetPath(willEditObject);
+                    willEditAssetPathes.Add(willEditAssetPath);
+                    willEditAssetGUIDs.Add(AssetDatabase.AssetPathToGUID(willEditAssetPath));
+
+                    // クローンが必要なためクローンリストに追加
+                    needsCloneAssetObjects.Add(willEditObject);
+                }
             }
 
+            // 変更予定アセットに依存しているアセットをクローンリストに追加
+            string[] allAssetPaths = AssetDatabase.GetAllAssetPaths();
+            foreach (string assetPath in allAssetPaths)
+            {
+                string[] dependencyPathes = AssetDatabase.GetDependencies(assetPath, true);
+
+                bool needsClone = dependencyPathes.Any(x => willEditAssetPathes.Contains(x));
+                if (needsClone)
+                {
+                    needsCloneAssetObjects.Add(AssetDatabase.LoadAssetAtPath<Object>(assetPath));
+                }
+            }
+
+            // マークされたものを遅延クローンに登録する
+            AssetCloner cloner = new();
+            foreach (Object needsCloneObject in needsCloneAssetObjects)
+            {
+                cloner.RegisterLazyClone(needsCloneObject);
+            }
+
+            // オブジェクトをクローンで差し替え
+            GameObject[] allGameObjects = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (GameObject gameObject in allGameObjects)
+            {
+                Component[] components = gameObject.GetComponents<Component>();
+
+                foreach (Component component in components)
+                {
+                    if (component == null) continue;
+
+                    // 差し替えが必要か、再帰的探索が必要かは RecursiveReplaceClonedObject 側で判断されるため、
+                    // とりあえずすべてのコンポーネントで処理を行う
+                    // 差し替えが必要なら必要に応じて遅延クローンが行われる
+                    _ = cloner.RecursiveReplaceClonedObject(component, true);
+                }
+            }
 
             foreach (MultipleFieldBulkChanger mfbcComponent in mfbcComponents)
             {
@@ -51,11 +101,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         Optional<object> argValue = default;
                         if (asPropObj._IsReferenceMode)
                         {
-                            UnityEngine.Object selectObj = asPropObj._SourceField._SelectObject;
+                            Object selectObj = asPropObj._SourceField._SelectObject;
                             string selectFieldPath = asPropObj._SourceField._FieldSelector._SelectFieldPath;
                             if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
                             {
-                                argValue = EditorUtil.OtherUtil.GetSelectPathValue(selectObj, selectFieldPath);
+                                argValue = EditorUtil.OtherUtil.GetSelectPathValueWithImporter(selectObj, selectFieldPath);
                             }
                         }
                         else
@@ -80,61 +130,87 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         // 代入式を解く
                         (bool expressionSuccess, Type resultValueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expression, argDatas);
 
-                        if (expressionSuccess)
+                        if (!expressionSuccess)
                         {
-                            foreach (MultiFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
+                            Logger.Log($"代入式の計算に失敗しました。\n代入式:'{expression}'\n計算エラーログ:'{result}'", LogType.Error, "");
+                            continue;
+                        }
+
+                        foreach (MultiFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
+                        {
+                            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(mfscPropObj._SelectObject))
                             {
-                                if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(mfscPropObj._SelectObject))
+                                // MultiFieldSelectorContainer でオブジェクトが指定されていない場合
+                                continue;
+                            }
+
+                            SerializedObject targetSerializedObject = new(mfscPropObj._SelectObject);
+
+                            SerializedPropertyTreeNode propertyRoot = EditorUtil.SerializedObjectUtil.GetPropertyTreeWithImporter(targetSerializedObject, new(), new(), new(), new());
+
+                            foreach (FieldSelector fsPropObj in mfscPropObj._FieldSelectors)
+                            {
+
+                                List<SerializedPropertyTreeNode> allNode = propertyRoot.GetAllNode();
+                                SerializedPropertyTreeNode targetPropertyNode = allNode.FirstOrDefault(x => x.FullPath == fsPropObj._SelectFieldPath);
+
+                                string selectPropertyInfo = $"指定されたオブジェクト:'{mfscPropObj._SelectObject.name}({mfscPropObj._SelectObject.GetType().FullName})', 指定されたプロパティパス:'{fsPropObj._SelectFieldPath}'";
+                                if (targetPropertyNode == null)
                                 {
-                                    SerializedObject targetSerializedObject = new(mfscPropObj._SelectObject);
-                                    if (mfscPropObj._SelectObject is Transform tf)
+                                    Logger.Log($"指定されたプロパティが見つかりませんでした。\n{selectPropertyInfo}", LogType.Error, "");
+                                    continue;
+                                }
+                                if (!targetPropertyNode.IsEditable)
+                                {
+                                    Logger.Log($"編集不可なプロパティが指定されました。\n{selectPropertyInfo}", LogType.Error, "");
+                                    continue;
+                                }
+
+                                // 代入先の SerializedProperty
+                                SerializedProperty targetProperty = targetPropertyNode.Property;
+
+                                if (targetProperty == null)
+                                {
+                                    Logger.Log($"指定されたプロパティの SerializedProperty が見つかりませんでした。\n{selectPropertyInfo}", LogType.Error, "");
+                                    continue;
+                                }
+
+                                (bool getFieldTypeSuccess, Type targetFieldType, string errorLog) = targetProperty.GetFieldType();
+                                if (!getFieldTypeSuccess)
+                                {
+                                    Logger.Log($"指定されたプロパティの型が取得できませんでした。\n{selectPropertyInfo}\n型取得エラーログ:'{errorLog}'", LogType.Error, "");
+                                    continue;
+                                }
+
+                                // 代入先と代入値の型の相性は問題ないか確認
+                                bool isValid = EditorUtil.OtherUtil.ValidationTypeAssignable(result.GetType(), targetFieldType);
+
+                                if (!isValid)
+                                {
+                                    Logger.Log($"指定されたプロパティの型に対し、代入しようとした値の型が不適合です。\n{selectPropertyInfo}\n代入値の型:'{result.GetType().FullName}', 代入先の型:'{targetFieldType}'", LogType.Error, "");
+                                    continue;
+                                }
+
+                                // カスタムキャスト処理
+                                object customCastedResult = EditorUtil.OtherUtil.CustomCast(result, targetFieldType);
+                                if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(customCastedResult))
+                                {
+                                    result = customCastedResult;
+                                }
+
+                                try
+                                {
+                                    targetProperty.boxedValue = result;
+                                    targetProperty.serializedObject.ApplyModifiedPropertiesWithoutUndo();
+                                    if (targetProperty.serializedObject.targetObject is AssetImporter importer)
                                     {
-                                        SerializedObject targetGameObjectSerializedObject = new(tf.gameObject);
-                                        targetSerializedObject.Update();
-                                        targetGameObjectSerializedObject.Update();
+                                        importer.SaveAndReimport();
                                     }
-
-                                    foreach (FieldSelector fsPropObj in mfscPropObj._FieldSelectors)
-                                    {
-                                        // 代入先の SerializedProperty
-                                        SerializedProperty targetProperty = targetSerializedObject.FindProperty(fsPropObj._SelectFieldPath);
-
-                                        if (targetProperty != null)
-                                        {
-                                            (bool getFieldTypeSuccess, Type targetFieldType, string errorLog) = targetProperty.GetFieldType();
-                                            if (getFieldTypeSuccess)
-                                            {
-                                                // 代入先と代入値の型の相性は問題ないか確認
-                                                bool isValid = EditorUtil.OtherUtil.ValidationTypeAssignable(result.GetType(), targetFieldType);
-
-                                                if (isValid)
-                                                {
-                                                    // カスタムキャスト処理
-                                                    object customCastedResult = EditorUtil.OtherUtil.CustomCast(result, targetFieldType);
-                                                    if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(customCastedResult))
-                                                    {
-                                                        result = customCastedResult;
-                                                    }
-
-                                                    try
-                                                    {
-                                                        targetProperty.boxedValue = result;
-                                                    }
-                                                    catch (Exception e)
-                                                    {
-                                                        EditorUtil.Debugger.DebugLog(
-                                                            $"Value change error !!! Object:{targetProperty.serializedObject.targetObject.name}({targetProperty.serializedObject.targetObject.GetType().Name})\r\n" +
-                                                            $"{targetProperty.propertyPath} to {result}\r\n" +
-                                                            $"Exception Type:{e.GetType().FullName}\r\n" +
-                                                            $"{e.Message}\r\n" +
-                                                            $"{e.StackTrace}",
-                                                            LogType.Error, "red");
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    targetSerializedObject.ApplyModifiedProperties();
+                                }
+                                catch
+                                {
+                                    Logger.Log("プロパティの値の変更に失敗しました。", LogType.Error, "");
+                                    continue;
                                 }
                             }
                         }
@@ -142,27 +218,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
 
                 // MultipleFieldBulkChanger を削除
-                UnityEngine.Object.DestroyImmediate(mfbcComponent);
+                Object.DestroyImmediate(mfbcComponent);
             }
         }
 
 
-        private static void ErrorAndThrow(string mes, UnityEngine.Object context)
+        private static void ErrorAndThrow(string mes, Object context)
         {
             Debug.LogError(mes, context);
             throw new MultipleFieldBulkChangerException(mes);
-        }
-
-
-
-
-
-        private static void NullCheck(object obj, string objDescription, UnityEngine.Object context)
-        {
-            if (obj == null)
-            {
-                ErrorAndThrow($"{objDescription}が取得できませんでした", context);
-            }
         }
 
         public class MultipleFieldBulkChangerException : Exception

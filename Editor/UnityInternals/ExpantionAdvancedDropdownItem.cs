@@ -6,17 +6,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     public abstract class ExpantionAdvancedDropdownItem : AdvancedDropdownItem
     {
-        public string FullName { get; } = "";
+        public virtual string FullPath { get; } = "";
 
-        public ExpantionAdvancedDropdownItem(string name, string fullName) : base(name)
-        {
-            FullName = fullName;
-            UpdateId();
-        }
+        public virtual int Id { get => FullPath.GetHashCode(); }
 
-        public void UpdateId() => id = GetHashCode();
+        public ExpantionAdvancedDropdownItem(string name) : base(name) { }
 
-        public override int GetHashCode() => FullName.GetHashCode();
+        public override int GetHashCode() => FullPath.GetHashCode();
 
         public new void SortChildren(Comparison<AdvancedDropdownItem> comparer, bool recursive = false)
         {

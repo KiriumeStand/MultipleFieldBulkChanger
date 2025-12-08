@@ -90,8 +90,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
             clone._InputtableVector3Value = _InputtableVector3Value;
             clone._InputtableVector4Value = _InputtableVector4Value;
             clone._InputtableBoundsValue = _InputtableBoundsValue;
-            clone._InputtableCurveValue = _InputtableCurveValue;
-            clone._InputtableGradientValue = _InputtableGradientValue;
+            clone._InputtableCurveValue = new(_InputtableCurveValue.keys);
+            clone._InputtableGradientValue = new();
+            clone._InputtableGradientValue.alphaKeys = _InputtableGradientValue.alphaKeys;
+            clone._InputtableGradientValue.colorKeys = _InputtableGradientValue.colorKeys;
+            clone._InputtableGradientValue.colorSpace = _InputtableGradientValue.colorSpace;
+            clone._InputtableGradientValue.mode = _InputtableGradientValue.mode;
             clone._SourceField = (SingleFieldSelectorContainer)_SourceField.Clone();
 
             return clone;

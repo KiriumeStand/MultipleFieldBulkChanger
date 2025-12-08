@@ -26,7 +26,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public ExpantionAdvancedDropdown(List<int> selectedItemIds, AdvancedDropdownState state) : base(new AdvancedDropdownState())
+        public ExpantionAdvancedDropdown(IEnumerable<int> selectedItemIds, AdvancedDropdownState state) : base(state)
         {
             // 派生クラスの型
             Type actualType = GetType();
@@ -36,8 +36,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             bool isOverrideSearchMethod = searchMethodInfo.DeclaringType != searchMethodInfo.GetBaseDefinition().DeclaringType;
 
             Func<List<TItem>, string, TItem> customSearch = isOverrideSearchMethod ? GenericSearch : null;
-            m_DataSource = new ExpantionAdvancedDropdownDataSource(selectedItemIds, GenericBuildRoot, GenericSearch);
-            m_Gui = new ExpantionAdvancedDropdownGUI(m_DataSource, BuildDisplayTexts);
+            ExpantionAdvancedDropdownDataSource newDataSource = new(selectedItemIds, GenericBuildRoot, GenericSearch);
+            m_DataSource = newDataSource;
+            m_Gui = new ExpantionAdvancedDropdownGUI(newDataSource, BuildDisplayTexts);
         }
 
         protected override sealed AdvancedDropdownItem BuildRoot() => GenericBuildRoot();
@@ -66,7 +67,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 if (e.children.Any())
                     continue;
 
-                string name = e.FullName.ToLower().Replace(" ", "");
+                string name = e.FullPath.ToLower().Replace(" ", "");
                 if (AddMatchItem(e, name, searchWords, matched))
                     found = true;
             }
@@ -75,7 +76,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 // パス検索などでヒットしない場合の再検索
                 foreach (TItem e in searchableElements)
                 {
-                    string name = e.FullName.Replace(" ", "");
+                    string name = e.FullPath.Replace(" ", "");
                     AddMatchItem(e, name, searchWords, matched);
                 }
             }
@@ -85,9 +86,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             {
                 matched[i].Sort((s2, s1) =>
                 {
-                    int order = (int)(s2?.FullName.Count(c => c == Separator) - s1?.FullName.Count(c => c == Separator));
+                    int order = (int)(s2?.FullPath.Count(c => c == Separator) - s1?.FullPath.Count(c => c == Separator));
                     if (order == 0)
-                        order = s2.FullName.CompareTo(s1.FullName);
+                        order = s2.FullPath.CompareTo(s1.FullPath);
                     return order;
                 });
 
@@ -144,7 +145,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         protected virtual (string itemName, string description, string tooltip) BuildDisplayTexts(
             TItem item, string name, Texture2D icon, bool enabled, bool drawArrow, bool selected, bool hasSearch)
-            => (item.name, hasSearch ? item.FullName : "", item.FullName);
+            => (item.name, hasSearch ? item.FullPath : "", item.FullPath);
 
         protected override sealed void ItemSelected(AdvancedDropdownItem item) => GenericItemSelected((TItem)item);
 
@@ -159,7 +160,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             private Func<List<TItem>, string, TItem> _searchCallback;
 
             internal ExpantionAdvancedDropdownDataSource(
-                List<int> selectedItemIds,
+                IEnumerable<int> selectedItemIds,
                 Func<TItem> buildRootCallback,
                 Func<List<TItem>, string, TItem> searchCallback
                 )
@@ -244,7 +245,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Func<TItem, string, Texture2D, bool, bool, bool, bool, (string itemName, string description, string tooltip)> _buildDisplayTextsCallback;
 
             public ExpantionAdvancedDropdownGUI(
-                AdvancedDropdownDataSource dataSource,
+                ExpantionAdvancedDropdownDataSource dataSource,
                 Func<TItem, string, Texture2D, bool, bool, bool, bool, (string itemName, string description, string tooltip)> buildDisplayTextsCallback)
                 : base(dataSource)
             {
@@ -252,7 +253,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 _buildDisplayTextsCallback = buildDisplayTextsCallback;
             }
 
-            AdvancedDropdownDataSource m_DataSource;
+            ExpantionAdvancedDropdownDataSource m_DataSource;
 
             internal override sealed void DrawItem(AdvancedDropdownItem item, string name, Texture2D icon, bool enabled, bool drawArrow, bool selected, bool hasSearch)
             {
@@ -289,7 +290,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 if (Event.current.type == EventType.Repaint)
                 {
-                    bool checkMark = m_DataSource.selectedIDs.Any() && m_DataSource.selectedIDs.Contains(item.id);
+                    bool checkMark = m_DataSource.selectedIDs.Any() && m_DataSource.selectedIDs.Contains(item.Id);
 
                     bool slctAndSearch = selected && hasSearch;
                     bool slctAndCheck = selected && checkMark;

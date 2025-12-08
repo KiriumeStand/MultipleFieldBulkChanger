@@ -3,12 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Linq.Dynamic.Core;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
-using nadena.dev.ndmf;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -16,8 +16,8 @@ using xFunc.Maths;
 using xFunc.Maths.Expressions;
 using xFunc.Maths.Expressions.Matrices;
 using xFunc.Maths.Expressions.Parameters;
-using Object = UnityEngine.Object;
 using FilterFuncType = System.Func<UnityEditor.SerializedObject, System.Collections.Generic.List<UnityEditor.SerializedProperty>, bool>;
+using Object = UnityEngine.Object;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
@@ -80,11 +80,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
             }
 
-            public static void DebugLog(string mes, LogType logType, string color = "white")
+            public static void DebugLog(string mes, LogType logType, string color = "")
             {
                 if (!Settings.Instance._DebugLog) return;
 
-                mes = $"<color={color}>{mes}</color>";
+                if (!string.IsNullOrWhiteSpace(color))
+                {
+                    mes = $"<color={color}>{mes}</color>";
+                }
 
                 switch (logType)
                 {
@@ -122,6 +125,16 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         Debug.LogError("logTypeの指定が不正です!!!!!!!!!!!");
                         break;
                 }
+            }
+
+            public static List<T> WhereDyn<T>(IEnumerable<T> lists, string query)
+            {
+                return lists.AsQueryable().Where(query).ToList();
+            }
+
+            public static List<dynamic> SelectDyn<T>(IEnumerable<T> lists, string query)
+            {
+                return lists.AsQueryable().Select(query).ToDynamicList();
             }
         }
 
@@ -577,6 +590,37 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 return properties.ToArray();
             }
 
+            public static SerializedPropertyTreeNode GetPropertyTreeWithImporter(
+                SerializedObject serializedObject,
+                HashSet<Filter> addListFilters,
+                HashSet<Filter> enterChildrenFilters,
+                HashSet<Filter> selectableNodeFilters,
+                HashSet<Filter> editableFilters
+            )
+            {
+                SerializedPropertyTreeNode treeRoot = GetPropertyTree(serializedObject, addListFilters, enterChildrenFilters, selectableNodeFilters, editableFilters);
+
+                string assetPath = AssetDatabase.GetAssetPath(serializedObject.targetObject);
+                if (!string.IsNullOrEmpty(assetPath))
+                {
+                    AssetImporter importer = AssetImporter.GetAtPath(assetPath);
+                    if (importer != null)
+                    {
+                        SerializedObject importerSO = new(importer);
+                        SerializedPropertyTreeNode importerTreeRoot = GetPropertyTree(importerSO, addListFilters, enterChildrenFilters, selectableNodeFilters, editableFilters);
+                        SerializedPropertyTreeNode newImporterTreeRoot = new("@Importer", null, false, false);
+                        treeRoot.AddChild(newImporterTreeRoot);
+
+                        foreach (SerializedPropertyTreeNode child in importerTreeRoot.Children.ToArray())
+                        {
+                            newImporterTreeRoot.AddChild(child);
+                        }
+                    }
+                }
+
+                return treeRoot;
+            }
+
             public static SerializedPropertyTreeNode GetPropertyTree(
                 SerializedObject serializedObject,
                 HashSet<Filter> addListFilters,
@@ -600,7 +644,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     return root;
                 }
 
-                return new(null, null, false, false);
+                return new("", null, false, false);
             }
 
             public static SerializedPropertyTreeNode GetPropertyTree(
@@ -630,13 +674,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             {
                 addListFilters.Add(new(FilterFuncs.AddListPropertyDefault, false));
                 enterChildrenFilters.Add(new(FilterFuncs.EnterChildrenPropertyDefault, false));
+                selectableNodeFilters.Add(new(FilterFuncs.IsGenericType, true));
+                editableFilters.Add(new(FilterFuncs.IsReadonly, true));
 
                 SerializedProperty curProperty = property.Copy();
 
                 List<SerializedProperty> propertyStack = new();
                 List<SerializedProperty> endPropertyStack = new();
 
-                SerializedPropertyTreeNode root = new(null, null, false, false);
+                SerializedPropertyTreeNode root = new(property.serializedObject.targetObject.name, null, false, false);
                 SerializedPropertyTreeNode curParentNode = root;
 
                 bool doLoop;
@@ -658,8 +704,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     bool isSelectable = selectableNodeFilters.All(filter => filter.Calc(curProperty.serializedObject, propertyStack));
                     bool isEditable = editableFilters.All(filter => filter.Calc(curProperty.serializedObject, propertyStack));
 
+                    int lastPathStartIndex = spCopy.propertyPath.LastIndexOf('.') + 1;
                     // ノードを作成する
-                    if (addList || enterChildren) { curParentNode = new(spCopy, curParentNode, isSelectable, isEditable); }
+                    string name = spCopy.propertyPath[lastPathStartIndex..];
+                    SerializedPropertyTreeNode newChild = new(name, spCopy, isSelectable, isEditable);
+                    curParentNode.AddChild(newChild);
+                    if (addList || enterChildren) { curParentNode = newChild; }
 
                     // 次の要素を取得
                     bool existNext = curProperty.Next(enterChildren);
@@ -733,8 +783,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         SerializedProperty curProperty = spStack.Last();
                         // フィールドが文字列かAnimationCurveなら中を探索しない
                         if (
-                            curProperty.propertyType == SerializedPropertyType.String ||
-                            curProperty.propertyType == SerializedPropertyType.AnimationCurve
+                            curProperty.propertyType == SerializedPropertyType.String
+                        //|| curProperty.propertyType == SerializedPropertyType.AnimationCurve
                         )
                         {
                             return false;
@@ -751,15 +801,20 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                         if (!lastStack.editable) return true;
 
-                        // Transformの最上層のフィールドか
+                        // Transform の最上層のフィールドか
                         if (root.targetObject is Transform && lastStack.depth == 0)
                         {
-                            // Transformのm_LocalEulerAnglesHintフィールドならfalse
+                            // Transform の m_LocalEulerAnglesHint フィールドなら true
                             if (
                                 lastStack.name == "m_LocalEulerAnglesHint"
                             ) return true;
                         }
                     }
+                    return false;
+                };
+
+                public static readonly FilterFuncType IsReadonlyWithChildren = static (root, spStack) =>
+                {
                     return false;
                 };
 
@@ -911,132 +966,31 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     element.SetEnabled(enabled);
                 }
             }
-        }
 
-        // ▲ VisualElement関連 ========================= ▲
-
-
-        // ▼ オブジェクトクローン関連 ========================= ▼
-        // MARK: ==オブジェクトクローン関連==
-
-        public class Cloner
-        {
-            // https://github.com/anatawa12/AvatarOptimizer/blob/e099fa6d13e9ee00a8558bc81fb08080da61ab22/Internal/Utils/DeepCloneHelper.cs
-            // https://github.com/anatawa12/AvatarOptimizer/blob/907ee51e0c47e0d73fe39613aa4299c23459ab79/Editor/Processors/DupliacteAssets.cs
-            // Originally under MIT License
-            // Copyright (c) 2022 anatawa12
-
-            private readonly Dictionary<Object, Object> _cache = new();
-
-            private readonly HashSet<Object> _checkedCache = new();
-
-            public T DeepClone<T>(T original) where T : Object
+            public static void TextBaseFieldSetReadOnlys(params (VisualElement element, bool enabled)[] items)
             {
-                Dictionary<Object, Object> cache = _cache;
-                return DeepCloneImpl(original, cache);
-            }
-
-            public static T DeepCloneImpl<T>(T original, Dictionary<Object, Object> cache) where T : Object
-            {
-                if (original == null) return null;
-
-                if (!AssetDatabase.Contains(original)) return original;
-
-                if (cache.TryGetValue(original, out Object cached)) return (T)cached;
-
-                T clone = CustomClone(original, cache);
-                if (clone != null)
+                foreach (var (element, enabled) in items)
                 {
-                    cache[original] = clone;
-                    cache[clone] = clone;
-                    return clone;
+                    switch (element)
+                    {
+                        case DoubleField doubleField:
+                            doubleField.isReadOnly = enabled;
+                            break;
+                        case TextField textField:
+                            textField.isReadOnly = enabled;
+                            break;
+                        case Vector2Field:
+                        case Vector3Field:
+                        case Vector4Field:
+                        case BoundsField:
+                            var textFields = element.Query<FloatField>().ToList();
+                            foreach (var textField in textFields)
+                            {
+                                textField.isReadOnly = enabled;
+                            }
+                            break;
+                    }
                 }
-
-                return DefaultDeepClone(original, cache);
-            }
-
-            private static T CustomClone<T>(T original, Dictionary<Object, Object> cache) where T : Object
-            {
-                return null;
-            }
-
-            private static T DefaultDeepClone<T>(T original, Dictionary<Object, Object> cache) where T : Object
-            {
-                Object clone;
-                var ctor = original.GetType().GetConstructor(Type.EmptyTypes);
-                if (ctor == null || original is ScriptableObject)
-                {
-                    clone = Object.Instantiate(original);
-                }
-                else
-                {
-                    clone = (T)ctor.Invoke(Array.Empty<object>());
-                    EditorUtility.CopySerialized(original, clone);
-                }
-
-                ObjectRegistry.RegisterReplacedObject(original, clone);
-                cache[original] = clone;
-                cache[clone] = clone;
-
-                using (SerializedObject so = new(clone))
-                {
-                    so.ApplyModifiedPropertiesWithoutUndo();
-                }
-
-                return (T)clone;
-            }
-
-            public void ReplaceClonedObject<T>(T obj) where T : Object
-            {
-                Dictionary<Object, Object> cache = _cache;
-                HashSet<Object> checkedCache = _checkedCache;
-                ReplaceClonedObjectImpl(obj, cache, checkedCache);
-            }
-
-            public static T ReplaceClonedObjectImpl<T>(T obj, Dictionary<Object, Object> cache, HashSet<Object> checkedCache) where T : Object
-            {
-                if (obj == null) return null;
-
-                if (checkedCache.Contains(obj)) return obj;
-
-                if (cache.TryGetValue(obj, out Object cached)) return (T)cached;
-
-                T replacedObj = CustomReplace(obj, cache, checkedCache);
-                if (replacedObj != null)
-                {
-                    checkedCache.Add(replacedObj);
-                    return replacedObj;
-                }
-
-                return DefaultReplace(obj, cache, checkedCache);
-            }
-
-            private static T CustomReplace<T>(T obj, Dictionary<Object, Object> cache, HashSet<Object> checkedCache) where T : Object
-            {
-                return null;
-            }
-
-            private static T DefaultReplace<T>(T obj, Dictionary<Object, Object> cache, HashSet<Object> checkedCache) where T : Object
-            {
-                checkedCache.Add(obj);
-
-                using (var so = new SerializedObject(obj))
-                {
-                    HashSet<SerializedObjectUtil.Filter> addListFilters = new() {
-                        new(SerializedObjectUtil.FilterFuncs.IsReadonly, true),
-                        new(SerializedObjectUtil.FilterFuncs.IsObjectReferenceType, true),
-                        };
-                    HashSet<SerializedObjectUtil.Filter> enterChildrenFilters = new() {
-                        new(SerializedObjectUtil.FilterFuncs.IsReadonly, true),
-                        };
-                    SerializedProperty[] props = SerializedObjectUtil.GetAllProperties(so, addListFilters, enterChildrenFilters);
-                    foreach (var prop in props)
-                        prop.objectReferenceValue = ReplaceClonedObjectImpl(prop.objectReferenceValue, cache, checkedCache);
-
-                    so.ApplyModifiedPropertiesWithoutUndo();
-                }
-
-                return obj;
             }
         }
 
@@ -1068,6 +1022,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public static string AssetBasePath => AssetBasePathUri.ToString();
         public static string AssetBaseFullPath => AssetBaseFullPathUri.ToString();
+
+        public static string GetCallerScriptFilePath([CallerFilePath] string sourceFilePath = "") => sourceFilePath;
 
         private static void InitializePaths([CallerFilePath] string sourceFilePath = "")
         {
@@ -1341,7 +1297,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     // 該当する引数が無ければエラーを返す
                     string varibleNames = string.Join("', '", missingVariables.Select(x => x.Name));
-                    return (false, null, $"引数'{varibleNames}'が設定されていません。");
+                    return (false, null, $"引数:'{varibleNames}'が設定されていません。");
                 }
 
                 // 計算式に利用できるFieldSPTypeのリスト
@@ -1376,7 +1332,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     {
                         // 計算式に利用できないデータを引数に指定しながら不正な代入式なら
                         string unityObjectTypeArgumentDataNames = string.Join("', '", notAllowCalcArgumentDatas.Select(x => x.ArgumentName));
-                        return (false, null, $"引数'{unityObjectTypeArgumentDataNames}'は計算に使用できない値であり、代入式に計算を必要とする式を指定することはできません。\n単一の引数名のみを入力してください。(例:代入式 = 'x1')");
+                        return (false, null, $"引数:'{unityObjectTypeArgumentDataNames}'は計算に使用できない値であり、代入式に計算を必要とする式を指定することはできません。単一の引数名のみを入力してください。(例:代入式 = 'x1')");
                     }
                 }
 
@@ -1386,7 +1342,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 if (notAllowUseTypeArgumentDatas.Count() > 0)
                 {
                     string notAllowUseTypeArgumentDataNames = string.Join("', '", notAllowUseTypeArgumentDatas.Select(x => x.ArgumentName));
-                    return (false, null, $"引数'{notAllowUseTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
+                    return (false, null, $"引数:'{notAllowUseTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
                 }
 
                 // ArgumentDataをParameterに変換
@@ -1427,11 +1383,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                 fixedResult = CustomCast<Vector4>(vectorValue);
                                 break;
                             default:
-                                return (false, null, $"ベクトルの次元数`{vectorValue.Size}`が異常です。");
+                                return (false, null, $"ベクトルの次元数:'{vectorValue.Size}'が異常です。");
                         }
                         break;
                     default:
-                        return (false, null, $"不明な型が返されました。{fixedResult.GetType().Name}/{fixedResult}");
+                        return (false, null, $"不明な型が返されました。値:'{fixedResult}', 型:'{fixedResult.GetType().FullName}'");
                 }
 
                 return (true, fixedResult.GetType(), fixedResult);
@@ -1814,22 +1770,57 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
             }
 
-            public static Optional<object> GetSelectPathValue(Object unityObj, string propertyPath)
+            public static Optional<object> GetSerializedPropertyValue(SerializedProperty sp)
             {
-                SerializedProperty selectSP = GetSelectPathSerializedProperty(unityObj, propertyPath);
-                if (selectSP == null)
+                if (sp == null)
                 {
                     return Optional<object>.None;
                 }
 
                 try
                 {
-                    return new Optional<object>(selectSP.boxedValue);
+                    return new Optional<object>(sp.boxedValue);
                 }
                 catch
                 {
                     return Optional<object>.None;
                 }
+            }
+
+            public static Optional<object> GetSelectPathValueWithImporter(Object unityObj, string propertyPath)
+            {
+                SerializedProperty sp = GetSelectPathSerializedPropertyWithImporter(unityObj, propertyPath);
+                return GetSerializedPropertyValue(sp);
+            }
+
+            public static Optional<object> GetSelectPathValue(Object unityObj, string propertyPath)
+            {
+                SerializedProperty sp = GetSelectPathSerializedProperty(unityObj, propertyPath);
+                return GetSerializedPropertyValue(sp);
+            }
+
+            public static SerializedProperty GetSelectPathSerializedPropertyWithImporter(Object unityObj, string propertyPath)
+            {
+                SerializedProperty result = null;
+                if (!propertyPath.StartsWith("@Importer"))
+                {
+                    result = GetSelectPathSerializedProperty(unityObj, propertyPath);
+                }
+                else
+                {
+                    string assetPath = AssetDatabase.GetAssetPath(unityObj);
+                    if (!string.IsNullOrEmpty(assetPath))
+                    {
+                        AssetImporter importer = AssetImporter.GetAtPath(assetPath);
+                        if (importer != null)
+                        {
+                            int firstPeriodIndex = propertyPath.IndexOf('.');
+                            string fixedPropertyPath = propertyPath[(firstPeriodIndex + 1)..];
+                            result = GetSelectPathSerializedProperty(importer, fixedPropertyPath);
+                        }
+                    }
+                }
+                return result;
             }
 
             public static SerializedProperty GetSelectPathSerializedProperty(Object unityObj, string propertyPath)

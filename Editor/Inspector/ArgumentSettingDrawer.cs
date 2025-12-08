@@ -65,10 +65,25 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             u_InputtableArgumentType.Init(SelectableFieldType.Number);
             u_ReferenceArgumentType.Init(FieldSPType.Float);
 
-
             EditorUtil.VisualElementHelper.SetEnableds(
                 (u_ReferenceArgumentType, false)
+
+            //(u_ReferenceBoolValueField, false),
+            //(u_ReferenceObjectValueField, false),
+            //(u_ReferenceColorValueField, false),
+            ////(u_ReferenceCurveValueField, false),
+            //(u_ReferenceGradientValueField, false)
             );
+
+            EditorUtil.VisualElementHelper.TextBaseFieldSetReadOnlys(
+                (u_ReferenceNumberValueField, false),
+                (u_ReferenceStringValueField, false),
+                (u_ReferenceVector2ValueField, false),
+                (u_ReferenceVector3ValueField, false),
+                (u_ReferenceVector4ValueField, false),
+                (u_ReferenceBoundsValueField, false)
+            );
+
 
             // イベント発行の登録
             EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_IsReferenceMode, this, property, status);
@@ -310,7 +325,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (args.NewProperty != null)
             {
                 (bool success, Type type, string errorLog) = args.NewProperty.GetFieldType();
-                string text = $"SerializedProperty.type:{args.NewProperty.type}\nSerializedProperty.propertyType:{args.NewProperty.propertyType}\nTypeFullName:{type?.FullName ?? ""}\nFieldInfo:{args.NewPropertyValueTypeFullName}";
+                string text = $"SerializedProperty.type:{args.NewProperty.type}\nSerializedProperty.propertyType:{args.NewProperty.propertyType}\nTypeFullName:{type?.FullName ?? ""}\nFieldInfo:{args.NewPropertyValueTypeFullName}\nGetType().FullName:{args.NewProperty.boxedValue?.GetType().FullName}";
                 EditorUtil.Debugger.SetDebugLabelText(uxml, text);
             }
         }
@@ -324,9 +339,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             UniversalDataManager.selectFieldPropertyCache.TryGetValue(targetFieldSelector, out SerializedProperty selectedFieldProperty);
             if (selectedFieldProperty == null) return;
-
-            // 情報を更新
-            selectedFieldProperty.serializedObject.Update();
 
             SelectedPropertyValueUpdate(property, uxml, targetObject, status, selectedFieldProperty);
         }
@@ -491,6 +503,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 object selectedFieldValue = null;
                 if (selectedFieldProperty != null)
                 {
+                    selectedFieldProperty.serializedObject.UpdateIfRequiredOrScript();
                     (bool success, Type type, string errorLog) = selectedFieldProperty.GetFieldType();
                     selectedFieldValueType = success ? type : null;
                     try
@@ -500,16 +513,17 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     catch { }
                 }
 
+                FieldSPType selectedFieldValueSPType = FieldSPTypeHelper.Parse2FieldSPType(selectedFieldValueType);
+
                 bool anyChanged = UpdateArgumentDatasDictionary(property, uxml, targetObject, status, Optional<string>.None, new Optional<Type>(selectedFieldValueType), new Optional<object>(selectedFieldValue));
 
+                // プレビュー用フィールドの表示を変更
                 if (anyChanged)
                 {
-                    // プレビュー用フィールドの表示を変更
-                    FieldSPType selectedFieldValueSPType = FieldSPTypeHelper.Parse2FieldSPType(selectedFieldValueType);
                     UpdateReferenceArgumentTypeField(uxml, selectedFieldValueSPType);
                     UpdateValueFieldsDisplaySettings(property, uxml, selectedFieldValue, selectedFieldValueSPType, true);
-                    UpdateReferenceValueFields(uxml, selectedFieldValue, selectedFieldValueSPType);
                 }
+                UpdateReferenceValueFields(uxml, selectedFieldValue, selectedFieldValueSPType);
             }
         }
 
@@ -554,7 +568,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 argumentData.ArgumentType = argumentType.Value;
                 typeChanged = true;
             }
-            if (value.HasValue && argumentData.Value.Value != value.Value)
+            if (value.HasValue && !Equals(argumentData.Value.Value, value.Value))
             {
                 argumentData.Value = value;
                 valueChanged = true;
@@ -677,7 +691,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     string objInfo = isObjNull ? "Null" : selectObject.ToString();
                     string objTypeName = isObjNull ? "" : $"{selectObject?.GetType().FullName} : ";
                     string invalidText = $"Invalid ({objTypeName}{objInfo})";
-                    u_ReferenceInvalidValueLabel.text = invalidText;
+                    if (u_ReferenceInvalidValueLabel.text != invalidText)
+                    {
+                        u_ReferenceInvalidValueLabel.text = invalidText;
+                    }
                     break;
             }
         }
@@ -689,10 +706,18 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             switch (valueField)
             {
                 case BaseField<double> doubleField:
-                    doubleField.value = Convert.ToDouble(selectObject);
+                    double convertedDouble = Convert.ToDouble(selectObject);
+                    if (doubleField.value != convertedDouble)
+                    {
+                        doubleField.value = convertedDouble;
+                    }
                     break;
                 default:
-                    valueField.value = (T)fixedObj;
+                    T castedObj = (T)fixedObj;
+                    if (!Equals(valueField.value, castedObj))
+                    {
+                        valueField.value = castedObj;
+                    }
                     break;
             }
         }

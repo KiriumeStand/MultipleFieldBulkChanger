@@ -34,7 +34,6 @@
                         <ui:BoundsField name="AS_InputtableBoundsValueField" style="display: none; flex-shrink: 1;" />
                         <uie:CurveField name="AS_InputtableCurveValueField" style="flex-shrink: 1; display: none;" />
                         <uie:GradientField name="AS_InputtableGradientValueField" style="display: none; flex-shrink: 1;" />
-                        <uie:PropertyField name="AS_InputtableOtherValueField" style="display: none;" />
                         <ui:Label text="Invalid" name="AS_InputtableInvalidValueLabel" style="font-size: 20px; display: none; flex-shrink: 1; white-space: normal; -unity-text-align: middle-left;" />
                     </ui:VisualElement>
                 </ui:VisualElement>
@@ -54,7 +53,6 @@
                             <ui:TextField picking-mode="Ignore" name="AS_ReferenceStringValueField" style="display: none;" />
                             <uie:ColorField name="AS_ReferenceColorValueField" value="#FFFFFFFF" hdr="true" style="display: none;" />
                             <uie:ObjectField name="AS_ReferenceObjectValueField" style="display: none;" />
-                            <uie:PropertyField name="AS_ReferenceOtherValueField" style="display: none;" />
                             <ui:Vector2Field name="AS_ReferenceVector2ValueField" style="display: none;" />
                             <ui:Vector3Field name="AS_ReferenceVector3ValueField" style="display: none;" />
                             <ui:Vector4Field name="AS_ReferenceVector4ValueField" style="display: none;" />

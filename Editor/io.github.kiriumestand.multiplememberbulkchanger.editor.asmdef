@@ -13,7 +13,8 @@
     "overrideReferences": true,
     "precompiledReferences": [
         "System.Collections.Immutable.dll",
-        "xFunc.Maths.dll"
+        "xFunc.Maths.dll",
+        "System.Linq.Dynamic.Core.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [],

@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEngine.UIElements;
@@ -89,19 +86,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             selectedObject = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject) ? null : selectedObject;
 
             SerializedObject selectedSerializedObject = null;
-            SerializedPropertyTreeNode propertyRoot = new(null, null, false, false);
+            SerializedPropertyTreeNode propertyRoot = new("None", null, false, false);
             if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject))
             {
                 selectedSerializedObject = new(selectedObject);
-                HashSet<EditorUtil.SerializedObjectUtil.Filter> addListFilters = new() { };
-                HashSet<EditorUtil.SerializedObjectUtil.Filter> enterChildrenFilters = new() { };
-                HashSet<EditorUtil.SerializedObjectUtil.Filter> selectableNodeFilters = new() {
-                    new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsGenericType, true),
-                };
-                HashSet<EditorUtil.SerializedObjectUtil.Filter> editableFilters = new() {
-                    new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsReadonly, true),
-                };
-                propertyRoot = EditorUtil.SerializedObjectUtil.GetPropertyTree(selectedSerializedObject, addListFilters, enterChildrenFilters, selectableNodeFilters, editableFilters);
+                propertyRoot = EditorUtil.SerializedObjectUtil.GetPropertyTreeWithImporter(selectedSerializedObject, new(), new(), new(), new());
             }
 
             FieldSelectorContainerBase targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property) as FieldSelectorContainerBase;

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEngine;
 
@@ -117,7 +116,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (_fieldInfoAndTypeGetter == null)
             {
                 // デリゲートの処理がうまくいかなかった場合は失敗
-                return (default, default, "ScriptAttributeUtility.GetFieldInfoAndStaticTypeFromProperty is not retrieved");
+                return (default, default, "ScriptAttributeUtility.GetFieldInfoAndStaticTypeFromProperty の取得ができませんでした。");
             }
 
             // プロパティのフィールド情報の取得を試みる
@@ -145,8 +144,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 string typeName = matchResult.Groups[1].Value;
                 IEnumerable<Type> matchTypes = _nativeUnityObjectAndSubTypes.Where(t => t.Name == typeName);
                 if (matchTypes.Count() == 0)
-                    return (false, null, "No matching types found");
-                else if (matchTypes.Count() > 1) return (false, null, $"Multiple matching types found '{string.Join("', '", matchTypes)}'");
+                    return (false, null, "一致する型が見つかりません。");
+                else if (matchTypes.Count() > 1) return (false, null, $"複数の一致する型が見つかりました。 '{string.Join("', '", matchTypes)}'");
                 else return (true, matchTypes.First(), "");
             }
 
@@ -156,7 +155,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Type systemType = Type.GetType(propertyTypeName);
             if (systemType != null) return (true, systemType, "");
 
-            return (false, null, "Failed to get type");
+            return (false, null, "型の取得に失敗しました。");
         }
 
         /// <summary>

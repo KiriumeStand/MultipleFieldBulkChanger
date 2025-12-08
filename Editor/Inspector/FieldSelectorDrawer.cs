@@ -134,8 +134,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 UniversalDataManager.targetObjectRootSerializedObjectCache.TryGetValue(fieldSelectorContainerObject, out SerializedObject rootObject);
                 SerializedProperty selectFieldPathProp = property.SafeFindPropertyRelative(nameof(FieldSelector._SelectFieldPath));
                 FieldSelectorAdvancedDropdown dropdown = new(
-                    new List<int>() { new FieldSelectorAdvancedDropdownItem("", u_SelectFieldPath.value, true, null).GetHashCode() },
-                    new AdvancedDropdownState(), rootNode, rootObject, selectFieldPathProp, ddItemEditableOnly
+                    new List<string>() { u_SelectFieldPath.value }, new AdvancedDropdownState(),
+                    rootNode, rootObject, selectFieldPathProp, ddItemEditableOnly
                 );
                 dropdown.Show(u_SelectFieldButton.parent.worldBound);
             };
@@ -218,7 +218,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             TextField u_SelectFieldPath = UIQuery.Q<TextField>(uxml, UxmlNames.SelectFieldPath);
             string propertyPath = u_SelectFieldPath.value;
             SerializedProperty selectingSerializedProperty =
-                nodeList.FirstOrDefault(x => x.Property != null && x.Property.propertyPath == propertyPath)?.Property;
+                nodeList.FirstOrDefault(x => x.Property != null && x.FullPath == propertyPath)?.Property;
 
             return selectingSerializedProperty;
         }
@@ -290,7 +290,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             private readonly bool _editableOnly;
 
-            public FieldSelectorAdvancedDropdown(List<int> selectedItemIds, AdvancedDropdownState state, SerializedPropertyTreeNode root, SerializedObject rootObject, SerializedProperty bindingProperty, bool editableOnly) : base(selectedItemIds, state)
+            public FieldSelectorAdvancedDropdown(
+                List<string> selectedItemPaths, AdvancedDropdownState state, SerializedPropertyTreeNode root,
+                SerializedObject rootObject, SerializedProperty bindingProperty, bool editableOnly
+            ) : base(selectedItemPaths.Select(x => FieldSelectorAdvancedDropdownItem.GetHashCode(x, true)), state)
             {
                 CurrentFolderContextualSearch = true;
                 Vector2 minSize = minimumSize;
@@ -306,78 +309,93 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             protected override FieldSelectorAdvancedDropdownItem GenericBuildRoot()
             {
                 if (_rootNode == null || RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(_rootObject))
-                    return new("Empty", "", false, _rootNode);
+                    return new(_rootNode?.Name, "", false, _rootNode);
 
-                Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs = new() { { _rootNode, new(_rootObject.targetObject.name, "", false, _rootNode) } };
-                List<SerializedProperty> spStack = new();
+                Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs = new() { { _rootNode, new(_rootNode.Name, "", false, _rootNode) } };
+                List<SerializedPropertyTreeNode> spNodeStack = new();
                 foreach (var child in _rootNode.Children)
                 {
-                    spStack.Add(child.Property);
-                    BuildRootInternal(child, spStack, nodeADItemPairs);
-                    spStack.Remove(spStack[^1]);
+                    spNodeStack.Add(child);
+                    BuildRootInternal(child, spNodeStack, nodeADItemPairs);
+                    spNodeStack.Remove(spNodeStack[^1]);
                 }
                 temp = nodeADItemPairs.Count();
                 return nodeADItemPairs[_rootNode];
             }
 
             private void BuildRootInternal(
-                SerializedPropertyTreeNode curNode, List<SerializedProperty> spStack,
+                SerializedPropertyTreeNode curNode, List<SerializedPropertyTreeNode> spNodeStack,
                 Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs
             )
             {
-                HashSet<EditorUtil.SerializedObjectUtil.Filter> isSelectableFilters = new();
-                HashSet<EditorUtil.SerializedObjectUtil.Filter> isInnerNodeFilters = new();
-                isSelectableFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsGenericType, true));
-                isInnerNodeFilters.Add(new((so, stack) => { return curNode.Children.Any(); }, false));
-
-                if (Settings.Instance._Limitter)
+                if (curNode.Property == null)
                 {
-                    isSelectableFilters.Add(new((so, stack) => { return curNode.IsSelectable; }, false));
-                    isSelectableFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsHighRisk, true));
-                    isSelectableFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsSafetyUnknown, true));
+                    FieldSelectorAdvancedDropdownItem innerItem = new($"{curNode.Name} ->", null, false, curNode);
+                    nodeADItemPairs[curNode.Parent].AddChild(innerItem);
 
-                    isInnerNodeFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsHighRisk, true));
-                    isInnerNodeFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsSafetyUnknown, true));
-
-                    if (_editableOnly)
-                    {
-                        isSelectableFilters.Add(new((so, stack) => { return curNode.IsEditable; }, false));
-                    }
-                }
-
-                bool isSelectable = isSelectableFilters.All(x => x.Calc(curNode.Property.serializedObject, spStack));
-                bool isInnerNode = isInnerNodeFilters.All(x => x.Calc(curNode.Property.serializedObject, spStack));
-
-                if (isSelectable || isInnerNode)
-                {
-                    string path = "." + curNode.Property.propertyPath;
-                    int lastDotIndex = path.LastIndexOf('.');
-                    string propName = path[(lastDotIndex + 1)..];
-
-                    FieldSelectorAdvancedDropdownItem selectableItem = null;
-                    if (isSelectable)
-                    {
-                        selectableItem = new(propName, curNode.Property.propertyPath, true, curNode);
-                        nodeADItemPairs[curNode.Parent].AddChild(selectableItem);
-                    }
-
-                    FieldSelectorAdvancedDropdownItem innerItem = null;
-                    if (isInnerNode)
-                    {
-                        innerItem = new($"{propName} ->", curNode.Property.propertyPath, false, curNode);
-                        nodeADItemPairs[curNode.Parent].AddChild(innerItem);
-                    }
-
-                    FieldSelectorAdvancedDropdownItem dictRegisterItem = innerItem ?? selectableItem;
+                    FieldSelectorAdvancedDropdownItem dictRegisterItem = innerItem;
                     nodeADItemPairs.Add(curNode, dictRegisterItem);
 
-                    if (isInnerNode)
+                    foreach (SerializedPropertyTreeNode child in curNode.Children)
                     {
-                        foreach (SerializedPropertyTreeNode child in curNode.Children)
+                        spNodeStack.Add(child);
+                        BuildRootInternal(child, spNodeStack, nodeADItemPairs);
+                        spNodeStack.Remove(spNodeStack[^1]);
+                    }
+                }
+                else
+                {
+                    HashSet<EditorUtil.SerializedObjectUtil.Filter> isSelectableFilters = new();
+                    HashSet<EditorUtil.SerializedObjectUtil.Filter> isInnerNodeFilters = new();
+                    isSelectableFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsGenericType, true));
+                    isInnerNodeFilters.Add(new((so, stack) => { return curNode.Children.Any(); }, false));
+
+                    if (Settings.Instance._Limitter)
+                    {
+                        isSelectableFilters.Add(new((so, stack) => { return curNode.IsSelectable; }, false));
+                        isSelectableFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsHighRisk, true));
+                        isSelectableFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsSafetyUnknown, true));
+
+                        isInnerNodeFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsHighRisk, true));
+                        isInnerNodeFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsSafetyUnknown, true));
+
+                        if (_editableOnly)
                         {
-                            spStack.Add(child.Property);
-                            BuildRootInternal(child, spStack, nodeADItemPairs);
-                            spStack.Remove(spStack[^1]);
+                            isSelectableFilters.Add(new((so, stack) => { return curNode.IsEditable; }, false));
+                        }
+                    }
+
+                    List<SerializedProperty> spStack = spNodeStack.Select(x => x.Property).ToList();
+                    bool isSelectable = isSelectableFilters.All(x => x.Calc(curNode.Property.serializedObject, spStack));
+                    bool isInnerNode = isInnerNodeFilters.All(x => x.Calc(curNode.Property.serializedObject, spStack));
+
+                    if (isSelectable || isInnerNode)
+                    {
+                        FieldSelectorAdvancedDropdownItem selectableItem = null;
+                        if (isSelectable)
+                        {
+                            selectableItem = new(curNode.Name, curNode.Property.propertyPath, true, curNode);
+                            nodeADItemPairs[curNode.Parent].AddChild(selectableItem);
+                        }
+
+                        FieldSelectorAdvancedDropdownItem innerItem = null;
+                        if (isInnerNode)
+                        {
+                            innerItem = new($"{curNode.Name} ->", curNode.Property.propertyPath, false, curNode);
+                            nodeADItemPairs[curNode.Parent].AddChild(innerItem);
+                        }
+
+                        FieldSelectorAdvancedDropdownItem dictRegisterItem = innerItem ?? selectableItem;
+                        nodeADItemPairs.Add(curNode, dictRegisterItem);
+
+                        if (isInnerNode)
+                        {
+                            foreach (SerializedPropertyTreeNode child in curNode.Children)
+                            {
+                                spNodeStack.Add(child);
+                                BuildRootInternal(child, spNodeStack, nodeADItemPairs);
+                                spNodeStack.Remove(spNodeStack[^1]);
+                            }
                         }
                     }
                 }
@@ -526,26 +544,35 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             protected override void GenericItemSelected(FieldSelectorAdvancedDropdownItem item)
             {
-                _bindingProperty.stringValue = item.Node?.Property.propertyPath ?? "";
+                _bindingProperty.stringValue = item.FullPath;
                 _bindingProperty.serializedObject.ApplyModifiedProperties();
-
-                EditorUtil.Debugger.DebugLog($"Selected: {item.name}", LogType.Log);
             }
         }
 
         private class FieldSelectorAdvancedDropdownItem : ExpantionAdvancedDropdownItem
         {
-            public bool IsValue { get; }
+            public bool IsSelectable { get; }
             public SerializedPropertyTreeNode Node { get; }
 
-            public FieldSelectorAdvancedDropdownItem(string displayName, string path, bool isValue, SerializedPropertyTreeNode node) : base(displayName, path)
+            public override int Id { get => GetHashCode(); }
+
+            public override string FullPath => Node?.FullPath ?? "";
+
+            public FieldSelectorAdvancedDropdownItem(string displayName, string path, bool isSelectable, SerializedPropertyTreeNode node) : base(displayName)
             {
-                IsValue = isValue;
+                IsSelectable = isSelectable;
                 Node = node;
-                UpdateId();
             }
 
-            public override int GetHashCode() => (FullName + (IsValue ? "@value" : "")).GetHashCode();
+            public override int GetHashCode()
+            {
+                return GetHashCode(FullPath, IsSelectable);
+            }
+
+            public static int GetHashCode(string fullPath, bool isSelectable)
+            {
+                return (fullPath + (isSelectable ? "@value" : "")).GetHashCode();
+            }
         }
 
         // ▲ 拡張AdvancedDropdown ========================= ▲
