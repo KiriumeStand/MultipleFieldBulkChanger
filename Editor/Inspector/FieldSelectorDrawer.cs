@@ -10,10 +10,12 @@ using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
+    public class FieldSelectorDrawer : ExpansionPropertyDrawer { }
+
     [CustomPropertyDrawer(typeof(FieldSelector))]
-    public class FieldSelectorDrawer : ExpansionPropertyDrawer
+    public class FieldSelectorDrawerImpl : ExpansionPropertyDrawerImpl<FieldSelectorDrawer>
     {
-        public FieldSelectorDrawer() : base() { }
+        public FieldSelectorDrawerImpl() : base() { }
 
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
@@ -24,7 +26,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Label u_LogLabel = UIQuery.Q<Label>(uxml, UxmlNames.LogLabel);
 
             // イベント発行の登録
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectFieldPath, this, property, status);
+            EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectFieldPath, this, property, status);
 
             // イベント購読の登録
             ((IExpansionInspectorCustomizer)this).Subscribe<SelectObjectSerializedPropertiesUpdateEventArgs>(this,
@@ -32,7 +34,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 (sender, args) => { OnSelectObjectNodeTreeUpdateEventHandler(args, property, uxml, status); },
                 e =>
                 {
-                    if (!EditorUtil.SerializedObjectUtil.IsValid(property)) return false;
+                    if (!SerializedObjectUtil.IsValid(property)) return false;
                     if (status.CurrentPhase < InspectorCustomizerStatus.Phase.BeforeDelayCall) return false;
 
                     property.serializedObject.Update();
@@ -42,20 +44,20 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     bool isSenderIsAncestorProperty = false;
                     if (e.SenderInspectorCustomizerSerializedProperty != null)
                     {
-                        string thisPropertyInstancePath = EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(property);
+                        string thisPropertyInstancePath = SerializedObjectUtil.GetPropertyInstancePath(property);
                         SerializedProperty senderDrawerProperty = e.SenderInspectorCustomizerSerializedProperty;
                         string senderPropertyTypeName = senderDrawerProperty.type;
                         if (senderPropertyTypeName == $"managedReference<{nameof(SingleFieldSelectorContainer)}>")
                         {
                             SerializedProperty senderDescendantProperty = senderDrawerProperty.SafeFindPropertyRelative(nameof(SingleFieldSelectorContainer._FieldSelector));
                             if (senderDescendantProperty == null) return false;
-                            isSenderIsAncestorProperty = EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(senderDescendantProperty) == thisPropertyInstancePath;
+                            isSenderIsAncestorProperty = SerializedObjectUtil.GetPropertyInstancePath(senderDescendantProperty) == thisPropertyInstancePath;
                         }
                         else if (senderPropertyTypeName == $"managedReference<{nameof(MultiFieldSelectorContainer)}>")
                         {
                             SerializedProperty senderDescendantProperty = senderDrawerProperty.SafeFindPropertyRelative(nameof(MultiFieldSelectorContainer._FieldSelectors));
                             if (senderDescendantProperty == null) return false;
-                            string senderDescendantPropertyPathPattern = $@"^{Regex.Escape(EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(senderDescendantProperty))}\.Array\.data\[\d+?\]";
+                            string senderDescendantPropertyPathPattern = $@"^{Regex.Escape(SerializedObjectUtil.GetPropertyInstancePath(senderDescendantProperty))}\.Array\.data\[\d+?\]";
                             isSenderIsAncestorProperty = Regex.IsMatch(thisPropertyInstancePath, senderDescendantPropertyPathPattern);
                         }
                     }
@@ -68,7 +70,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 (sender, args) => { OnListViewAncestorItemRemovedEventHandler(args, property, uxml, status); },
                 e =>
                 {
-                    if (!EditorUtil.SerializedObjectUtil.IsValid(property)) return false;
+                    if (!SerializedObjectUtil.IsValid(property)) return false;
                     if (status.CurrentPhase < InspectorCustomizerStatus.Phase.BeforeDelayCall) return false;
 
                     property.serializedObject.Update();
@@ -77,14 +79,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    string senderBindingPropertyInstancePath = EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
+                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
                     bool isSenderIsAncestorProperty = false;
                     foreach (int index in e.RemovedIndex)
                     {
                         string targetPathPrefix = $"{senderBindingPropertyInstancePath}.Array.data[{index}]";
-                        isSenderIsAncestorProperty |= EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(property).StartsWith(targetPathPrefix);
+                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetPropertyInstancePath(property).StartsWith(targetPathPrefix);
                     }
 
                     return isSameEditorInstance && isSenderIsAncestorProperty;
@@ -96,7 +98,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 (sender, args) => { OnFieldSelectorLogChangeRequestEventHandler(args, property, uxml, status); },
                 e =>
                 {
-                    if (!EditorUtil.SerializedObjectUtil.IsValid(property)) return false;
+                    if (!SerializedObjectUtil.IsValid(property)) return false;
                     if (status.CurrentPhase < InspectorCustomizerStatus.Phase.BeforeDelayCall) return false;
 
                     property.serializedObject.Update();
@@ -105,7 +107,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    bool isSelfIsEventTarget = e.TargetFieldSelectorPropertyInstancePath == EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(property);
+                    bool isSelfIsEventTarget = e.TargetFieldSelectorPropertyInstancePath == SerializedObjectUtil.GetPropertyInstancePath(property);
 
                     return isSameEditorInstance && isSelfIsEventTarget;
                 },
@@ -119,15 +121,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Button u_SelectFieldButton = UIQuery.Q<Button>(uxml, UxmlNames.SelectFieldButton);
 
             // イベント購読の登録
-            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent(u_SelectFieldPath, this, property, status,
+            EventUtil.SubscribeFieldValueChangedEvent(u_SelectFieldPath, this, property, status,
                 (sender, args) => { OnFieldSelectorSelectFieldPathChangedEventHandler(args, property, uxml, status); });
             u_SelectFieldButton.clicked += () =>
             {
-                SerializedProperty fieldSelectorContainerProperty = EditorUtil.SerializedObjectUtil.GetParentProperty(property);
-                FieldSelectorContainerBase fieldSelectorContainerObject = EditorUtil.SerializedObjectUtil.GetTargetObject(fieldSelectorContainerProperty) as FieldSelectorContainerBase;
+                SerializedProperty fieldSelectorContainerProperty = SerializedObjectUtil.GetParentProperty(property);
+                FieldSelectorContainerBase fieldSelectorContainerObject = MFBCHelper.GetTargetObject(fieldSelectorContainerProperty) as FieldSelectorContainerBase;
 
-                SerializedProperty grandparentProperty = EditorUtil.SerializedObjectUtil.GetParentProperty(fieldSelectorContainerProperty);
-                IExpansionInspectorCustomizerTargetMarker grandparentObject = EditorUtil.SerializedObjectUtil.GetTargetObject(fieldSelectorContainerProperty);
+                SerializedProperty grandparentProperty = SerializedObjectUtil.GetParentProperty(fieldSelectorContainerProperty);
+                IExpansionInspectorCustomizerTargetMarker grandparentObject = MFBCHelper.GetTargetObject(fieldSelectorContainerProperty);
                 bool ddItemEditableOnly = grandparentObject is FieldChangeSetting;
 
                 UniversalDataManager.targetObjectPropertyTreeRootCache.TryGetValue(fieldSelectorContainerObject, out SerializedPropertyTreeNode rootNode);
@@ -180,7 +182,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private void OnListViewAncestorItemRemovedEventHandler(ListViewItemsRemovedEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
         {
-            IExpansionInspectorCustomizerTargetMarker targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property);
+            IExpansionInspectorCustomizerTargetMarker targetObject = MFBCHelper.GetTargetObject(property);
             ((IExpansionInspectorCustomizer)this).OnDetachFromPanelEvent(property, uxml, targetObject, status);
         }
 
@@ -193,8 +195,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             u_LogLabel.style.fontSize = args.FontSize;
 
             if (!string.IsNullOrWhiteSpace(args.LogMessage))
-                EditorUtil.VisualElementHelper.SetDisplay(u_LogLabel, true);
-            else EditorUtil.VisualElementHelper.SetDisplay(u_LogLabel, false);
+                VisualElementUtil.SetDisplay(u_LogLabel, true);
+            else VisualElementUtil.SetDisplay(u_LogLabel, false);
         }
 
         // ▲ イベントハンドラー ========================= ▲
@@ -207,8 +209,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             property.serializedObject.Update();
 
-            SerializedProperty fieldSelectorContainerProperty = EditorUtil.SerializedObjectUtil.GetParentProperty(property);
-            FieldSelectorContainerBase fieldSelectorContainerObject = EditorUtil.SerializedObjectUtil.GetTargetObject(fieldSelectorContainerProperty) as FieldSelectorContainerBase;
+            SerializedProperty fieldSelectorContainerProperty = SerializedObjectUtil.GetParentProperty(property);
+            FieldSelectorContainerBase fieldSelectorContainerObject = MFBCHelper.GetTargetObject(fieldSelectorContainerProperty) as FieldSelectorContainerBase;
 
             if (!UniversalDataManager.targetObjectAllPropertiesNodesCache.TryGetValue(fieldSelectorContainerObject, out List<SerializedPropertyTreeNode> nodeList))
             {
@@ -242,7 +244,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
             }
 
-            FieldSelector targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property) as FieldSelector;
+            FieldSelector targetObject = MFBCHelper.GetTargetObject(property) as FieldSelector;
 
             UniversalDataManager.selectFieldPropertyCache.AddOrUpdate(targetObject, selectProperty);
 
@@ -290,6 +292,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             private readonly bool _editableOnly;
 
+            private HashSet<SerializedPropertyTreeNode.Filter> _selectableFilters = new();
+            private HashSet<SerializedPropertyTreeNode.Filter> _innerNodeFilters = new();
+
             public FieldSelectorAdvancedDropdown(
                 List<string> selectedItemPaths, AdvancedDropdownState state, SerializedPropertyTreeNode root,
                 SerializedObject rootObject, SerializedProperty bindingProperty, bool editableOnly
@@ -304,6 +309,16 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 _rootObject = rootObject;
                 _bindingProperty = bindingProperty;
                 _editableOnly = editableOnly;
+
+                _selectableFilters.Add(new(SerializedPropertyTreeNode.FilterFuncs.IsGenericType, true));
+                if (Settings.Instance._Limitter)
+                {
+                    _selectableFilters.Add(new(SerializedPropertyTreeNode.FilterFuncs.IsHighRisk, true));
+                    _selectableFilters.Add(new(SerializedPropertyTreeNode.FilterFuncs.IsChange2Crash, true));
+
+                    _innerNodeFilters.Add(new(SerializedPropertyTreeNode.FilterFuncs.IsHighRisk, true));
+                    _innerNodeFilters.Add(new(SerializedPropertyTreeNode.FilterFuncs.IsChange2Crash, true));
+                }
             }
 
             protected override FieldSelectorAdvancedDropdownItem GenericBuildRoot()
@@ -312,20 +327,16 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     return new(_rootNode?.Name, "", false, _rootNode);
 
                 Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs = new() { { _rootNode, new(_rootNode.Name, "", false, _rootNode) } };
-                List<SerializedPropertyTreeNode> spNodeStack = new();
-                foreach (var child in _rootNode.Children)
+                foreach (SerializedPropertyTreeNode child in _rootNode.Children)
                 {
-                    spNodeStack.Add(child);
-                    BuildRootInternal(child, spNodeStack, nodeADItemPairs);
-                    spNodeStack.Remove(spNodeStack[^1]);
+                    BuildRootInternal(child, nodeADItemPairs);
                 }
                 temp = nodeADItemPairs.Count();
                 return nodeADItemPairs[_rootNode];
             }
 
             private void BuildRootInternal(
-                SerializedPropertyTreeNode curNode, List<SerializedPropertyTreeNode> spNodeStack,
-                Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs
+                SerializedPropertyTreeNode curNode, Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs
             )
             {
                 if (curNode.Property == null)
@@ -338,36 +349,30 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     foreach (SerializedPropertyTreeNode child in curNode.Children)
                     {
-                        spNodeStack.Add(child);
-                        BuildRootInternal(child, spNodeStack, nodeADItemPairs);
-                        spNodeStack.Remove(spNodeStack[^1]);
+                        BuildRootInternal(child, nodeADItemPairs);
                     }
                 }
                 else
                 {
-                    HashSet<EditorUtil.SerializedObjectUtil.Filter> isSelectableFilters = new();
-                    HashSet<EditorUtil.SerializedObjectUtil.Filter> isInnerNodeFilters = new();
-                    isSelectableFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsGenericType, true));
-                    isInnerNodeFilters.Add(new((so, stack) => { return curNode.Children.Any(); }, false));
+                    SerializedPropertyTreeNode[] spNodeStack = curNode.GetNodeStackWithoutRoot();
+                    SerializedProperty[] spStack = spNodeStack.Select(x => x.Property).ToArray();
 
+
+                    bool isSelectable = true;
+                    bool isInnerNode = true;
+
+                    isInnerNode &= curNode.Children.Any();
                     if (Settings.Instance._Limitter)
                     {
-                        isSelectableFilters.Add(new((so, stack) => { return curNode.IsSelectable; }, false));
-                        isSelectableFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsHighRisk, true));
-                        isSelectableFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsSafetyUnknown, true));
-
-                        isInnerNodeFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsHighRisk, true));
-                        isInnerNodeFilters.Add(new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsSafetyUnknown, true));
-
+                        isSelectable &= curNode.Tags.Contains("Selectable");
                         if (_editableOnly)
                         {
-                            isSelectableFilters.Add(new((so, stack) => { return curNode.IsEditable; }, false));
+                            isSelectable &= curNode.Tags.Contains("Editable");
                         }
                     }
 
-                    List<SerializedProperty> spStack = spNodeStack.Select(x => x.Property).ToList();
-                    bool isSelectable = isSelectableFilters.All(x => x.Calc(curNode.Property.serializedObject, spStack));
-                    bool isInnerNode = isInnerNodeFilters.All(x => x.Calc(curNode.Property.serializedObject, spStack));
+                    isSelectable &= _selectableFilters.All(x => x.Calc(curNode.SerializedObject, spStack));
+                    isInnerNode &= _innerNodeFilters.All(x => x.Calc(curNode.SerializedObject, spStack));
 
                     if (isSelectable || isInnerNode)
                     {
@@ -392,9 +397,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         {
                             foreach (SerializedPropertyTreeNode child in curNode.Children)
                             {
-                                spNodeStack.Add(child);
-                                BuildRootInternal(child, spNodeStack, nodeADItemPairs);
-                                spNodeStack.Remove(spNodeStack[^1]);
+                                BuildRootInternal(child, nodeADItemPairs);
                             }
                         }
                     }

@@ -1,15 +1,27 @@
+using System;
 using System.Runtime.CompilerServices;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
+    [Serializable]
     /// <summary>
     /// イベント購読の自動解除機能などを持つEditorの基底クラス
     /// </summary>
     public abstract class ExpansionEditor : Editor, IExpansionInspectorCustomizer
     {
+        [SerializeField]
+        private StyleSheet uss;
+
+        [SerializeField]
+        private VisualTreeAsset uxml;
+
+        public VisualTreeAsset UXML => uxml;
+        public StyleSheet USS => uss;
+
         public string SourceFilePath { get; }
 
         private VisualElement _uxml;
@@ -66,7 +78,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public void OnDisable()
         {
-            IExpansionInspectorCustomizerTargetMarker targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(serializedObject);
+            IExpansionInspectorCustomizerTargetMarker targetObject = MFBCHelper.GetTargetObject(serializedObject);
             VisualElement uxml = _uxml;
             InspectorCustomizerStatus status = _status;
 

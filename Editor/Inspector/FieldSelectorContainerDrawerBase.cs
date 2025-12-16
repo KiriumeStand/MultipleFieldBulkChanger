@@ -1,10 +1,11 @@
+using System.Linq;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public abstract class FieldSelectorContainerDrawerBase : ExpansionPropertyDrawer
+    public abstract class FieldSelectorContainerDrawerBase<TDrawer> : ExpansionPropertyDrawerImpl<TDrawer> where TDrawer : ExpansionPropertyDrawer
     {
         public FieldSelectorContainerDrawerBase() : base() { }
 
@@ -19,7 +20,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 (sender, args) => { OnListViewAncestorItemRemovedEventHandler(args, property, uxml, status); },
                 e =>
                 {
-                    if (!EditorUtil.SerializedObjectUtil.IsValid(property)) return false;
+                    if (!SerializedObjectUtil.IsValid(property)) return false;
                     if (status.CurrentPhase < InspectorCustomizerStatus.Phase.BeforeDelayCall) return false;
 
                     property.serializedObject.Update();
@@ -28,14 +29,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    string senderBindingPropertyInstancePath = EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
+                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
                     bool isSenderIsAncestorProperty = false;
                     foreach (int index in e.RemovedIndex)
                     {
                         string targetPathPrefix = $"{senderBindingPropertyInstancePath}.Array.data[{index}]";
-                        isSenderIsAncestorProperty |= EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(property).StartsWith(targetPathPrefix);
+                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetPropertyInstancePath(property).StartsWith(targetPathPrefix);
                     }
 
                     return isSameEditorInstance && isSenderIsAncestorProperty;
@@ -63,7 +64,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         protected void OnListViewAncestorItemRemovedEventHandler(ListViewItemsRemovedEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
         {
-            IExpansionInspectorCustomizerTargetMarker targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property);
+            IExpansionInspectorCustomizerTargetMarker targetObject = MFBCHelper.GetTargetObject(property);
             ((IExpansionInspectorCustomizer)this).OnDetachFromPanelEvent(property, uxml, targetObject, status);
         }
 
@@ -86,16 +87,16 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             selectedObject = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject) ? null : selectedObject;
 
             SerializedObject selectedSerializedObject = null;
-            SerializedPropertyTreeNode propertyRoot = new("None", null, false, false);
+            SerializedPropertyTreeNode propertyRoot = new("None", null, null);
             if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject))
             {
                 selectedSerializedObject = new(selectedObject);
-                propertyRoot = EditorUtil.SerializedObjectUtil.GetPropertyTreeWithImporter(selectedSerializedObject, new(), new(), new(), new());
+                propertyRoot = SerializedPropertyTreeNode.GetPropertyTreeWithImporter(selectedSerializedObject, new());
             }
 
-            FieldSelectorContainerBase targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property) as FieldSelectorContainerBase;
+            FieldSelectorContainerBase targetObject = MFBCHelper.GetTargetObject(property) as FieldSelectorContainerBase;
 
-            UniversalDataManager.targetObjectAllPropertiesNodesCache.AddOrUpdate(targetObject, propertyRoot.GetAllNode());
+            UniversalDataManager.targetObjectAllPropertiesNodesCache.AddOrUpdate(targetObject, propertyRoot.GetAllNode().ToList());
             UniversalDataManager.targetObjectRootSerializedObjectCache.AddOrUpdate(targetObject, selectedSerializedObject);
 
             UniversalDataManager.targetObjectPropertyTreeRootCache.AddOrUpdate(targetObject, propertyRoot);

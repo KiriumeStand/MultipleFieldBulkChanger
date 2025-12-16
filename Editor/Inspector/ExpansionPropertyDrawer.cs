@@ -1,22 +1,47 @@
+using System;
 using System.Runtime.CompilerServices;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
+    public abstract class ExpansionPropertyDrawer : ScriptableObject
+    {
+        public StyleSheet uss;
+        public VisualTreeAsset uxml;
+    }
+
     /// <summary>
     /// イベント購読の自動解除機能などを持つPropertyDrawerの基底クラス
     /// </summary>
-    public abstract class ExpansionPropertyDrawer : PropertyDrawer, IExpansionInspectorCustomizer
+    public abstract class ExpansionPropertyDrawerImpl<TDrawer> : PropertyDrawer, IExpansionInspectorCustomizer where TDrawer : ExpansionPropertyDrawer
     {
+        private TDrawer _drawer;
+
+        public TDrawer Drawer
+        {
+            get
+            {
+                if (_drawer == null)
+                {
+                    _drawer = ScriptableObject.CreateInstance<TDrawer>();
+                }
+                return _drawer;
+            }
+        }
+
+        public StyleSheet USS => Drawer.uss;
+        public VisualTreeAsset UXML => Drawer.uxml;
+
         public string SourceFilePath { get; }
 
         /// <summary>
         /// 継承先は必ずこのコンストラクターを明示的に呼び出さなくてはならない
         /// </summary>
         /// <param name="sourceFilePath"></param>
-        public ExpansionPropertyDrawer([CallerFilePath] string sourceFilePath = "")
+        public ExpansionPropertyDrawerImpl([CallerFilePath] string sourceFilePath = "")
         {
             SourceFilePath = new System.IO.FileInfo(sourceFilePath).FullName;
         }
@@ -52,7 +77,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 (sender, args) => { OnDisableEventHandler(property, uxml, targetObject, status); },
                 e =>
                 {
-                    if (!EditorUtil.SerializedObjectUtil.IsValid(property)) return false;
+                    if (!SerializedObjectUtil.IsValid(property)) return false;
                     return e.GetSerializedObject() == property.serializedObject;
                 },
                 true

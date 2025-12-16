@@ -9,15 +9,17 @@ using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
+    public class FieldChangeSettingDrawer : ExpansionPropertyDrawer { }
+
     [CustomPropertyDrawer(typeof(FieldChangeSetting))]
-    public class FieldChangeSettingDrawer : ExpansionPropertyDrawer
+    public class FieldChangeSettingDrawerImpl : ExpansionPropertyDrawerImpl<FieldChangeSettingDrawer>
     {
 
         private static string GetMultiFieldSelectorContainerPath(int index1) => $"{nameof(FieldChangeSetting._TargetFields)}.Array.data[{index1}]";
         private static string GetFieldSelectorPath(int index1, int index2) => $"{GetMultiFieldSelectorContainerPath(index1)}.{nameof(MultiFieldSelectorContainer._FieldSelectors)}.Array.data[{index2}]";
 
 
-        public FieldChangeSettingDrawer() : base() { }
+        public FieldChangeSettingDrawerImpl() : base() { }
 
 
         // ▼ 初期化定義 ========================= ▼
@@ -32,8 +34,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Label u_ValuePreview = UIQuery.Q<Label>(uxml, UxmlNames.ValuePreview);
 
             // イベント発行の登録
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_Enable, this, property, status);
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_Expression, this, property, status);
+            EventUtil.RegisterFieldValueChangeEventPublisher(u_Enable, this, property, status);
+            EventUtil.RegisterFieldValueChangeEventPublisher(u_Expression, this, property, status);
             u_TargetFields.itemsAdded += (e) =>
             {
                 IExpansionInspectorCustomizer.AddListElementWithClone(((FieldChangeSetting)targetObject)._TargetFields, e);
@@ -50,7 +52,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 (sender, args) => { OnListViewAncestorItemRemovedEventHandler(args, property, uxml, status); },
                 e =>
                 {
-                    if (!EditorUtil.SerializedObjectUtil.IsValid(property)) return false;
+                    if (!SerializedObjectUtil.IsValid(property)) return false;
                     if (status.CurrentPhase < InspectorCustomizerStatus.Phase.BeforeDelayCall) return false;
 
                     property.serializedObject.Update();
@@ -59,14 +61,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    string senderBindingPropertyInstancePath = EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
+                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
                     bool isSenderIsAncestorProperty = false;
                     foreach (int index in e.RemovedIndex)
                     {
                         string targetPathPrefix = $"{senderBindingPropertyInstancePath}.Array.data[{index}]";
-                        isSenderIsAncestorProperty |= EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(property).StartsWith(targetPathPrefix);
+                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetPropertyInstancePath(property).StartsWith(targetPathPrefix);
                     }
 
                     return isSameEditorInstance && isSenderIsAncestorProperty;
@@ -78,16 +80,16 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 (sender, args) => { OnArgumentDataUpdatedEventHandler(args, property, uxml, targetObject, status); },
                 e =>
                 {
-                    if (!EditorUtil.SerializedObjectUtil.IsValid(property)) return false;
+                    if (!SerializedObjectUtil.IsValid(property)) return false;
                     if (status.CurrentPhase < InspectorCustomizerStatus.Phase.BeforeDelayCall) return false;
 
                     property.serializedObject.Update();
 
-                    IExpansionInspectorCustomizerTargetMarker targetRootObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property.serializedObject);
+                    IExpansionInspectorCustomizerTargetMarker targetRootObject = MFBCHelper.GetTargetObject(property.serializedObject);
 
                     SerializedObject senderSerializedObject = e.GetSerializedObject();
 
-                    IExpansionInspectorCustomizerTargetMarker senderTargetRootObject = EditorUtil.SerializedObjectUtil.GetTargetObject(senderSerializedObject);
+                    IExpansionInspectorCustomizerTargetMarker senderTargetRootObject = MFBCHelper.GetTargetObject(senderSerializedObject);
 
                     bool isSameComponentInstance = targetRootObject == senderTargetRootObject;
 
@@ -100,7 +102,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 (sender, args) => { OnSelectedFieldSerializedPropertyUpdateEventHandler(args, property, uxml, targetObject, status); },
                 e =>
                 {
-                    if (!EditorUtil.SerializedObjectUtil.IsValid(property)) return false;
+                    if (!SerializedObjectUtil.IsValid(property)) return false;
                     if (status.CurrentPhase < InspectorCustomizerStatus.Phase.BeforeDelayCall) return false;
 
                     bool isSameEditorInstance = e.GetSerializedObjectObjectId() == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
@@ -119,7 +121,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             TextField u_Expression = UIQuery.Q<TextField>(uxml, UxmlNames.Expression);
 
-            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<string>(u_Expression, this, property, status,
+            EventUtil.SubscribeFieldValueChangedEvent<string>(u_Expression, this, property, status,
                 (sender, args) => { OnExpressionTextChangedEventHandler(args, property, uxml, targetObject, status); });
 
             (Optional<object> result, string resultStr) = CalculateExpression(property, uxml, targetObject);
@@ -135,7 +137,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private void OnListViewAncestorItemRemovedEventHandler(ListViewItemsRemovedEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
         {
-            IExpansionInspectorCustomizerTargetMarker targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property);
+            IExpansionInspectorCustomizerTargetMarker targetObject = MFBCHelper.GetTargetObject(property);
             ((IExpansionInspectorCustomizer)this).OnDetachFromPanelEvent(property, uxml, targetObject, status);
         }
 
@@ -173,7 +175,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private static string GetDescendantFieldSelectorPropertyPathPattern(SerializedProperty property)
         {
-            string pattern = $@"^{Regex.Escape(EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(property))}\.{nameof(FieldChangeSetting._TargetFields)}\.Array\.data\[(\d+?)\]\.{nameof(MultiFieldSelectorContainer._FieldSelectors)}\.Array\.data\[(\d+?)\]";
+            string pattern = $@"^{Regex.Escape(SerializedObjectUtil.GetPropertyInstancePath(property))}\.{nameof(FieldChangeSetting._TargetFields)}\.Array\.data\[(\d+?)\]\.{nameof(MultiFieldSelectorContainer._FieldSelectors)}\.Array\.data\[(\d+?)\]";
             return pattern;
         }
 
@@ -186,7 +188,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             List<ArgumentData> argumentDatas = GetArgumentList(property);
 
-            (bool success, Type valueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expressionString, argumentDatas);
+            (bool success, Type valueType, object result) = MFBCHelper.CalculateExpression(expressionString, argumentDatas);
 
             var expressionResultCache = UniversalDataManager.expressionResultCache;
             var fcs = (FieldChangeSetting)property.managedReferenceValue;
@@ -200,7 +202,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             // 引数データ辞書
             var argumentDataDictionary = UniversalDataManager.GetUniqueObjectDictionary<ArgumentData>(UniversalDataManager.IdentifierNames.ArgumentData);
 
-            IExpansionInspectorCustomizerTargetMarker rootObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property.serializedObject);
+            IExpansionInspectorCustomizerTargetMarker rootObject = MFBCHelper.GetTargetObject(property.serializedObject);
             var rootMultipleFieldBulkChanger = rootObject as MultipleFieldBulkChanger;
             List<ArgumentSetting> argumentSettings = rootMultipleFieldBulkChanger._ArgumentSettings;
 
@@ -210,7 +212,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 // キーの ArgumentSetting が argumentSettings に含まれているか
                 argumentSettings.Contains(keyArgumentSetting) &&
                 // キーになっている SerializedData が property.serializedObject と同一(=同一エディター)か
-                (EditorUtil.SerializedObjectUtil.GetSerializedObject(kvp.Key.SerializedData) == property.serializedObject) &&
+                (SerializedObjectUtil.GetSerializedObject(kvp.Key.SerializedData) == property.serializedObject) &&
                 // 値が ArgumentData にキャストできるか
                 kvp.Value is ArgumentData argumentData
             ).Select(x => x.Value as ArgumentData).ToList();
@@ -284,7 +286,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
             }
 
-            OnFieldSelectorLogChangeRequestEventPublish(property, uxml, status, EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(fieldSelectorProperty), logMessage, logColor, fontStyle, null);
+            OnFieldSelectorLogChangeRequestEventPublish(property, uxml, status, SerializedObjectUtil.GetPropertyInstancePath(fieldSelectorProperty), logMessage, logColor, fontStyle, null);
         }
 
         private static (bool isValid, Type expressionResultType, Type selectedFieldType) ValidationTypeAssignable(Optional<object> value, SerializedProperty fieldSelectorProperty)
@@ -308,7 +310,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (value.HasValue) expressionResultType = value.Value?.GetType();
             else return (false, null, selectFieldType);
 
-            bool isValid = EditorUtil.OtherUtil.ValidationTypeAssignable(expressionResultType, selectFieldType);
+            bool isValid = MFBCHelper.ValidationTypeAssignable(expressionResultType, selectFieldType);
             return (isValid, expressionResultType, selectFieldType);
         }
 

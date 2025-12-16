@@ -11,13 +11,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     {
         private readonly Dictionary<Object, Node> _mappedCache = new();
 
-        private static readonly HashSet<EditorUtil.SerializedObjectUtil.Filter> _addListFilters = new(){
-            new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsReadonly, true),
-            new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsObjectReferenceType, false),
+        private static readonly HashSet<SerializedPropertyTreeNode.Filter> _editableObjectReferencePropFilter = new(){
+            new(SerializedPropertyTreeNode.FilterFuncs.IsReadonly, true),
+            new(SerializedPropertyTreeNode.FilterFuncs.IsObjectReferenceType, false),
         };
-        private static readonly HashSet<EditorUtil.SerializedObjectUtil.Filter> _enterChildrenFilters = new() {
-            new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsReadonlyWithChildren, true),
-        };
+        private static readonly HashSet<SerializedPropertyTreeNode.Filter> _enterChildrenFilters = new() { };
 
         public Node Mapping<T>(T obj) where T : Object
         {
@@ -103,7 +101,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             HashSet<Node> newChildNodes = new();
 
-            SerializedProperty[] props = EditorUtil.SerializedObjectUtil.GetAllProperties(so, _addListFilters, _enterChildrenFilters);
+            SerializedPropertyTreeNode propTreeRoot = SerializedPropertyTreeNode.GetPropertyTree(so, _enterChildrenFilters);
+            SerializedProperty[] props = propTreeRoot.Where(_editableObjectReferencePropFilter).Select(x => x.Property).ToArray();
             foreach (SerializedProperty prop in props)
             {
                 Node newChildNode = MappingCore(prop.objectReferenceValue);

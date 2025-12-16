@@ -8,7 +8,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
         void Start()
         {
             // ここは消さない
-            // 消すとインスペクターでenabledのチェックボックスが消える}
+            // 消すとインスペクターでenabledのチェックボックスが消える
         }
     }
 }

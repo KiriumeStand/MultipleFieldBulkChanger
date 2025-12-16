@@ -105,7 +105,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                             string selectFieldPath = asPropObj._SourceField._FieldSelector._SelectFieldPath;
                             if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
                             {
-                                argValue = EditorUtil.OtherUtil.GetSelectPathValueWithImporter(selectObj, selectFieldPath);
+                                argValue = MFBCHelper.GetSelectPathValueWithImporter(selectObj, selectFieldPath);
                             }
                         }
                         else
@@ -128,7 +128,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                         string expression = fcsPropObj._Expression;
                         // 代入式を解く
-                        (bool expressionSuccess, Type resultValueType, object result) = EditorUtil.OtherUtil.CalculateExpression(expression, argDatas);
+                        (bool expressionSuccess, Type resultValueType, object result) = MFBCHelper.CalculateExpression(expression, argDatas);
 
                         if (!expressionSuccess)
                         {
@@ -146,12 +146,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                             SerializedObject targetSerializedObject = new(mfscPropObj._SelectObject);
 
-                            SerializedPropertyTreeNode propertyRoot = EditorUtil.SerializedObjectUtil.GetPropertyTreeWithImporter(targetSerializedObject, new(), new(), new(), new());
+                            SerializedPropertyTreeNode propertyRoot = SerializedPropertyTreeNode.GetPropertyTreeWithImporter(targetSerializedObject, new());
 
                             foreach (FieldSelector fsPropObj in mfscPropObj._FieldSelectors)
                             {
 
-                                List<SerializedPropertyTreeNode> allNode = propertyRoot.GetAllNode();
+                                SerializedPropertyTreeNode[] allNode = propertyRoot.GetAllNode();
                                 SerializedPropertyTreeNode targetPropertyNode = allNode.FirstOrDefault(x => x.FullPath == fsPropObj._SelectFieldPath);
 
                                 string selectPropertyInfo = $"指定されたオブジェクト:'{mfscPropObj._SelectObject.name}({mfscPropObj._SelectObject.GetType().FullName})', 指定されたプロパティパス:'{fsPropObj._SelectFieldPath}'";
@@ -160,7 +160,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                     Logger.Log($"指定されたプロパティが見つかりませんでした。\n{selectPropertyInfo}", LogType.Error, "");
                                     continue;
                                 }
-                                if (!targetPropertyNode.IsEditable)
+                                if (!targetPropertyNode.Tags.Contains("Editable"))
                                 {
                                     Logger.Log($"編集不可なプロパティが指定されました。\n{selectPropertyInfo}", LogType.Error, "");
                                     continue;
@@ -183,7 +183,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                 }
 
                                 // 代入先と代入値の型の相性は問題ないか確認
-                                bool isValid = EditorUtil.OtherUtil.ValidationTypeAssignable(result.GetType(), targetFieldType);
+                                bool isValid = MFBCHelper.ValidationTypeAssignable(result.GetType(), targetFieldType);
 
                                 if (!isValid)
                                 {
@@ -192,7 +192,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                 }
 
                                 // カスタムキャスト処理
-                                object customCastedResult = EditorUtil.OtherUtil.CustomCast(result, targetFieldType);
+                                object customCastedResult = MFBCHelper.CustomCast(result, targetFieldType);
                                 if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(customCastedResult))
                                 {
                                     result = customCastedResult;

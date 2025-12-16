@@ -11,9 +11,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     {
         public long SenderInspectorCustomizerInstanceId { get; }
 
-        public ExpansionEditor SenderEditor { get; }
-
-        public ExpansionPropertyDrawer SenderPropertyDrawer { get; }
+        public IExpansionInspectorCustomizer SenderPropertyInspectorCustomizer { get; }
 
         public SerializedObject SenderEditorSerializedObject { get; }
 
@@ -31,8 +29,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             SenderInspectorCustomizerInstanceId = EditorUtil.ObjectIdUtil.GetObjectId(inspectorCustomizer);
 
-            SenderEditor = inspectorCustomizer as ExpansionEditor;
-            SenderPropertyDrawer = null;
+            SenderPropertyInspectorCustomizer = inspectorCustomizer;
             SenderEditorSerializedObject = editorSerializedObject;
             SenderInspectorCustomizerSerializedProperty = null;
 
@@ -48,8 +45,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             SenderInspectorCustomizerInstanceId = EditorUtil.ObjectIdUtil.GetObjectId(inspectorCustomizer);
 
-            SenderEditor = null;
-            SenderPropertyDrawer = inspectorCustomizer as ExpansionPropertyDrawer;
+            SenderPropertyInspectorCustomizer = inspectorCustomizer;
             SenderEditorSerializedObject = null;
             SenderInspectorCustomizerSerializedProperty = drawerProperty;
 
@@ -65,7 +61,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public string GetSenderInspectorCustomizerInstancePath()
         {
-            if (IsSenderFromPropertyDrawer) return EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(SenderInspectorCustomizerSerializedProperty);
+            if (IsSenderFromPropertyDrawer) return SerializedObjectUtil.GetPropertyInstancePath(SenderInspectorCustomizerSerializedProperty);
             else return SenderEditorSerializedObject.targetObject.GetInstanceID().ToString();
         }
     }

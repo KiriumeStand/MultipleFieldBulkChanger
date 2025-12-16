@@ -1,9 +1,10 @@
 {
-    "name": "io.github.kiriumestand.multiplefieldbulkchanger.editor",
+    "name": "io.github.kiriumestand.multiplememberbulkchanger.debug.editor",
     "rootNamespace": "",
     "references": [
+        "io.github.kiriumestand.multiplefieldbulkchanger.editor",
         "io.github.kiriumestand.multiplefieldbulkchanger.runtime",
-        "nadena.dev.ndmf"
+        "io.github.kiriumestand.multiplefieldbulkchanger.debug.runtime"
     ],
     "includePlatforms": [
         "Editor"
@@ -12,8 +13,7 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "System.Collections.Immutable.dll",
-        "xFunc.Maths.dll"
+        "System.Collections.Immutable.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [],

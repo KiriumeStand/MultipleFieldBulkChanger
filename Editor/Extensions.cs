@@ -31,7 +31,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             DateTime time = DateTime.Now;
             _nativeUnityObjectAndSubTypes = GetAllNativeUnityObjectAndSubTypes();
             TimeSpan timeSpan = DateTime.Now - time;
-            EditorUtil.Debugger.DebugLog($"GetAllNativeUnityObjectAndSubTypes TimeSpan/{timeSpan}", LogType.Log, "blue");
+            DebugUtil.DebugLog($"GetAllNativeUnityObjectAndSubTypes TimeSpan/{timeSpan}", LogType.Log, "blue");
         }
 
         private static GetFieldInfoAndStaticTypeFromProperty GetFieldInfoAndTypeGetter()
@@ -144,7 +144,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 string typeName = matchResult.Groups[1].Value;
                 IEnumerable<Type> matchTypes = _nativeUnityObjectAndSubTypes.Where(t => t.Name == typeName);
                 if (matchTypes.Count() == 0)
-                    return (false, null, "一致する型が見つかりません。");
+                    return (false, null, $"一致する型が見つかりません。'{typeName}'");
                 else if (matchTypes.Count() > 1) return (false, null, $"複数の一致する型が見つかりました。 '{string.Join("', '", matchTypes)}'");
                 else return (true, matchTypes.First(), "");
             }
@@ -173,7 +173,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
             catch (ObjectDisposedException ex)
             {
-                EditorUtil.Debugger.ErrorDebugLog(ex.ToString(), LogType.Warning);
+                DebugUtil.ErrorDebugLog(ex.ToString(), LogType.Warning);
                 return null;
             }
         }

@@ -10,6 +10,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     public interface IExpansionInspectorCustomizer
     {
+        public abstract StyleSheet USS { get; }
+        public abstract VisualTreeAsset UXML { get; }
+
         public string SourceFilePath { get; }
 
 
@@ -24,13 +27,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         public virtual VisualElement CreateCustomizerGUI(IDisposable serializedData)
         {
 
-            if (!EditorUtil.SerializedObjectUtil.IsValid(serializedData)) return null;
+            if (!SerializedObjectUtil.IsValid(serializedData)) return null;
 
             SerializedDataType dataType = ValidateSerializedDataType(serializedData);
 
             VisualElement uxml = CreateUxml();
 
-            IExpansionInspectorCustomizerTargetMarker targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(serializedData);
+            IExpansionInspectorCustomizerTargetMarker targetObject = MFBCHelper.GetTargetObject(serializedData);
 
             InspectorCustomizerStatus status = new();
 
@@ -55,7 +58,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (u_DebugLabel != null)
             {
                 u_DebugLabel.text = $"drawerId:{EditorUtil.ObjectIdUtil.GetObjectId(this)}/targetId:{EditorUtil.ObjectIdUtil.GetObjectId(targetObject)}/serializedDataId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedData)}";
-                EditorUtil.VisualElementHelper.SetDisplay(u_DebugLabel, Settings.Instance._DebugMode);
+                VisualElementUtil.SetDisplay(u_DebugLabel, Settings.Instance._DebugMode);
             }
 
             status.SetPhase(InspectorCustomizerStatus.Phase.BeforeDelayCall);
@@ -69,9 +72,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <returns></returns>
         private VisualElement CreateUxml()
         {
-            string layoutFilePathBase = $"{EditorUtil.GetCallerScriptRelativeDirectoryPath(SourceFilePath)}/Layouts/{GetType().Name}";
-            VisualTreeAsset visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{layoutFilePathBase}.uxml");
-            StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"{layoutFilePathBase}.uss");
+            string layoutFilePathBase = $"{EditorUtil.PathUtil.GetCallerScriptRelativeDirectoryPath(SourceFilePath)}/Layouts/{GetType().Name}";
+            //StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"{layoutFilePathBase}.uss");
+            //VisualTreeAsset visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{layoutFilePathBase}.uxml");
+            StyleSheet styleSheet = USS;
+            VisualTreeAsset visualTreeAsset = UXML;
             // UXML をインスタンス化
             VisualElement uxml = visualTreeAsset.CloneTree();
             // ussを適用
@@ -169,7 +174,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <param name="status"></param>
         private void DelayCall(IDisposable serializedData, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
-            if (!EditorUtil.SerializedObjectUtil.IsValid(serializedData)) return;
+            if (!SerializedObjectUtil.IsValid(serializedData)) return;
 
             // CurrentPhaseがDelayCall実行中以降を示していれば処理をせずに戻る
             if (status.CurrentPhase > InspectorCustomizerStatus.Phase.BeforeDelayCall) return;
@@ -228,7 +233,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(this))
             {
                 // MARK: デバッグ用
-                EditorUtil.Debugger.DebugLog($"ここは必要みたいです/OnDetachFromPanelEvent", LogType.Warning);
+                DebugUtil.DebugLog($"ここは必要みたいです/OnDetachFromPanelEvent", LogType.Warning);
                 //return;
             }
 
@@ -255,21 +260,21 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         public Action Subscribe<T>(IExpansionInspectorCustomizer inspectorCustomizer, IDisposable serializedData, InspectorCustomizerStatus status, EventHandler<T> handler, Func<T, bool> filter = null, bool allowNestEvent = false) where T : BaseEventArgs
         {
             // MARK: 要確認 単一責任でIsValidをSubscribeの外側で呼び出したほうが良い？
-            if (EditorUtil.SerializedObjectUtil.IsValid(serializedData) != true)
+            if (SerializedObjectUtil.IsValid(serializedData) != true)
             {
                 // MARK: デバッグ用 
-                EditorUtil.Debugger.DebugLog($"ここは必要みたいです/Subscribe", LogType.Warning);
+                DebugUtil.DebugLog($"ここは必要みたいです/Subscribe", LogType.Warning);
                 return () => { };
             }
 
             // Cleanup以降の購読登録は認めない
             if (status.CurrentPhase >= InspectorCustomizerStatus.Phase.Cleanup) return () => { };
 
-            IExpansionInspectorCustomizerTargetMarker targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(serializedData);
+            IExpansionInspectorCustomizerTargetMarker targetObject = MFBCHelper.GetTargetObject(serializedData);
             if (targetObject == null)
             {
                 // MARK: デバッグ用
-                EditorUtil.Debugger.DebugLog($"ここは必要みたいです/Subscribe", LogType.Warning);
+                DebugUtil.DebugLog($"ここは必要みたいです/Subscribe", LogType.Warning);
                 return () => { };
             }
 

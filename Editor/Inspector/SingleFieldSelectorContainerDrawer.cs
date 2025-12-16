@@ -5,10 +5,12 @@ using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
+    public class SingleFieldSelectorContainerDrawer : ExpansionPropertyDrawer { }
+
     [CustomPropertyDrawer(typeof(SingleFieldSelectorContainer))]
-    public class SingleFieldSelectorContainerDrawer : FieldSelectorContainerDrawerBase
+    public class SingleFieldSelectorContainerDrawerImpl : FieldSelectorContainerDrawerBase<SingleFieldSelectorContainerDrawer>
     {
-        public SingleFieldSelectorContainerDrawer() : base() { }
+        public SingleFieldSelectorContainerDrawerImpl() : base() { }
 
 
         // ▼ 初期化定義 ========================= ▼
@@ -20,7 +22,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             PropertyField u_SelectField = BindHelper.BindRelative<PropertyField>(uxml, UxmlNames.FieldSelector, property, nameof(SingleFieldSelectorContainer._FieldSelector));
 
             // イベント発行の登録
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectObject, this, property, status);
+            EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectObject, this, property, status);
 
             // イベント購読の登録
             SubscribeListViewItemsRemovedEvent(property, uxml, status);
@@ -31,7 +33,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             ObjectField u_SelectObject = UIQuery.Q<ObjectField>(uxml, UxmlNames.SelectObject);
 
             // イベント購読の登録
-            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<UnityEngine.Object>(u_SelectObject, this, property, status,
+            EventUtil.SubscribeFieldValueChangedEvent<UnityEngine.Object>(u_SelectObject, this, property, status,
                 (sender, args) => { OnFieldSelectorSelectObjectChangedEventHandler(args, uxml, status); });
 
             UpdateSerializedPropertiesCache(property, uxml, status, u_SelectObject.value);

@@ -28,13 +28,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             u_DebugButton.clicked += () =>
             {
                 (int count, int validCount) = UniversalEventManager.ManagedEventCount;
-                EditorUtil.Debugger.DebugLog(
+                DebugUtil.DebugLog(
                     $"drawerId:{EditorUtil.ObjectIdUtil.GetObjectId(this)}/targetId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedObject.targetObject)}/propertyId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedObject)}/Unsubscriptions/ManagedEventCount:{count}/valid:{validCount}/\r\n" +
                     $"\r\n" +
                     $"{UniversalDataManager.Debugger.UnsubscribeActionsInfoList}"
                     , LogType.Log);
             };
-            EditorUtil.VisualElementHelper.SetDisplay(u_DebugButton, Settings.Instance._DebugMode);
+            VisualElementUtil.SetDisplay(u_DebugButton, Settings.Instance._DebugMode);
 
             Toggle u_Enable = BindHelper.Bind<Toggle>(uxml, UxmlNames.Enable, serializedObject, nameof(MultipleFieldBulkChanger._Enable));
             ListView u_Arguments = BindHelper.Bind<ListView>(uxml, UxmlNames.Arguments, serializedObject, nameof(MultipleFieldBulkChanger._ArgumentSettings));
@@ -100,7 +100,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             };
             u_ChangeSettings.itemIndexChanged += (e1, e2) =>
             {
-                EditorUtil.Debugger.DebugLog($"u_ChangeSettings.itemIndexChanged/{e1}/{e2}", LogType.Warning);
+                DebugUtil.DebugLog($"u_ChangeSettings.itemIndexChanged/{e1}/{e2}", LogType.Warning);
             };
 
             // このオブジェクトをウィンドウ要素にバインド
@@ -112,23 +112,23 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             // 参照値の更新をリクエストするイベントの発行処理
             void editorApplicationUpdateCallback()
             {
-                if (!EditorUtil.SerializedObjectUtil.IsValid(serializedObject))
+                if (!SerializedObjectUtil.IsValid(serializedObject))
                 {
                     // MARK: デバッグ用
-                    EditorUtil.Debugger.DebugLog($"serializedObject/IsValid == false/editorApplicationUpdateCallback", LogType.Warning);
+                    DebugUtil.DebugLog($"serializedObject/IsValid == false/editorApplicationUpdateCallback", LogType.Warning);
                     return;
                 }
                 if (serializedObject == null)
                 {
                     // MARK: デバッグ用
-                    EditorUtil.Debugger.DebugLog($"ここは必要みたいです/editorApplicationUpdateCallback", LogType.Warning);
+                    DebugUtil.DebugLog($"ここは必要みたいです/editorApplicationUpdateCallback", LogType.Warning);
                     return;
                 }
 
                 // MARK: デバッグ用
                 var argumentDataDictionary = UniversalDataManager.GetUniqueObjectDictionary<ArgumentData>(UniversalDataManager.IdentifierNames.ArgumentData);
                 string text = $"argumentDataDictionary/{argumentDataDictionary.Count()}";
-                EditorUtil.Debugger.SetDebugLabelText(uxml, text);
+                DebugUtil.SetDebugLabelText(uxml, text);
 
                 SelectedFieldSerializedPropertyReloadRequestEventArgs args = new(this, serializedObject, uxml, status);
                 ((IExpansionInspectorCustomizer)this).Publish(args);

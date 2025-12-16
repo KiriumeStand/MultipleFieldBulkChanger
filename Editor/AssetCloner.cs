@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using nadena.dev.ndmf;
@@ -22,7 +23,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         private static readonly string _generatedFolderName = "__Generated";
         private static readonly string _generatedFolderPath = $"{_scriptRootDir}/{_generatedFolderName}";
 
-        private readonly HashSet<Object> _lazyCloneList = new();
+        private readonly HashSet<LazyCloneRequest> _lazyCloneList = new(new LazyCloneRequestComparer());
 
         private readonly Dictionary<Object, Object> _cloneDic = new();
 
@@ -41,42 +42,61 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             _saveFolderPath = _generatedFolderPath;
         }
 
-        public void RegisterLazyClone<T>(T original) where T : Object
+        public void RegisterLazyClone<T>(T original, bool force = false) where T : Object
         {
             if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(original)) return;
             // ファイルベースのオブジェクトでない場合クローン不要
-            if (!AssetDatabase.Contains(original)) return;
-            if (AssetDatabase.GetAssetPath(original).StartsWith(_generatedFolderPath)) return;
+            if (!force && !AssetDatabase.Contains(original)) return;
+            if (AssetDatabase.GetAssetPath(original)?.StartsWith(_generatedFolderPath) is true) return;
             if (_cloneDic.ContainsKey(original)) return;
-            if (_lazyCloneList.Contains(original)) return;
 
-            _lazyCloneList.Add(original);
+            LazyCloneRequest[] existedList = _lazyCloneList.Where(x => x.Object.Equals(original)).ToArray();
+            bool existForceLazyClone = existedList.Any(x => x.Force);
+            bool fixedForce = existForceLazyClone || force;
+
+            foreach (LazyCloneRequest item in existedList)
+            {
+                _lazyCloneList.Remove(item);
+            }
+
+            _lazyCloneList.Add(new(original, fixedForce));
         }
 
         private T LazyClone<T>(T original) where T : Object
         {
-            if (!_lazyCloneList.Contains(original)) return original;
+            LazyCloneRequest[] existedList = _lazyCloneList.Where(x => x.Object.Equals(original)).ToArray();
+            if (existedList.Length == 0) return original;
 
-            _lazyCloneList.Remove(original);
-            return DeepCloneCore(original);
+            bool existForceLazyClone = existedList.Any(x => x.Force);
+
+            foreach (LazyCloneRequest item in existedList)
+            {
+                _lazyCloneList.Remove(item);
+            }
+            return DeepCloneCore(original, existForceLazyClone);
         }
 
-
-        public T DeepClone<T>(T original) where T : Object
+        public T DeepClone<T>(T original, bool force = false) where T : Object
         {
-            return DeepCloneCore(original);
+            return DeepCloneCore(original, force);
         }
 
-        private T DeepCloneCore<T>(T original) where T : Object
+        private T DeepCloneCore<T>(T original, bool force) where T : Object
         {
+            if (force)
+            {
+                _cloneDic[original] = null;
+                _cloneDic.Remove(original);
+            }
+
             if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(original)) return null;
             // ファイルベースのオブジェクトでない場合クローン不要
-            if (!AssetDatabase.Contains(original)) return original;
-            if (AssetDatabase.GetAssetPath(original).StartsWith(_generatedFolderPath)) return original;
+            if (!force && !AssetDatabase.Contains(original)) return original;
+            if (!force && AssetDatabase.GetAssetPath(original)?.StartsWith(_generatedFolderPath) is true) return original;
             if (_cloneDic.TryGetValue(original, out Object cached)) return (T)cached;
 
             // アセットのクローン
-            T clone = CustomClone(original) ?? DefaultDeepClone(original);
+            T clone = CustomClone(original, force) ?? DefaultDeepClone(original, force);
 
             ObjectRegistry.RegisterReplacedObject(original, clone);
             _cloneDic[original] = clone;
@@ -84,50 +104,49 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return clone;
         }
 
-        private T CustomClone<T>(T original) where T : Object
+        private T CustomClone<T>(T original, bool force) where T : Object
         {
             // Importerの取得
             string originalPath = AssetDatabase.GetAssetPath(original);
             AssetImporter originalImporter = AssetImporter.GetAtPath(originalPath);
 
-            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(originalImporter))
+            if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(originalImporter))
             {
-                return null;
+                string cloneFileName = Path.GetFileNameWithoutExtension(originalPath);
+                string fileExtension = Path.GetExtension(originalPath);
+                string clonePath = $"{_saveFolderPath}/{cloneFileName}(MFBC_Clone_{Guid.NewGuid()}){fileExtension}";
+                bool copySuccess = AssetDatabase.CopyAsset(originalPath, clonePath);
+                if (!copySuccess)
+                {
+                    Logger.Log($"アセットのコピーに失敗しました。\nアセットパス:'{originalPath}', アセットの型:'{typeof(T).FullName}'", LogType.Error);
+                    return null;
+                }
+
+                AssetDatabase.Refresh();
+
+                T clone = AssetDatabase.LoadAssetAtPath<T>(clonePath);
+                AssetImporter cloneImporter = AssetImporter.GetAtPath(clonePath);
+
+                EditorUtility.CopySerialized(originalImporter, cloneImporter);
+                cloneImporter.SaveAndReimport();
+
+                return clone;
             }
 
-            string cloneFileName = Path.GetFileNameWithoutExtension(originalPath);
-            string fileExtension = Path.GetExtension(originalPath);
-            string clonePath = $"{_saveFolderPath}/{cloneFileName}(MFBC_Clone_{Guid.NewGuid()}){fileExtension}";
-            bool copySuccess = AssetDatabase.CopyAsset(originalPath, clonePath);
-            if (!copySuccess)
-            {
-                Logger.Log($"アセットのコピーに失敗しました。\nアセットパス:'{originalPath}', アセットの型:'{typeof(T).FullName}'", LogType.Error);
-                return null;
-            }
-
-            AssetDatabase.Refresh();
-
-            T clone = AssetDatabase.LoadAssetAtPath<T>(clonePath);
-            AssetImporter cloneImporter = AssetImporter.GetAtPath(clonePath);
-
-            EditorUtility.CopySerialized(originalImporter, cloneImporter);
-            cloneImporter.SaveAndReimport();
-
-            return clone;
+            return null;
         }
 
-        private static T DefaultDeepClone<T>(T original) where T : Object
+        private static T DefaultDeepClone<T>(T original, bool force) where T : Object
         {
-            T clone;
-            ConstructorInfo ctor = original.GetType().GetConstructor(Type.EmptyTypes);
-            if (ctor == null || original is ScriptableObject)
+            T clone = Object.Instantiate(original);
+            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(clone))
             {
-                clone = Object.Instantiate(original);
-            }
-            else
-            {
-                clone = (T)ctor.Invoke(Array.Empty<object>());
-                EditorUtility.CopySerialized(original, clone);
+                ConstructorInfo ctor = original.GetType().GetConstructor(Type.EmptyTypes);
+                if (ctor == null)
+                {
+                    clone = (T)ctor.Invoke(Array.Empty<object>());
+                    EditorUtility.CopySerialized(original, clone);
+                }
             }
 
             return clone;
@@ -173,7 +192,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public T ReplaceClonedObjectForMyself<T>(T obj) where T : Object
         {
-            if (_lazyCloneList.Contains(obj))
+            if (_lazyCloneList.Any(x => x.Object.Equals(obj)))
             {
                 _ = LazyClone(obj);
             }
@@ -196,14 +215,16 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             SerializedObject so = new(obj);
 
-            HashSet<EditorUtil.SerializedObjectUtil.Filter> addListFilters = new() {
-                new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsReadonly, true),
-                new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsObjectReferenceType, false),
+            HashSet<SerializedPropertyTreeNode.Filter> replacePropFilters = new() {
+                new(SerializedPropertyTreeNode.FilterFuncs.IsReadonly, true),
+                new(SerializedPropertyTreeNode.FilterFuncs.IsObjectReferenceType, false),
             };
-            HashSet<EditorUtil.SerializedObjectUtil.Filter> enterChildrenFilters = new() {
-                new(EditorUtil.SerializedObjectUtil.FilterFuncs.IsReadonly, true),
+            HashSet<SerializedPropertyTreeNode.Filter> enterChildrenFilters = new() {
+                new(SerializedPropertyTreeNode.FilterFuncs.IsReadonly, true),
             };
-            SerializedProperty[] props = EditorUtil.SerializedObjectUtil.GetAllProperties(so, addListFilters, enterChildrenFilters);
+
+            SerializedPropertyTreeNode treeRoot = SerializedPropertyTreeNode.GetPropertyTree(so, enterChildrenFilters);
+            SerializedProperty[] props = treeRoot.Where(replacePropFilters).Select(n => n.Property).ToArray();
 
             bool isChanged = false;
             HashSet<Object> objRefs = new();
@@ -212,7 +233,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 Object orig = prop.objectReferenceValue;
                 if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(orig))
                 {
-                    if (_lazyCloneList.Contains(orig))
+                    if (_lazyCloneList.Any(x => x.Object.Equals(obj)))
                     {
                         _ = LazyClone(orig);
                     }
@@ -233,6 +254,32 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (isChanged) so.ApplyModifiedPropertiesWithoutUndo();
 
             return objRefs;
+        }
+
+        private record LazyCloneRequest
+        {
+            public Object Object;
+            public bool Force;
+
+            public LazyCloneRequest(Object obj, bool force)
+            {
+                Object = obj;
+                Force = force;
+            }
+        }
+
+        private class LazyCloneRequestComparer : IEqualityComparer<LazyCloneRequest>
+        {
+            public bool Equals(LazyCloneRequest x, LazyCloneRequest y)
+            {
+                if (x == null || y == null) return x == y;
+                return x.Object.Equals(y.Object);
+            }
+
+            public int GetHashCode(LazyCloneRequest obj)
+            {
+                return obj?.Object.GetHashCode() ?? 0;
+            }
         }
     }
 }

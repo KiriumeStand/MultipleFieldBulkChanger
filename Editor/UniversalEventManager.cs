@@ -58,10 +58,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 if (filter(args) && (!IsNowNestEventing || allowNestEvent))
                 {
                     // フィルターを通る、かつ、(このイベントがネストしていない、もしくは、イベントのネストが許可されている)なら
-                    EditorUtil.Debugger.EventManagerDebugLog(args, true, isDebugMode);
+                    DebugUtil.EventManagerDebugLog(args, true, isDebugMode);
                     // イベント処理を実行
                     handler(sender, args);
-                    EditorUtil.Debugger.EventManagerDebugLog(args, false, isDebugMode);
+                    DebugUtil.EventManagerDebugLog(args, false, isDebugMode);
                 }
             };
 
@@ -142,7 +142,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (removeHandlers.Count > 0)
             {
                 (int count, int validCount) = ManagedEventCount;
-                EditorUtil.Debugger.DebugLog($"{count}/valid:{validCount}/removeWeakHandlers", LogType.Warning);
+                DebugUtil.DebugLog($"{count}/valid:{validCount}/removeWeakHandlers", LogType.Warning);
             }
         }
     }
