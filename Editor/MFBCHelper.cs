@@ -17,6 +17,58 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     public static class MFBCHelper
     {
+
+        public static ArgumentData GetArgumentData(ArgumentSetting asObj)
+        {
+            Optional<object> argValue;
+            if (asObj._IsReferenceMode)
+            {
+                argValue = GetSelectValue(asObj._SourceField);
+            }
+            else
+            {
+                argValue = new Optional<object>(asObj.InputtableValue);
+            }
+
+            ArgumentData argData = new()
+            {
+                Name = asObj._ArgumentName,
+                Value = argValue,
+                Type = argValue.Value.GetType(),
+            };
+
+            return argData;
+        }
+
+        public static Optional<object> GetSelectValue(SingleFieldSelectorContainer sfscObj)
+        {
+            Object selectObj = sfscObj._SelectObject;
+            string selectFieldPath = sfscObj._FieldSelector._SelectFieldPath;
+            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
+            {
+                return Optional<object>.None;
+            }
+            return GetSelectPathValueWithImporter(selectObj, selectFieldPath);
+        }
+
+        public static Optional<object>[] GetSelectValues(MultipleFieldSelectorContainer sfscObj)
+        {
+            Object selectObj = sfscObj._SelectObject;
+            string[] selectFieldPathes = sfscObj._FieldSelectors.Select(x => x._SelectFieldPath).ToArray();
+
+            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
+            {
+                return Array.Empty<Optional<object>>();
+            }
+
+            List<Optional<object>> results = new();
+            foreach (string selectFieldPath in selectFieldPathes)
+            {
+                results.Add(GetSelectPathValueWithImporter(selectObj, selectFieldPath));
+            }
+            return results.ToArray();
+        }
+
         public static IExpansionInspectorCustomizerTargetMarker GetTargetObject(IDisposable serializedData) => serializedData switch
         {
             SerializedObject serializedObject => GetTargetObject(serializedObject),
@@ -118,7 +170,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private static readonly Regex BlankCharRegex = new(@"\s+", RegexOptions.Compiled);
 
-        public static (bool success, Type valueType, object result) CalculateExpression(string expressionString, List<ArgumentData> argumentDatas)
+        public static (Optional<object> result, Type valueType, string errorLog) CalculateExpression(string expressionString, List<ArgumentData> argumentDatas)
+        {
+            ExpressionData expressionData = ParseExpression(expressionString);
+            if (expressionData.Expression == null) { return (Optional<object>.None, null, expressionData.ErrorLog); }
+
+            return CalculateExpression(expressionData, argumentDatas);
+        }
+
+        public static ExpressionData ParseExpression(string expressionString)
         {
             // 数式パーサー
             Processor processor = new();
@@ -129,18 +189,40 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             {
                 expression = processor.Parse(expressionString);
             }
-            catch (Exception ex) { return (false, null, ex.Message); }
+            catch (Exception e)
+            {
+                ExpressionData errorExpressionData = new()
+                {
+                    ExpressionString = expressionString,
+                    Expression = null,
+                    Variables = new(),
+                    ErrorLog = e.Message
+                };
+                return errorExpressionData;
+            }
 
-            IEnumerable<Variable> needVariables = GetAllVariables(expression).GroupBy(x => x.Name).Select(x => x.First());
+            List<Variable> variables = GetAllVariables(expression).GroupBy(x => x.Name).Select(x => x.First()).ToList();
 
+            ExpressionData expressionData = new()
+            {
+                ExpressionString = expressionString,
+                Expression = expression,
+                Variables = variables
+            };
+
+            return expressionData;
+        }
+
+        public static (Optional<object> result, Type valueType, string errorLog) CalculateExpression(ExpressionData expressionData, List<ArgumentData> argumentDatas)
+        {
             // 使用するArgumentDataのみを抽出
-            (List<ArgumentData> filteredArgumentDatas, List<Variable> missingVariables) = FilterArgumentDatas(argumentDatas, needVariables);
+            (List<ArgumentData> filteredArgumentDatas, List<Variable> missingVariables) = FilterArgumentDatas(argumentDatas, expressionData.Variables);
             // 不足している引数が無いかを確認
             if (missingVariables.Count() > 0)
             {
                 // 該当する引数が無ければエラーを返す
                 string varibleNames = string.Join("', '", missingVariables.Select(x => x.Name));
-                return (false, null, $"引数:'{varibleNames}'が設定されていません。");
+                return (Optional<object>.None, null, $"引数:'{varibleNames}'が設定されていません。");
             }
 
             // 計算式に利用できるFieldSPTypeのリスト
@@ -149,15 +231,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     FieldSPType.Vector2, FieldSPType.Vector3, FieldSPType.Vector4, FieldSPType.Rect, FieldSPType.ArraySize, FieldSPType.Quaternion };
             // 計算式に利用できないArgumentTypeのArgumentDataのリスト
             IEnumerable<ArgumentData> notAllowCalcArgumentDatas = filteredArgumentDatas.Where(
-                x => !allowCalcFieldSPTypes.Contains(x.ArgumentFieldSPType)
+                x => !allowCalcFieldSPTypes.Contains(x.FieldSPType)
             );
             // 計算式に利用できないArgumentFieldSPTypeのArgumentDataが存在するか確認
             if (notAllowCalcArgumentDatas.Count() > 0)
             {
                 // 空白文字を削除した式文字列
-                string NonBlankLowerExpressionString = BlankCharRegex.Replace(expressionString, "").ToLower();
+                string NonBlankLowerExpressionString = BlankCharRegex.Replace(expressionData.ExpressionString, "").ToLower();
 
-                if (needVariables.Count() == 1 && NonBlankLowerExpressionString == needVariables.First().Name.ToLower())
+                if (expressionData.Variables.Count() == 1 && NonBlankLowerExpressionString == expressionData.Variables.First().Name.ToLower())
                 {
                     // 必要な変数が1つのみで余計な計算式も無い(=空白文字無し代入式が唯一の変数名と完全一致する)なら
 
@@ -166,26 +248,26 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     object valueObj = argumentData.Value.Value;
                     if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(valueObj))
                     {
-                        return (true, argumentData.ArgumentType, null);
+                        return (new(null), argumentData.Type, "");
                     }
 
-                    return (true, argumentData.ArgumentType, valueObj);
+                    return (new(valueObj), argumentData.Type, ""); ;
                 }
                 else
                 {
                     // 計算式に利用できないデータを引数に指定しながら不正な代入式なら
-                    string unityObjectTypeArgumentDataNames = string.Join("', '", notAllowCalcArgumentDatas.Select(x => x.ArgumentName));
-                    return (false, null, $"引数:'{unityObjectTypeArgumentDataNames}'は計算に使用できない値であり、代入式に計算を必要とする式を指定することはできません。単一の引数名のみを入力してください。(例:代入式 = 'x1')");
+                    string unityObjectTypeArgumentDataNames = string.Join("', '", notAllowCalcArgumentDatas.Select(x => x.Name));
+                    return (Optional<object>.None, null, $"引数:'{unityObjectTypeArgumentDataNames}'は計算に使用できない値であり、代入式に計算を必要とする式を指定することはできません。単一の引数名のみを入力してください。(例:代入式 = 'x1')");
                 }
             }
 
             // ArgumentFieldSPTypeが使用できないタイプのArgumentDataのリスト
-            IEnumerable<ArgumentData> notAllowUseTypeArgumentDatas = filteredArgumentDatas.Where(x => !FieldSPTypeHelper.AllowCalculateFieldSPType(x.ArgumentFieldSPType));
+            IEnumerable<ArgumentData> notAllowUseTypeArgumentDatas = filteredArgumentDatas.Where(x => !FieldSPTypeHelper.AllowCalculateFieldSPType(x.FieldSPType));
             // ArgumentFieldSPTypeが使用できないタイプのArgumentDataが存在するか確認
             if (notAllowUseTypeArgumentDatas.Count() > 0)
             {
-                string notAllowUseTypeArgumentDataNames = string.Join("', '", notAllowUseTypeArgumentDatas.Select(x => x.ArgumentName));
-                return (false, null, $"引数:'{notAllowUseTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
+                string notAllowUseTypeArgumentDataNames = string.Join("', '", notAllowUseTypeArgumentDatas.Select(x => x.Name));
+                return (Optional<object>.None, null, $"引数:'{notAllowUseTypeArgumentDataNames}'は使用できない不正な値が設定されています。");
             }
 
             // ArgumentDataをParameterに変換
@@ -196,9 +278,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             object result;
             try
             {
-                result = expression.Execute(parameters);
+                result = expressionData.Expression.Execute(parameters);
             }
-            catch (Exception ex) { return (false, null, ex.Message); }
+            catch (Exception e) { return (Optional<object>.None, null, e.Message); }
 
             object fixedResult = result;
             switch (result)
@@ -226,14 +308,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                             fixedResult = CustomCast<Vector4>(vectorValue);
                             break;
                         default:
-                            return (false, null, $"ベクトルの次元数:'{vectorValue.Size}'が異常です。");
+                            return (Optional<object>.None, null, $"ベクトルの次元数:'{vectorValue.Size}'が異常です。");
                     }
                     break;
                 default:
-                    return (false, null, $"不明な型が返されました。値:'{fixedResult}', 型:'{fixedResult.GetType().FullName}'");
+                    return (Optional<object>.None, null, $"不明な型が返されました。値:'{fixedResult}', 型:'{fixedResult.GetType().FullName}'");
             }
 
-            return (true, fixedResult.GetType(), fixedResult);
+            return (new(fixedResult), fixedResult.GetType(), "");
         }
 
         private static IEnumerable<Variable> GetAllVariables(IExpression expression)
@@ -275,7 +357,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             {
                 string needVariableName = needVariable.Name;
 
-                ArgumentData matchArgData = argumentDatas.LastOrDefault(x => x.ArgumentName == needVariableName);
+                ArgumentData matchArgData = argumentDatas.LastOrDefault(x => x.Name == needVariableName);
 
                 // マッチしたデータがnullでないかを確認
                 if (matchArgData != null)
@@ -302,22 +384,22 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             List<Parameter> arguments = new();
             foreach (ArgumentData argumentData in argumentDatas)
             {
-                switch (argumentData.ArgumentFieldSPType)
+                switch (argumentData.FieldSPType)
                 {
                     // 変数データを追加
                     case FieldSPType.Boolean:
                         if (argumentData.Value.HasValue)
-                            arguments.Add(new(argumentData.ArgumentName, (bool)argumentData.Value.Value));
+                            arguments.Add(new(argumentData.Name, (bool)argumentData.Value.Value));
                         break;
                     case FieldSPType.Integer:
                     case FieldSPType.Float:
                         string valueNumberStr = argumentData.Value.Value.ToString();
                         if (double.TryParse(valueNumberStr, out double doubleValue))
-                            arguments.Add(new(argumentData.ArgumentName, doubleValue));
+                            arguments.Add(new(argumentData.Name, doubleValue));
                         break;
                     case FieldSPType.String:
                         if (argumentData.Value.HasValue)
-                            arguments.Add(new(argumentData.ArgumentName, (string)argumentData.Value.Value));
+                            arguments.Add(new(argumentData.Name, (string)argumentData.Value.Value));
                         break;
                     case FieldSPType.Vector2:
                     case FieldSPType.Vector3:
@@ -325,11 +407,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     case FieldSPType.Rect:
                     case FieldSPType.Color:
                     case FieldSPType.Quaternion:
-                        arguments.Add(new(argumentData.ArgumentName, CustomCast<VectorValue>(argumentData.Value.Value)));
+                        arguments.Add(new(argumentData.Name, CustomCast<VectorValue>(argumentData.Value.Value)));
                         break;
                     case FieldSPType.Enum:
                         if (argumentData.Value.HasValue)
-                            arguments.Add(new(argumentData.ArgumentName, Convert.ToInt32(argumentData.Value.Value)));
+                            arguments.Add(new(argumentData.Name, Convert.ToInt32(argumentData.Value.Value)));
                         break;
                     default:
                         break;
@@ -617,23 +699,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public static Optional<object> GetSerializedPropertyValue(SerializedProperty sp)
-        {
-            if (sp == null)
-            {
-                return Optional<object>.None;
-            }
-
-            try
-            {
-                return new Optional<object>(sp.boxedValue);
-            }
-            catch
-            {
-                return Optional<object>.None;
-            }
-        }
-
         public static Optional<object> GetSelectPathValueWithImporter(Object unityObj, string propertyPath)
         {
             SerializedProperty sp = GetSelectPathSerializedPropertyWithImporter(unityObj, propertyPath);
@@ -679,5 +744,54 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
             return null;
         }
+
+        public static Optional<object> GetSerializedPropertyValue(SerializedProperty sp)
+        {
+            if (sp == null)
+            {
+                return Optional<object>.None;
+            }
+
+            try
+            {
+                return new Optional<object>(sp.boxedValue);
+            }
+            catch
+            {
+                return Optional<object>.None;
+            }
+        }
+
+        public record ExpressionData : IEquatable<ExpressionData>
+        {
+            public string ExpressionString = "";
+            public IExpression Expression;
+            public List<Variable> Variables;
+            public string ErrorLog = "";
+
+            public virtual bool Equals(ExpressionData other)
+            {
+                return ToString() == other.ToString();
+            }
+
+            public override int GetHashCode()
+            {
+                if (Expression == null)
+                {
+                    return HashCode.Combine((ExpressionString, ErrorLog));
+                }
+                return HashCode.Combine(Expression.ToString());
+            }
+
+            public override string ToString()
+            {
+                if (Expression == null)
+                {
+                    return $"@Null({ExpressionString}):{ErrorLog}";
+                }
+                return Expression.ToString();
+            }
+        }
+
     }
 }

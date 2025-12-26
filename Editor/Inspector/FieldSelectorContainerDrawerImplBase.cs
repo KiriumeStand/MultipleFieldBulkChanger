@@ -5,9 +5,9 @@ using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public abstract class FieldSelectorContainerDrawerBase<TDrawer> : ExpansionPropertyDrawerImpl<TDrawer> where TDrawer : ExpansionPropertyDrawer
+    public abstract class FieldSelectorContainerDrawerImplBase<TDrawer> : ExpansionPropertyDrawerImpl<TDrawer> where TDrawer : ExpansionPropertyDrawer
     {
-        public FieldSelectorContainerDrawerBase() : base() { }
+        public FieldSelectorContainerDrawerImplBase() : base() { }
 
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==

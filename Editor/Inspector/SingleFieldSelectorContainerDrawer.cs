@@ -8,7 +8,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     public class SingleFieldSelectorContainerDrawer : ExpansionPropertyDrawer { }
 
     [CustomPropertyDrawer(typeof(SingleFieldSelectorContainer))]
-    public class SingleFieldSelectorContainerDrawerImpl : FieldSelectorContainerDrawerBase<SingleFieldSelectorContainerDrawer>
+    public class SingleFieldSelectorContainerDrawerImpl : FieldSelectorContainerDrawerImplBase<SingleFieldSelectorContainerDrawer>
     {
         public SingleFieldSelectorContainerDrawerImpl() : base() { }
 

@@ -7,8 +7,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     public class MultipleFieldSelectorContainerDrawer : ExpansionPropertyDrawer { }
 
-    [CustomPropertyDrawer(typeof(MultiFieldSelectorContainer))]
-    public class MultipleFieldSelectorContainerDrawerImpl : FieldSelectorContainerDrawerBase<MultipleFieldSelectorContainerDrawer>
+    [CustomPropertyDrawer(typeof(MultipleFieldSelectorContainer))]
+    public class MultipleFieldSelectorContainerDrawerImpl : FieldSelectorContainerDrawerImplBase<MultipleFieldSelectorContainerDrawer>
     {
         public MultipleFieldSelectorContainerDrawerImpl() : base() { }
 
@@ -18,14 +18,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
-            ObjectField u_SelectObject = BindHelper.BindRelative<ObjectField>(uxml, UxmlNames.SelectObject, property, nameof(MultiFieldSelectorContainer._SelectObject));
-            ListView u_SelectFields = BindHelper.BindRelative<ListView>(uxml, UxmlNames.FieldsSelector, property, nameof(MultiFieldSelectorContainer._FieldSelectors));
+            ObjectField u_SelectObject = BindHelper.BindRelative<ObjectField>(uxml, UxmlNames.SelectObject, property, nameof(MultipleFieldSelectorContainer._SelectObject));
+            ListView u_SelectFields = BindHelper.BindRelative<ListView>(uxml, UxmlNames.FieldsSelector, property, nameof(MultipleFieldSelectorContainer._FieldSelectors));
 
             // イベント発行の登録
             EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectObject, this, property, status);
             u_SelectFields.itemsAdded += (e) =>
             {
-                IExpansionInspectorCustomizer.AddListElementWithClone(((MultiFieldSelectorContainer)targetObject)._FieldSelectors, e);
+                IExpansionInspectorCustomizer.AddListElementWithClone(((MultipleFieldSelectorContainer)targetObject)._FieldSelectors, e);
             };
             u_SelectFields.itemsRemoved += (e) =>
             {

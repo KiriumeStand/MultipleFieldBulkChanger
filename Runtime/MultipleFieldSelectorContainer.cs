@@ -6,7 +6,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
 {
     // プロパティ選択
     [Serializable]
-    public class MultiFieldSelectorContainer : FieldSelectorContainerBase, ICloneable
+    public class MultipleFieldSelectorContainer : FieldSelectorContainerBase, ICloneable
     {
         // 選択プロパティのデータ
         [SerializeReference]
@@ -14,7 +14,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
 
         public object Clone()
         {
-            MultiFieldSelectorContainer clone = new();
+            MultipleFieldSelectorContainer clone = new();
 
             clone._SelectObject = _SelectObject;
             foreach (FieldSelector sfItem in _FieldSelectors)

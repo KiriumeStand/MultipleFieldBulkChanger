@@ -27,7 +27,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     if (!fcsPropObj._Enable) continue;
 
-                    foreach (MultiFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
+                    foreach (MultipleFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
                     {
                         willEditObjects.Add(mfscPropObj._SelectObject);
                     }
@@ -98,27 +98,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     List<ArgumentData> argDatas = new();
                     foreach (ArgumentSetting asPropObj in mfbcComponent._ArgumentSettings)
                     {
-                        Optional<object> argValue = default;
-                        if (asPropObj._IsReferenceMode)
-                        {
-                            Object selectObj = asPropObj._SourceField._SelectObject;
-                            string selectFieldPath = asPropObj._SourceField._FieldSelector._SelectFieldPath;
-                            if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
-                            {
-                                argValue = MFBCHelper.GetSelectPathValueWithImporter(selectObj, selectFieldPath);
-                            }
-                        }
-                        else
-                        {
-                            argValue = new Optional<object>(asPropObj.InputtableValue);
-                        }
-
-                        ArgumentData argData = new()
-                        {
-                            ArgumentName = asPropObj._ArgumentName,
-                            Value = argValue,
-                            ArgumentType = argValue.GetType(),
-                        };
+                        ArgumentData argData = MFBCHelper.GetArgumentData(asPropObj);
                         argDatas.Add(argData);
                     }
 
@@ -128,15 +108,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                         string expression = fcsPropObj._Expression;
                         // 代入式を解く
-                        (bool expressionSuccess, Type resultValueType, object result) = MFBCHelper.CalculateExpression(expression, argDatas);
+                        (Optional<object> result, Type resultValueType, string calcErrorLog) = MFBCHelper.CalculateExpression(expression, argDatas);
 
-                        if (!expressionSuccess)
+                        if (!result.HasValue)
                         {
-                            Logger.Log($"代入式の計算に失敗しました。\n代入式:'{expression}'\n計算エラーログ:'{result}'", LogType.Error, "");
+                            Logger.Log($"代入式の計算に失敗しました。\n代入式:'{expression}'\n計算エラーログ:'{calcErrorLog}'", LogType.Error, "");
                             continue;
                         }
 
-                        foreach (MultiFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
+                        foreach (MultipleFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
                         {
                             if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(mfscPropObj._SelectObject))
                             {
@@ -183,24 +163,24 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                 }
 
                                 // 代入先と代入値の型の相性は問題ないか確認
-                                bool isValid = MFBCHelper.ValidationTypeAssignable(result.GetType(), targetFieldType);
+                                bool isValid = MFBCHelper.ValidationTypeAssignable(result.Value.GetType(), targetFieldType);
 
                                 if (!isValid)
                                 {
-                                    Logger.Log($"指定されたプロパティの型に対し、代入しようとした値の型が不適合です。\n{selectPropertyInfo}\n代入値の型:'{result.GetType().FullName}', 代入先の型:'{targetFieldType}'", LogType.Error, "");
+                                    Logger.Log($"指定されたプロパティの型に対し、代入しようとした値の型が不適合です。\n{selectPropertyInfo}\n代入値の型:'{result.Value.GetType().FullName}', 代入先の型:'{targetFieldType}'", LogType.Error, "");
                                     continue;
                                 }
 
                                 // カスタムキャスト処理
-                                object customCastedResult = MFBCHelper.CustomCast(result, targetFieldType);
+                                object customCastedResult = MFBCHelper.CustomCast(result.Value, targetFieldType);
                                 if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(customCastedResult))
                                 {
-                                    result = customCastedResult;
+                                    customCastedResult = null;
                                 }
 
                                 try
                                 {
-                                    targetProperty.boxedValue = result;
+                                    targetProperty.boxedValue = customCastedResult;
                                     targetProperty.serializedObject.ApplyModifiedPropertiesWithoutUndo();
                                     if (targetProperty.serializedObject.targetObject is AssetImporter importer)
                                     {
