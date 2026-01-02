@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
@@ -45,6 +44,22 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         public void RejectChanges()
         {
             _currentValue = _originalValue;
+        }
+    }
+
+    public static class TrackableHelper
+    {
+        public static Trackable<T> CreateOrUpdate<T>(this Trackable<T> trackable, T setValue)
+        {
+            if (trackable == null)
+            {
+                return new(setValue, true);
+            }
+            else
+            {
+                trackable.Value = setValue;
+                return trackable;
+            }
         }
     }
 }

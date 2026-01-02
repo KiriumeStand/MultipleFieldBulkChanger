@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
-using UnityEditor;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
@@ -59,13 +58,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ SerializedProperty系 ========================= ▼
         // MARK: ==SerializedProperty系==
 
-        public static readonly ConditionalWeakTable<FieldSelectorContainerBase, List<SerializedPropertyTreeNode>> targetObjectAllPropertiesNodesCache = new();
-
         public static readonly ConditionalWeakTable<FieldSelectorContainerBase, SerializedPropertyTreeNode> targetObjectPropertyTreeRootCache = new();
-
-        public static readonly ConditionalWeakTable<FieldSelectorContainerBase, SerializedObject> targetObjectRootSerializedObjectCache = new();
-
-        public static readonly ConditionalWeakTable<FieldSelector, SerializedProperty> selectFieldPropertyCache = new();
 
         public static readonly ConditionalWeakTable<FieldChangeSetting, Optional<object>> expressionResultCache = new();
 

@@ -94,6 +94,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
+        // MARK: TODO:ここの返値の型をobjectにする
         public static IExpansionInspectorCustomizerTargetMarker GetTargetObject(SerializedProperty property)
         {
             try
@@ -355,9 +356,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             List<Variable> missingVariables = new();
             foreach (Variable needVariable in needVariables)
             {
-                string needVariableName = needVariable.Name;
-
-                ArgumentData matchArgData = argumentDatas.LastOrDefault(x => x.Name == needVariableName);
+                ArgumentData matchArgData = argumentDatas.LastOrDefault(x => x.Name == needVariable.Name);
 
                 // マッチしたデータがnullでないかを確認
                 if (matchArgData != null)
@@ -367,7 +366,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 else
                 {
-                    if (!constantsNames.Contains(needVariableName))
+                    if (!constantsNames.Contains(needVariable.Name))
                     {
                         // nullかつ、定数値の名前でもないなら不足変数リストに追加
                         missingVariables.Add(needVariable);

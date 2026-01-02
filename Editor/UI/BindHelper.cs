@@ -32,7 +32,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             string relativePath
         ) where T : VisualElement, IBindable
         {
-            if (parent == null) throw new ArgumentNullException(nameof(parent));
+            if (parent == null)
+                throw new ArgumentNullException(nameof(parent));
             T element = UIQuery.Q<T>(root, elementName);
             SerializedProperty property = parent.SafeFindPropertyRelative(relativePath);
             if (property == null)

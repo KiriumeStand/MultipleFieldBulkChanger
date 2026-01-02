@@ -33,7 +33,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             ObjectField u_SelectObject = UIQuery.Q<ObjectField>(uxml, UxmlNames.SelectObject);
 
             // イベント購読の登録
-            EventUtil.SubscribeFieldValueChangedEvent<UnityEngine.Object>(u_SelectObject, this, property, status,
+            EventUtil.SubscribeFieldValueChangedEvent(u_SelectObject, this, property, status,
                 (sender, args) => { OnFieldSelectorSelectObjectChangedEventHandler(args, uxml, status); });
 
             UpdateSerializedPropertiesCache(property, uxml, status, u_SelectObject.value);

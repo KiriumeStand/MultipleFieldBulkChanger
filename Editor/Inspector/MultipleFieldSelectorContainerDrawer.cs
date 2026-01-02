@@ -18,6 +18,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
+            MultipleFieldBulkChangerVM viewModel = MultipleFieldBulkChangerVM.GetInstance(property.serializedObject);
+
             ObjectField u_SelectObject = BindHelper.BindRelative<ObjectField>(uxml, UxmlNames.SelectObject, property, nameof(MultipleFieldSelectorContainer._SelectObject));
             ListView u_SelectFields = BindHelper.BindRelative<ListView>(uxml, UxmlNames.FieldsSelector, property, nameof(MultipleFieldSelectorContainer._FieldSelectors));
 
@@ -26,11 +28,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             u_SelectFields.itemsAdded += (e) =>
             {
                 IExpansionInspectorCustomizer.AddListElementWithClone(((MultipleFieldSelectorContainer)targetObject)._FieldSelectors, e);
+
+                viewModel.Recalculate();
             };
             u_SelectFields.itemsRemoved += (e) =>
             {
                 ListViewItemsRemovedEventArgs args = new(this, property, u_SelectFields, status, e);
                 ((IExpansionInspectorCustomizer)this).Publish(args);
+
+                viewModel.Recalculate();
             };
 
             // イベント購読の登録
@@ -42,7 +48,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             ObjectField u_SelectObject = UIQuery.Q<ObjectField>(uxml, UxmlNames.SelectObject);
 
             // イベント購読の登録
-            EventUtil.SubscribeFieldValueChangedEvent<UnityEngine.Object>(u_SelectObject, this, property, status,
+            EventUtil.SubscribeFieldValueChangedEvent(u_SelectObject, this, property, status,
                 (sender, args) => { OnFieldSelectorSelectObjectChangedEventHandler(args, uxml, status); });
 
             UpdateSerializedPropertiesCache(property, uxml, status, u_SelectObject.value);

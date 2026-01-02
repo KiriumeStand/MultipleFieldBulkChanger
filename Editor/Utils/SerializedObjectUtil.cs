@@ -80,6 +80,21 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return (bool)result;
         }
 
+        public static SerializedProperty[] GetPropertyStack(SerializedProperty property)
+        {
+            List<SerializedProperty> propertyStack = new();
+            (SerializedObject, SerializedProperty) curProp = (property.serializedObject, property);
+            while (curProp.Item2 != null)
+            {
+                propertyStack.Add(curProp.Item2);
+                curProp = GetParentPropertyAndRootObject(curProp);
+            }
+
+            propertyStack.Reverse();
+
+            return propertyStack.ToArray();
+        }
+
         public static SerializedProperty GetParentProperty(SerializedProperty property) => GetParentPropertyAndRootObject(property).Item2;
 
         public static (SerializedObject, SerializedProperty) GetParentPropertyAndRootObject(SerializedProperty property)

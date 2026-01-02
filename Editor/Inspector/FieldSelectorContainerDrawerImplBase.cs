@@ -1,4 +1,3 @@
-using System.Linq;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEngine.UIElements;
@@ -86,29 +85,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             // 偽装NullかNullならNullに統一
             selectedObject = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject) ? null : selectedObject;
 
-            SerializedObject selectedSerializedObject = null;
             SerializedPropertyTreeNode propertyRoot = new("None", null, null);
             if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject))
             {
-                selectedSerializedObject = new(selectedObject);
-                propertyRoot = SerializedPropertyTreeNode.GetPropertyTreeWithImporter(selectedSerializedObject, new());
+                propertyRoot = SerializedPropertyTreeNode.GetPropertyTreeWithImporter(new(selectedObject), new());
             }
 
             FieldSelectorContainerBase targetObject = MFBCHelper.GetTargetObject(property) as FieldSelectorContainerBase;
 
-            UniversalDataManager.targetObjectAllPropertiesNodesCache.AddOrUpdate(targetObject, propertyRoot.GetAllNode().ToList());
-            UniversalDataManager.targetObjectRootSerializedObjectCache.AddOrUpdate(targetObject, selectedSerializedObject);
-
             UniversalDataManager.targetObjectPropertyTreeRootCache.AddOrUpdate(targetObject, propertyRoot);
-
-            OnSelectObjectSerializedPropertiesUpdateEventPublish(property, uxml, status, selectedSerializedObject);
-        }
-
-        private void OnSelectObjectSerializedPropertiesUpdateEventPublish(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedObject serializedObject)
-        {
-            property.serializedObject.Update();
-            SelectObjectSerializedPropertiesUpdateEventArgs args = new(this, property, uxml, status, serializedObject);
-            ((IExpansionInspectorCustomizer)this).Publish(args);
         }
 
         // ▲ メソッド ========================= ▲
