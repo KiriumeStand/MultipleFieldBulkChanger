@@ -19,6 +19,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         internal Trackable<string> m_Expression { get; private set; }
 
         internal Trackable<MFBCHelper.ExpressionData> ExpressionData { get; private set; }
+        internal Trackable<string> ValidArgumentList { get; private set; }
 
         internal Trackable<Optional<object>> ExpressionResult { get; private set; }
         internal Trackable<Optional<string>> ExpressionErrorLog { get; private set; }
@@ -138,12 +139,16 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     .Where(arg => arg != null).ToHashSet();
 
                 bool existModifiedNeedArgs = needArguments.Count() > 0 && needArguments.Any(a => a.IsModified);
+                string needArgumentNames = string.Join(", ", needArguments.Select(a => a.Value.Name).OrderBy(n => n));
+                ValidArgumentList = ValidArgumentList.CreateOrUpdate(needArgumentNames);
 
-                if (ExpressionData.IsModified || existModifiedNeedArgs)
+                if (ExpressionData.IsModified || ValidArgumentList.IsModified || existModifiedNeedArgs)
                 {
                     (Optional<object> calcResult, Type calcValueType, string calcErrorLog) = MFBCHelper.CalculateExpression(ExpressionData.Value, needArguments.Select(a => a.Value).ToList());
                     result = calcResult;
                     errorLog = string.IsNullOrEmpty(calcErrorLog) ? Optional<string>.None : new(calcErrorLog);
+
+                    ValidArgumentList.AcceptChanges();
                 }
             }
             ExpressionData.AcceptChanges();

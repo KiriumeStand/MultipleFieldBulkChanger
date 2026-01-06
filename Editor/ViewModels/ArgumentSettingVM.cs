@@ -35,6 +35,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         internal Gradient vm_ReferenceGradientValue;
         [SerializeField]
         internal string vm_ReferenceInvalidValueLabel;
+        internal object vm_ReferenceGenericObjectValue;
 
         [SerializeField]
         internal SingleFieldSelectorContainerVM vm_SourceField;
@@ -60,12 +61,20 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (m_IsReferenceMode.Value)
             {
                 FieldSelectorVM fsVM = vm_SourceField.vm_FieldSelector;
-                Trackable<Optional<object>> selectValue = fsVM.SelectValue;
                 Trackable<Optional<Type>> selectFieldType = fsVM.SelectFieldType;
+                Trackable<Optional<object>> selectValue = fsVM.SelectValue;
 
-                if (selectValue.IsModified)
+                FieldSPType curFieldSPType = FieldSPType.Generic;
+                if (selectFieldType.Value.HasValue)
                 {
-                    vm_ReferenceArgumentType = FieldSPTypeHelper.Parse2FieldSPType(selectFieldType.Value.Value);
+                    curFieldSPType = FieldSPTypeHelper.Parse2FieldSPType(selectFieldType.Value.Value);
+                }
+
+                object curObject = GetReferenceValues(curFieldSPType);
+
+                if (selectValue.IsModified || selectFieldType.IsModified || (selectValue.Value.HasValue && !selectValue.Value.Value.Equals(curObject)))
+                {
+                    vm_ReferenceArgumentType = curFieldSPType;
                     UpdateReferenceValues(selectValue.Value.Value, vm_ReferenceArgumentType);
                 }
 
@@ -89,6 +98,25 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
 
             m_IsReferenceMode.AcceptChanges();
+        }
+
+        private object GetReferenceValues(FieldSPType fieldSPType)
+        {
+            return fieldSPType switch
+            {
+                FieldSPType.Boolean => vm_ReferenceBoolValue,
+                FieldSPType.Enum or FieldSPType.Integer or FieldSPType.Float => vm_ReferenceNumberValue,
+                FieldSPType.String => vm_ReferenceStringValue,
+                FieldSPType.Color => vm_ReferenceColorValue,
+                FieldSPType.ObjectReference => vm_ReferenceObjectValue,
+                FieldSPType.Vector2 or FieldSPType.Vector2Int => vm_ReferenceVector2Value,
+                FieldSPType.Vector3 or FieldSPType.Vector3Int => vm_ReferenceVector3Value,
+                FieldSPType.Vector4 or FieldSPType.Quaternion or FieldSPType.Rect or FieldSPType.RectInt => vm_ReferenceVector4Value,
+                FieldSPType.Bounds or FieldSPType.BoundsInt => vm_ReferenceBoundsValue,
+                FieldSPType.AnimationCurve => vm_ReferenceCurveValue,
+                FieldSPType.Gradient => vm_ReferenceGradientValue,
+                _ => vm_ReferenceGenericObjectValue,
+            };
         }
 
         private void UpdateReferenceValues(object selectObject, FieldSPType fieldSPType)
@@ -131,10 +159,19 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     vm_ReferenceBoundsValue = MFBCHelper.CustomCast<Bounds>(selectObject);
                     break;
                 case FieldSPType.AnimationCurve:
-                    vm_ReferenceCurveValue = MFBCHelper.CustomCast<AnimationCurve>(selectObject);
+                    vm_ReferenceCurveValue = new();
+                    vm_ReferenceCurveValue.CopyFrom(MFBCHelper.CustomCast<AnimationCurve>(selectObject));
                     break;
                 case FieldSPType.Gradient:
-                    vm_ReferenceGradientValue = MFBCHelper.CustomCast<Gradient>(selectObject);
+                    Gradient gradient = MFBCHelper.CustomCast<Gradient>(selectObject);
+                    Gradient copyGradient = new()
+                    {
+                        alphaKeys = gradient.alphaKeys,
+                        colorKeys = gradient.colorKeys,
+                        colorSpace = gradient.colorSpace,
+                        mode = gradient.mode,
+                    };
+                    vm_ReferenceGradientValue = copyGradient;
                     break;
                 default:
                     bool isObjNull = EditorUtil.FakeNullUtil.IsNullOrFakeNull(selectObject);
@@ -142,6 +179,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     string objInfo = isObjNull ? "Null" : selectObject.ToString();
                     string invalidText = $"Invalid ({objTypeName}{objInfo})";
                     vm_ReferenceInvalidValueLabel = invalidText;
+                    vm_ReferenceGenericObjectValue = selectObject;
                     break;
             }
         }

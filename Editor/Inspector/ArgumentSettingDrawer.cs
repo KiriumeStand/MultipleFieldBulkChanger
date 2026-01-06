@@ -67,12 +67,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             u_ReferenceArgumentType.SetEnabled(false);
 
             VisualElementUtil.TextBaseFieldSetReadOnlys(
-                (u_ReferenceNumberValueField, false),
-                (u_ReferenceStringValueField, false),
-                (u_ReferenceVector2ValueField, false),
-                (u_ReferenceVector3ValueField, false),
-                (u_ReferenceVector4ValueField, false),
-                (u_ReferenceBoundsValueField, false)
+                (u_ReferenceNumberValueField, true),
+                (u_ReferenceStringValueField, true),
+                (u_ReferenceVector2ValueField, true),
+                (u_ReferenceVector3ValueField, true),
+                (u_ReferenceVector4ValueField, true),
+                (u_ReferenceBoundsValueField, true)
             );
 
             // イベント購読の登録

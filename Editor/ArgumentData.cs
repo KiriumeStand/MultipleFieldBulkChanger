@@ -16,8 +16,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public virtual bool Equals(ArgumentData other)
         {
-            return Name == other.Name &&
-                Type == other.Type &&
+            return Name == other.Name && Type == other.Type &&
                 EqualityComparer<Optional<object>>.Default.Equals(Value, other.Value);
         }
 

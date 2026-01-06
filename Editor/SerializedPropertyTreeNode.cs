@@ -158,7 +158,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             // 元リストを書き換えないようにコピー
             enterChildrenFilters = enterChildrenFilters.ToHashSet();
 
-            enterChildrenFilters.Add(new(FilterFuncs.EnterChildrenObjectDefault, false));
+            enterChildrenFilters.Add(new(FilterFuncs.EnterChildrenSODefault, false));
 
             SerializedProperty curSP = so.GetIterator();
 
@@ -217,7 +217,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 // スタックを追加
                 spStack.Add(curSPCopy);
                 bool includeInvisible = true;
-                // このプロパティの子孫はない次のプロパティ
+                // このプロパティの子孫じゃない次のプロパティ
                 endSPStack.Add(curSP.GetEndProperty(includeInvisible));
 
                 // serializedPropertyをフィルターにかける
@@ -227,11 +227,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 // ノードを作成する
                 string name = curSP.propertyPath[lastPathStartIndex..];
                 SerializedPropertyTreeNode newChild = new(name, curSP.serializedObject, curSPCopy);
-                if (enterChildren)
-                {
-                    curParentNode.AddChild(newChild);
-                    curParentNode = newChild;
-                }
+                curParentNode.AddChild(newChild);
+                curParentNode = newChild;
 
                 // 次の要素を取得
                 bool existNext = curSP.Next(enterChildren);
@@ -291,13 +288,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             public static readonly FilterFuncType AnyTrue = static (root, spStack) => { return true; };
 
-            [Obsolete]
-            public static readonly FilterFuncType AddListPropertyDefault = static (root, spStack) =>
-            {
-                return spStack.Count() > 0;
-            };
-
-            public static readonly FilterFuncType EnterChildrenObjectDefault = static (root, spStack) =>
+            public static readonly FilterFuncType EnterChildrenSODefault = static (root, spStack) =>
             {
                 if (spStack.Count() > 0)
                 {
@@ -384,41 +375,38 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 string propertyPath = lastStack.propertyPath;
                 Object targetObject = lastStack.serializedObject.targetObject;
 
-                if (targetObject is Object)
+                if (targetObject is GameObject)
                 {
-                    if (targetObject is GameObject)
+                    if (propertyPath.StartsWith("m_Component.Array.data["))
                     {
-                        if (propertyPath.StartsWith("m_Component.Array.data["))
+                        return true;
+                    }
+                }
+
+                if (targetObject is Component)
+                {
+                    if (propertyPath.StartsWith("m_GameObject"))
+                    {
+                        return true;
+                    }
+                    if (targetObject is Transform)
+                    {
+                        if (
+                            propertyPath.StartsWith("m_Children.Array.data[") ||
+                            propertyPath.StartsWith("m_Father")
+                        )
                         {
                             return true;
                         }
                     }
+                }
 
-                    if (targetObject is Component)
+                if (targetObject is AnimationClip)
+                {
+                    if (eulerCurvePropPathRegex.IsMatch(propertyPath))
                     {
-                        if (propertyPath.StartsWith("m_GameObject"))
-                        {
-                            return true;
-                        }
-                        if (targetObject is Transform)
-                        {
-                            if (
-                                propertyPath.StartsWith("m_Children.Array.data[") ||
-                                propertyPath.StartsWith("m_Father")
-                            )
-                            {
-                                return true;
-                            }
-                        }
-                    }
-
-                    if (targetObject is AnimationClip)
-                    {
-                        if (eulerCurvePropPathRegex.IsMatch(propertyPath))
-                        {
-                            // こいつが本当にヤバい。変更して Apply すると一瞬でクソデカメモリリークして恐ろしい負荷がかかる。絶対に変更してはいけない
-                            return true;
-                        }
+                        // こいつが本当にヤバい。変更して Apply すると一瞬でクソデカメモリリークして恐ろしい負荷がかかる。絶対に変更してはいけない
+                        return true;
                     }
                 }
 
