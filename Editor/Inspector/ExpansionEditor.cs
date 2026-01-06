@@ -1,9 +1,8 @@
 using System;
-using System.Runtime.CompilerServices;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
-using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
@@ -22,20 +21,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         public VisualTreeAsset UXML => uxml;
         public StyleSheet USS => uss;
 
-        public string SourceFilePath { get; }
-
         private VisualElement _uxml;
 
         private InspectorCustomizerStatus _status;
-
-        /// <summary>
-        /// 継承先は必ずこのコンストラクターを明示的に呼び出さなくてはならない
-        /// </summary>
-        /// <param name="sourceFilePath"></param>
-        public ExpansionEditor([CallerFilePath] string sourceFilePath = "")
-        {
-            SourceFilePath = new System.IO.FileInfo(sourceFilePath).FullName;
-        }
 
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==

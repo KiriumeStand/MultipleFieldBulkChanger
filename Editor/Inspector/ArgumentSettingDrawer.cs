@@ -16,8 +16,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         private static readonly string _fieldSelectorPath = $"{nameof(ArgumentSetting._SourceField)}.{nameof(SingleFieldSelectorContainer._FieldSelector)}";
         private static readonly string _fsSelectFieldPathPath = $"{_fieldSelectorPath}.{nameof(FieldSelector._SelectFieldPath)}";
 
-        public ArgumentSettingDrawerImpl() : base() { }
-
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
@@ -46,8 +44,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             CurveField u_InputtableCurveValueField = BindHelper.BindRelative<CurveField>(uxml, UxmlNames.InputtableFields.CurveValueField, property, nameof(ArgumentSetting._InputtableCurveValue));
             GradientField u_InputtableGradientValueField = BindHelper.BindRelative<GradientField>(uxml, UxmlNames.InputtableFields.GradientValueField, property, nameof(ArgumentSetting._InputtableGradientValue));
 
-            //Label u_InputtableInvalidValueLabel = UIQuery.Q<Label>(uxml, UxmlNames.InputtableFields.InvalidValueLabel);
-
             PropertyField u_SourceField = BindHelper.BindRelative<PropertyField>(uxml, UxmlNames.SourceField, property, nameof(ArgumentSetting._SourceField));
 
             Toggle u_ReferenceBoolValueField = BindHelper.BindRelative<Toggle>(uxml, UxmlNames.ReferenceFields.BoolValueField, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceBoolValue));
@@ -68,15 +64,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             u_InputtableArgumentType.Init(SelectableFieldType.Number);
             u_ReferenceArgumentType.Init(FieldSPType.Float);
 
-            VisualElementUtil.SetEnableds(
-                (u_ReferenceArgumentType, false)
-
-            //(u_ReferenceBoolValueField, false),
-            //(u_ReferenceObjectValueField, false),
-            //(u_ReferenceColorValueField, false),
-            ////(u_ReferenceCurveValueField, false),
-            //(u_ReferenceGradientValueField, false)
-            );
+            u_ReferenceArgumentType.SetEnabled(false);
 
             VisualElementUtil.TextBaseFieldSetReadOnlys(
                 (u_ReferenceNumberValueField, false),
@@ -86,12 +74,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 (u_ReferenceVector4ValueField, false),
                 (u_ReferenceBoundsValueField, false)
             );
-
-
-            // イベント発行の登録
-            EventUtil.RegisterFieldValueChangeEventPublisher(u_IsReferenceMode, this, property, status);
-            EventUtil.RegisterFieldValueChangeEventPublisher(u_InputtableArgumentType, this, property, status);
-            EventUtil.RegisterFieldValueChangeEventPublisher(u_ReferenceArgumentType, this, property, status);
 
             // イベント購読の登録
             ((IExpansionInspectorCustomizer)this).Subscribe<ListViewItemsRemovedEventArgs>(this,
@@ -108,14 +90,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
+                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
                     bool isSenderIsAncestorProperty = false;
                     foreach (int index in e.RemovedIndex)
                     {
                         string targetPathPrefix = $"{senderBindingPropertyInstancePath}.Array.data[{index}]";
-                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetPropertyInstancePath(property).StartsWith(targetPathPrefix);
+                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetSerializedPropertyInstancePath(property).StartsWith(targetPathPrefix);
                     }
 
                     return isSameEditorInstance && isSenderIsAncestorProperty;
@@ -126,22 +108,19 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public override void DelayCallCore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
-            string propertyInstancePath = SerializedObjectUtil.GetPropertyInstancePath(property);
+            string propertyInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(property);
 
             Toggle u_IsReferenceMode = UIQuery.Q<Toggle>(uxml, UxmlNames.IsReferenceMode);
             EnumField u_InputtableArgumentType = UIQuery.Q<EnumField>(uxml, UxmlNames.InputtableArgumentType);
             EnumField u_ReferenceArgumentType = UIQuery.Q<EnumField>(uxml, UxmlNames.ReferenceArgumentType);
 
             // イベント購読の登録
-            EventUtil.SubscribeFieldValueChangedEvent(u_IsReferenceMode, this, property, status,
-                (sender, args) => { OnArgumentSettingIsReferenceModeChangedEventHandler(args, property, uxml, targetObject, status, propertyInstancePath); });
-            EventUtil.SubscribeFieldValueChangedEvent(u_InputtableArgumentType, this, property, status,
-                (sender, args) => { OnArgumentSettingArgumentTypeChangedEventHandler(args, property, uxml, targetObject, status); });
-            EventUtil.SubscribeFieldValueChangedEvent(u_ReferenceArgumentType, this, property, status,
-                (sender, args) => { OnArgumentSettingArgumentTypeChangedEventHandler(args, property, uxml, targetObject, status); });
+            u_IsReferenceMode.RegisterValueChangedCallback(e => OnArgumentSettingIsReferenceModeChangedEventHandler(e, property, uxml, status));
+            u_InputtableArgumentType.RegisterValueChangedCallback(e => OnArgumentSettingArgumentTypeChangedEventHandler(e, property, uxml, status, u_InputtableArgumentType));
+            u_ReferenceArgumentType.RegisterValueChangedCallback(e => OnArgumentSettingArgumentTypeChangedEventHandler(e, property, uxml, status, u_ReferenceArgumentType));
 
-            bool isReferenceMode = property.SafeFindPropertyRelative(nameof(ArgumentSetting._IsReferenceMode)).boolValue;
-            SelectableFieldType inputtableArgumentSelectableType = (SelectableFieldType)property.SafeFindPropertyRelative(nameof(ArgumentSetting._InputtableArgumentType)).enumValueFlag;
+            bool isReferenceMode = property.FindPropertyRelative(nameof(ArgumentSetting._IsReferenceMode)).boolValue;
+            SelectableFieldType inputtableArgumentSelectableType = (SelectableFieldType)property.FindPropertyRelative(nameof(ArgumentSetting._InputtableArgumentType)).enumValueFlag;
             FieldSPType inputtableArgumentFieldSPType = inputtableArgumentSelectableType.ToFieldSPType();
 
             (object selectFieldValue, Type referenceArgumentType) = GetSelectFieldValueAndType(property);
@@ -169,9 +148,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// </summary>
         /// <param name="args"></param>
         /// <param name="property"></param>
-        private void OnArgumentSettingIsReferenceModeChangedEventHandler(FieldValueChangedEventArgs<bool> args, SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status, string propertyInstancePath)
+        private void OnArgumentSettingIsReferenceModeChangedEventHandler(ChangeEvent<bool> e, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
         {
-            UpdateSettingContainerDisplaySettings(property, uxml, args.NewValue);
+            UpdateSettingContainerDisplaySettings(property, uxml, e.newValue);
         }
 
         /// <summary>
@@ -179,22 +158,21 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// </summary>
         /// <param name="args"></param>
         /// <param name="property"></param>
-        private void OnArgumentSettingArgumentTypeChangedEventHandler(FieldValueChangedEventArgs<Enum> args, SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        private void OnArgumentSettingArgumentTypeChangedEventHandler(ChangeEvent<Enum> e, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, EnumField sender)
         {
-            if (args.NewValue != null)
+            if (e.newValue != null)
             {
                 EnumField u_ReferenceArgumentType = UIQuery.Q<EnumField>(uxml, UxmlNames.ReferenceArgumentType);
-                bool isReferenceMode = args.SenderElement == u_ReferenceArgumentType;
+                bool isReferenceMode = sender == u_ReferenceArgumentType;
 
                 FieldSPType newFieldSPType;
-                if (!isReferenceMode)
+                if (isReferenceMode)
                 {
-                    SelectableFieldType newValue = (SelectableFieldType)args.NewValue;
-                    newFieldSPType = newValue.ToFieldSPType();
+                    newFieldSPType = (FieldSPType)e.newValue;
                 }
                 else
                 {
-                    newFieldSPType = (FieldSPType)args.NewValue;
+                    newFieldSPType = ((SelectableFieldType)e.newValue).ToFieldSPType();
                 }
 
                 UpdateValueFieldsDisplaySettings(property, uxml, newFieldSPType, isReferenceMode);
@@ -221,7 +199,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             SerializedProperty selectFieldSP = GetSelectObjectFieldProperty(property);
             if (selectFieldSP != null)
             {
-                (bool success, Type type, string errorLog) = selectFieldSP.GetFieldType();
+                (bool success, Type type, _) = selectFieldSP.GetFieldType();
                 if (success)
                 {
                     selectFieldType = type;
@@ -237,10 +215,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private SerializedProperty GetSelectObjectFieldProperty(SerializedProperty property)
         {
-            UnityEngine.Object selectObj = property.SafeFindPropertyRelative($"{nameof(ArgumentSetting._SourceField)}.{nameof(SingleFieldSelectorContainer._SelectObject)}").objectReferenceValue;
-            string selectFieldPath = property.SafeFindPropertyRelative(_fsSelectFieldPathPath).stringValue;
+            UnityEngine.Object selectObj = property.FindPropertyRelative($"{nameof(ArgumentSetting._SourceField)}.{nameof(SingleFieldSelectorContainer._SelectObject)}").objectReferenceValue;
+            string selectFieldPath = property.FindPropertyRelative(_fsSelectFieldPathPath).stringValue;
 
-            if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
+            if (!EditorUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
             {
                 return MFBCHelper.GetSelectPathSerializedProperty(selectObj, selectFieldPath);
             }

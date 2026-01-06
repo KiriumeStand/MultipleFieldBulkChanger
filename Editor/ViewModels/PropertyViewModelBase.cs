@@ -1,21 +1,21 @@
 using System;
 using UnityEditor;
+using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     [Serializable]
-    public abstract class PropertyViewModelBase<TModel> : IViewModel
+    internal abstract class ViewModelPropertyBase<TModel> : IViewModel
         where TModel : class
     {
-        public PropertyViewModelBase() { }
+        [SerializeField]
+        internal string vm_DebugLabelText;
 
         protected SerializedProperty TargetProperty { get; private set; }
 
-        public TModel Model => (TModel)MFBCHelper.GetTargetObject(TargetProperty);
+        internal TModel Model => (TModel)MFBCHelper.GetTargetObject(TargetProperty);
 
-        public string vm_DebugLabelText;
-
-        public void InitializeSetting(SerializedProperty targetProperty)
+        internal void InitializeSetting(SerializedProperty targetProperty)
         {
             TargetProperty = targetProperty;
         }

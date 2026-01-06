@@ -9,9 +9,9 @@ using Object = UnityEngine.Object;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public class MultipleFieldBulkChangerProcessor
+    internal class MultipleFieldBulkChangerProcessor
     {
-        public static void Execute(BuildContext ctx)
+        internal static void Execute(BuildContext ctx)
         {
             Object.FindObjectOfType<Object>(true);
             // MultipleFieldBulkChanger の一覧を取得
@@ -107,8 +107,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         if (!fcsPropObj._Enable) continue;
 
                         string expression = fcsPropObj._Expression;
-                        // 代入式を解く
-                        (Optional<object> result, Type resultValueType, string calcErrorLog) = MFBCHelper.CalculateExpression(expression, argDatas);
+
+                        // 代入式をパース
+                        MFBCHelper.ExpressionData expressionData = MFBCHelper.ParseExpression(expression);
+
+                        // パースした代入式を解く
+                        (Optional<object> result, Type resultValueType, string calcErrorLog) = expressionData.Expression != null ? MFBCHelper.CalculateExpression(expressionData, argDatas) : (Optional<object>.None, null, expressionData.ErrorLog);
 
                         if (!result.HasValue)
                         {
@@ -118,47 +122,47 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                         foreach (MultipleFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
                         {
-                            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(mfscPropObj._SelectObject))
+                            if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(mfscPropObj._SelectObject))
                             {
                                 // MultiFieldSelectorContainer でオブジェクトが指定されていない場合
                                 continue;
                             }
 
-                            SerializedObject targetSerializedObject = new(mfscPropObj._SelectObject);
+                            SerializedObject targetSO = new(mfscPropObj._SelectObject);
 
-                            SerializedPropertyTreeNode propertyRoot = SerializedPropertyTreeNode.GetPropertyTreeWithImporter(targetSerializedObject, new());
+                            SerializedPropertyTreeNode spTreeRoot = SerializedPropertyTreeNode.GetSerializedPropertyTreeWithImporter(targetSO, new());
 
                             foreach (FieldSelector fsPropObj in mfscPropObj._FieldSelectors)
                             {
 
-                                SerializedPropertyTreeNode[] allNode = propertyRoot.GetAllNode();
-                                SerializedPropertyTreeNode targetPropertyNode = allNode.FirstOrDefault(x => x.FullPath == fsPropObj._SelectFieldPath);
+                                SerializedPropertyTreeNode[] allNode = spTreeRoot.GetAllNode();
+                                SerializedPropertyTreeNode targetSPTreeNode = allNode.FirstOrDefault(x => x.FullPath == fsPropObj._SelectFieldPath);
 
-                                string selectPropertyInfo = $"指定されたオブジェクト:'{mfscPropObj._SelectObject.name}({mfscPropObj._SelectObject.GetType().FullName})', 指定されたプロパティパス:'{fsPropObj._SelectFieldPath}'";
-                                if (targetPropertyNode == null)
+                                string selectFieldInfo = $"指定されたオブジェクト:'{mfscPropObj._SelectObject.name}({mfscPropObj._SelectObject.GetType().FullName})', 指定されたプロパティパス:'{fsPropObj._SelectFieldPath}'";
+                                if (targetSPTreeNode == null)
                                 {
-                                    Logger.Log($"指定されたプロパティが見つかりませんでした。\n{selectPropertyInfo}", LogType.Error, "");
+                                    Logger.Log($"指定されたプロパティが見つかりませんでした。\n{selectFieldInfo}", LogType.Error, "");
                                     continue;
                                 }
-                                if (!targetPropertyNode.Tags.Contains("Editable"))
+                                if (!targetSPTreeNode.Tags.Contains("Editable"))
                                 {
-                                    Logger.Log($"編集不可なプロパティが指定されました。\n{selectPropertyInfo}", LogType.Error, "");
+                                    Logger.Log($"編集不可なプロパティが指定されました。\n{selectFieldInfo}", LogType.Error, "");
                                     continue;
                                 }
 
                                 // 代入先の SerializedProperty
-                                SerializedProperty targetProperty = targetPropertyNode.Property;
+                                SerializedProperty targetSP = targetSPTreeNode.SerializedProperty;
 
-                                if (targetProperty == null)
+                                if (targetSP == null)
                                 {
-                                    Logger.Log($"指定されたプロパティの SerializedProperty が見つかりませんでした。\n{selectPropertyInfo}", LogType.Error, "");
+                                    Logger.Log($"指定されたプロパティの SerializedProperty が見つかりませんでした。\n{selectFieldInfo}", LogType.Error, "");
                                     continue;
                                 }
 
-                                (bool getFieldTypeSuccess, Type targetFieldType, string errorLog) = targetProperty.GetFieldType();
+                                (bool getFieldTypeSuccess, Type targetFieldType, string errorLog) = targetSP.GetFieldType();
                                 if (!getFieldTypeSuccess)
                                 {
-                                    Logger.Log($"指定されたプロパティの型が取得できませんでした。\n{selectPropertyInfo}\n型取得エラーログ:'{errorLog}'", LogType.Error, "");
+                                    Logger.Log($"指定されたプロパティの型が取得できませんでした。\n{selectFieldInfo}\n型取得エラーログ:'{errorLog}'", LogType.Error, "");
                                     continue;
                                 }
 
@@ -167,22 +171,22 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                                 if (!isValid)
                                 {
-                                    Logger.Log($"指定されたプロパティの型に対し、代入しようとした値の型が不適合です。\n{selectPropertyInfo}\n代入値の型:'{result.Value.GetType().FullName}', 代入先の型:'{targetFieldType}'", LogType.Error, "");
+                                    Logger.Log($"指定されたプロパティの型に対し、代入しようとした値の型が不適合です。\n{selectFieldInfo}\n代入値の型:'{result.Value.GetType().FullName}', 代入先の型:'{targetFieldType}'", LogType.Error, "");
                                     continue;
                                 }
 
                                 // カスタムキャスト処理
                                 object customCastedResult = MFBCHelper.CustomCast(result.Value, targetFieldType);
-                                if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(customCastedResult))
+                                if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(customCastedResult))
                                 {
                                     customCastedResult = null;
                                 }
 
                                 try
                                 {
-                                    targetProperty.boxedValue = customCastedResult;
-                                    targetProperty.serializedObject.ApplyModifiedPropertiesWithoutUndo();
-                                    if (targetProperty.serializedObject.targetObject is AssetImporter importer)
+                                    targetSP.boxedValue = customCastedResult;
+                                    targetSP.serializedObject.ApplyModifiedPropertiesWithoutUndo();
+                                    if (targetSP.serializedObject.targetObject is AssetImporter importer)
                                     {
                                         importer.SaveAndReimport();
                                     }
@@ -200,20 +204,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 // MultipleFieldBulkChanger を削除
                 Object.DestroyImmediate(mfbcComponent);
             }
-        }
-
-
-        private static void ErrorAndThrow(string mes, Object context)
-        {
-            Debug.LogError(mes, context);
-            throw new MultipleFieldBulkChangerException(mes);
-        }
-
-        public class MultipleFieldBulkChangerException : Exception
-        {
-            public MultipleFieldBulkChangerException() : base() { }
-            public MultipleFieldBulkChangerException(string message) : base(message) { }
-            public MultipleFieldBulkChangerException(string message, Exception inner) : base(message, inner) { }
         }
     }
 }

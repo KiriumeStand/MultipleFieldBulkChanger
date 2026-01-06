@@ -4,16 +4,16 @@ using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public static class Logger
+    internal static class Logger
     {
-        public static void DebugLog(string mes, LogType logType = LogType.Log, string color = "")
+        internal static void DebugLog(string mes, LogType logType = LogType.Log, string color = "")
         {
             if (!Settings.Instance._DebugLog) return;
 
             Log(mes, logType, color);
         }
 
-        public static void Log(string mes, LogType logType = LogType.Log, string color = "")
+        internal static void Log(string mes, LogType logType = LogType.Log, string color = "")
         {
             if (!string.IsNullOrWhiteSpace(color))
             {

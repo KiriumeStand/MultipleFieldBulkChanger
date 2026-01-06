@@ -1,21 +1,24 @@
 using System;
-using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEditor;
 using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     [Serializable]
-    public abstract class ViewModelBase<TViewModel, TTarget> : ScriptableObject, IViewModel where TViewModel : ViewModelBase<TViewModel, TTarget> where TTarget : Component
+    internal abstract class ViewModelRootBase<TViewModel, TTarget> : ScriptableObject, IViewModel where TViewModel : ViewModelRootBase<TViewModel, TTarget> where TTarget : Component
     {
-        private static readonly Dictionary<TTarget, TViewModel> _instances = new();
+        protected ViewModelRootBase() { }
 
-        public string vm_DebugLabelText;
+        private static readonly ConditionalWeakTable<TTarget, TViewModel> _instances = new();
 
-        public TTarget Model { get; private set; }
+        [SerializeField]
+        internal string vm_DebugLabelText;
+
+        internal TTarget Model { get; private set; }
 
         private SerializedObject _modelSO;
-        public SerializedObject ModelSO
+        internal SerializedObject ModelSO
         {
             get
             {
@@ -24,9 +27,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        protected ViewModelBase() { }
-
-        public static TViewModel GetInstance(SerializedObject modelSO)
+        internal static TViewModel GetInstance(SerializedObject modelSO)
         {
             TTarget castedTargetObject = modelSO.targetObject as TTarget;
             if (_instances.TryGetValue(castedTargetObject, out TViewModel vm))

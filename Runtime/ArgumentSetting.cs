@@ -5,7 +5,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
 {
     // 引数設定
     [Serializable]
-    public class ArgumentSetting : ValueHolderBase<ArgumentSetting>, IExpansionInspectorCustomizerTargetMarker, ICloneable
+    public class ArgumentSetting : IExpansionInspectorCustomizerTargetMarker, ICloneable
     {
         public bool _IsReferenceMode;
 
@@ -45,20 +45,20 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
             var _ => null,
         };
 
-        public override string ValueTypeFieldName => nameof(_InputtableArgumentType);
-        public override string BoolValueFieldName => nameof(_InputtableBoolValue);
-        public override string NumberValueFieldName => nameof(_InputtableNumberValue);
-        public override string StringValueFieldName => nameof(_InputtableStringValue);
-        public override string ColorValueFieldName => nameof(_InputtableColorValue);
-        public override string ObjectValueFieldName => nameof(_InputtableObjectValue);
-        public override string Vector2ValueFieldName => nameof(_InputtableVector2Value);
-        public override string Vector3ValueFieldName => nameof(_InputtableVector3Value);
-        public override string Vector4ValueFieldName => nameof(_InputtableVector4Value);
-        public override string BoundsValueFieldName => nameof(_InputtableBoundsValue);
-        public override string CurveValueFieldName => nameof(_InputtableCurveValue);
-        public override string GradientValueFieldName => nameof(_InputtableGradientValue);
+        public string ValueTypeFieldName => nameof(_InputtableArgumentType);
+        public string BoolValueFieldName => nameof(_InputtableBoolValue);
+        public string NumberValueFieldName => nameof(_InputtableNumberValue);
+        public string StringValueFieldName => nameof(_InputtableStringValue);
+        public string ColorValueFieldName => nameof(_InputtableColorValue);
+        public string ObjectValueFieldName => nameof(_InputtableObjectValue);
+        public string Vector2ValueFieldName => nameof(_InputtableVector2Value);
+        public string Vector3ValueFieldName => nameof(_InputtableVector3Value);
+        public string Vector4ValueFieldName => nameof(_InputtableVector4Value);
+        public string BoundsValueFieldName => nameof(_InputtableBoundsValue);
+        public string CurveValueFieldName => nameof(_InputtableCurveValue);
+        public string GradientValueFieldName => nameof(_InputtableGradientValue);
 
-        public override string GetCurrentValueFieldName() => _InputtableArgumentType switch
+        public string GetCurrentValueFieldName() => _InputtableArgumentType switch
         {
             SelectableFieldType.Boolean => BoolValueFieldName,
             SelectableFieldType.Number => NumberValueFieldName,
@@ -76,22 +76,23 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
 
         public object Clone()
         {
-            ArgumentSetting clone = new();
-
-            clone._IsReferenceMode = _IsReferenceMode;
-            clone._ArgumentName = _ArgumentName;
-            clone._InputtableArgumentType = _InputtableArgumentType;
-            clone._InputtableBoolValue = _InputtableBoolValue;
-            clone._InputtableNumberValue = _InputtableNumberValue;
-            clone._InputtableStringValue = _InputtableStringValue;
-            clone._InputtableColorValue = _InputtableColorValue;
-            clone._InputtableObjectValue = _InputtableObjectValue;
-            clone._InputtableVector2Value = _InputtableVector2Value;
-            clone._InputtableVector3Value = _InputtableVector3Value;
-            clone._InputtableVector4Value = _InputtableVector4Value;
-            clone._InputtableBoundsValue = _InputtableBoundsValue;
-            clone._InputtableCurveValue = new(_InputtableCurveValue.keys);
-            clone._InputtableGradientValue = new();
+            ArgumentSetting clone = new()
+            {
+                _IsReferenceMode = _IsReferenceMode,
+                _ArgumentName = _ArgumentName,
+                _InputtableArgumentType = _InputtableArgumentType,
+                _InputtableBoolValue = _InputtableBoolValue,
+                _InputtableNumberValue = _InputtableNumberValue,
+                _InputtableStringValue = _InputtableStringValue,
+                _InputtableColorValue = _InputtableColorValue,
+                _InputtableObjectValue = _InputtableObjectValue,
+                _InputtableVector2Value = _InputtableVector2Value,
+                _InputtableVector3Value = _InputtableVector3Value,
+                _InputtableVector4Value = _InputtableVector4Value,
+                _InputtableBoundsValue = _InputtableBoundsValue,
+                _InputtableCurveValue = new(_InputtableCurveValue.keys),
+                _InputtableGradientValue = new()
+            };
             clone._InputtableGradientValue.alphaKeys = _InputtableGradientValue.alphaKeys;
             clone._InputtableGradientValue.colorKeys = _InputtableGradientValue.colorKeys;
             clone._InputtableGradientValue.colorSpace = _InputtableGradientValue.colorSpace;

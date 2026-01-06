@@ -13,9 +13,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         public abstract StyleSheet USS { get; }
         public abstract VisualTreeAsset UXML { get; }
 
-        public string SourceFilePath { get; }
-
-
         // ▼ 初期化定義関連 ========================= ▼
         // MARK: ==初期化定義関連==
 
@@ -29,9 +26,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             if (!SerializedObjectUtil.IsValid(serializedData)) return null;
 
-            SerializedDataType dataType = ValidateSerializedDataType(serializedData);
-
-            VisualElement uxml = CreateUxml();
+            // UXML をインスタンス化
+            VisualElement uxml = UXML.CloneTree();
+            // ussを適用
+            uxml.styleSheets.Add(USS);
 
             IExpansionInspectorCustomizerTargetMarker targetObject = MFBCHelper.GetTargetObject(serializedData);
 
@@ -46,41 +44,22 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 OnDetachFromPanelEvent(serializedData, uxml, targetObject, status);
             });
 
-            int tempCount = 0;
             EditorApplication.delayCall += () =>
             {
                 DelayCall(serializedData, uxml, targetObject, status);
-                tempCount++;
             };
 
-            // MARK: デバッグ用
+            // MARK: デバッグ用(常設)
             Label u_DebugLabel = UIQuery.QOrNull<Label>(uxml, "DebugLabel");
             if (u_DebugLabel != null)
             {
-                u_DebugLabel.text = $"drawerId:{EditorUtil.ObjectIdUtil.GetObjectId(this)}/targetId:{EditorUtil.ObjectIdUtil.GetObjectId(targetObject)}/serializedDataId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedData)}";
-                VisualElementUtil.SetDisplay(u_DebugLabel, Settings.Instance._DebugMode);
+                if (string.IsNullOrWhiteSpace(u_DebugLabel.text))
+                {
+                    VisualElementUtil.SetDisplay(u_DebugLabel, Settings.Instance._DebugMode);
+                }
             }
 
             status.SetPhase(InspectorCustomizerStatus.Phase.BeforeDelayCall);
-
-            return uxml;
-        }
-
-        /// <summary>
-        /// VisualElementの作成
-        /// </summary>
-        /// <returns></returns>
-        private VisualElement CreateUxml()
-        {
-            string layoutFilePathBase = $"{EditorUtil.PathUtil.GetCallerScriptRelativeDirectoryPath(SourceFilePath)}/Layouts/{GetType().Name}";
-            //StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"{layoutFilePathBase}.uss");
-            //VisualTreeAsset visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{layoutFilePathBase}.uxml");
-            StyleSheet styleSheet = USS;
-            VisualTreeAsset visualTreeAsset = UXML;
-            // UXML をインスタンス化
-            VisualElement uxml = visualTreeAsset.CloneTree();
-            // ussを適用
-            uxml.styleSheets.Add(styleSheet);
 
             return uxml;
         }
@@ -100,15 +79,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             HandleSerializedType(
                 serializedData,
-                (serializedObject) =>
+                (so) =>
                 {
                     CreateInspectorGUICore(uxml, targetObject, status);
                     PostCreateInspectorGUICore(uxml, targetObject, status);
                 },
-                (property) =>
+                (sp) =>
                 {
-                    CreatePropertyGUICore(property, uxml, targetObject, status);
-                    PostCreatePropertyGUICore(property, uxml, targetObject, status);
+                    CreatePropertyGUICore(sp, uxml, targetObject, status);
+                    PostCreatePropertyGUICore(sp, uxml, targetObject, status);
                 }
             );
         }
@@ -140,12 +119,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <summary>
         /// UnityのCreatePropertyGUIの代わりにユーザーが継承クラスで実装するメソッド
         /// </summary>
-        /// <param name="property"></param>
+        /// <param name="sp"></param>
         /// <param name="uxml"></param>
         /// <param name="targetObject"></param>
         /// <param name="status"></param>
         public virtual void CreatePropertyGUICore(
-            SerializedProperty property,
+            SerializedProperty sp,
             VisualElement uxml,
             IExpansionInspectorCustomizerTargetMarker targetObject,
             InspectorCustomizerStatus status)
@@ -154,12 +133,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <summary>
         /// PostCreatePropertyGUICore直後に呼ばれるメソッド
         /// </summary>
-        /// <param name="property"></param>
+        /// <param name="sp"></param>
         /// <param name="uxml"></param>
         /// <param name="targetObject"></param>
         /// <param name="status"></param>
         public virtual void PostCreatePropertyGUICore(
-            SerializedProperty property,
+            SerializedProperty sp,
             VisualElement uxml,
             IExpansionInspectorCustomizerTargetMarker targetObject,
             InspectorCustomizerStatus status)
@@ -182,8 +161,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             status.SetPhase(InspectorCustomizerStatus.Phase.DelayCall);
             HandleSerializedType(
                 serializedData,
-                (serializedObject) => DelayCallCore(uxml, targetObject, status),
-                (property) => DelayCallCore(property, uxml, targetObject, status)
+                (so) => DelayCallCore(uxml, targetObject, status),
+                (sp) => DelayCallCore(sp, uxml, targetObject, status)
             );
             status.SetPhase(InspectorCustomizerStatus.Phase.AfterDelayCall);
             return;
@@ -204,12 +183,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <summary>
         /// PropertyDrawer用DelayCall処理
         /// </summary>
-        /// <param name="property"></param>
+        /// <param name="sp"></param>
         /// <param name="uxml"></param>
         /// <param name="targetObject"></param>
         /// <param name="status"></param>
         public virtual void DelayCallCore(
-            SerializedProperty property,
+            SerializedProperty sp,
             VisualElement uxml,
             IExpansionInspectorCustomizerTargetMarker targetObject,
             InspectorCustomizerStatus status)
@@ -230,13 +209,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             IExpansionInspectorCustomizerTargetMarker targetObject,
             InspectorCustomizerStatus status)
         {
-            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(this))
-            {
-                // MARK: デバッグ用
-                DebugUtil.DebugLog($"ここは必要みたいです/OnDetachFromPanelEvent", LogType.Warning);
-                //return;
-            }
-
             DrawerCleanup(serializedData, uxml, targetObject, status);
         }
 
@@ -259,11 +231,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <returns></returns>
         public Action Subscribe<T>(IExpansionInspectorCustomizer inspectorCustomizer, IDisposable serializedData, InspectorCustomizerStatus status, EventHandler<T> handler, Func<T, bool> filter = null, bool allowNestEvent = false) where T : BaseEventArgs
         {
-            // MARK: 要確認 単一責任でIsValidをSubscribeの外側で呼び出したほうが良い？
             if (SerializedObjectUtil.IsValid(serializedData) != true)
             {
-                // MARK: デバッグ用 
-                DebugUtil.DebugLog($"ここは必要みたいです/Subscribe", LogType.Warning);
                 return () => { };
             }
 
@@ -273,8 +242,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             IExpansionInspectorCustomizerTargetMarker targetObject = MFBCHelper.GetTargetObject(serializedData);
             if (targetObject == null)
             {
-                // MARK: デバッグ用
-                DebugUtil.DebugLog($"ここは必要みたいです/Subscribe", LogType.Warning);
                 return () => { };
             }
 
@@ -367,12 +334,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             IExpansionInspectorCustomizerTargetMarker targetObject,
             InspectorCustomizerStatus status)
         {
-            // MARK: デバッグ statusがnullになるかも
             status?.SetPhase(InspectorCustomizerStatus.Phase.Cleanup);
             HandleSerializedType(
                 serializedData,
-                (serializedObject) => OnCleanup(serializedObject, uxml, targetObject, status),
-                (property) => OnCleanup(property, uxml, targetObject, status));
+                (so) => OnCleanup(so, uxml, targetObject, status),
+                (sp) => OnCleanup(sp, uxml, targetObject, status));
             Unsubscriptions(serializedData, targetObject);
             UniversalDataManager.CleanupByInspectorCustomizerIdentifier((this, targetObject, serializedData));
             status?.SetPhase(InspectorCustomizerStatus.Phase.AfterCleanup);
@@ -385,7 +351,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <param name="targetObject"></param>
         /// <param name="status"></param>
         public virtual void OnCleanup(
-            SerializedObject serializedObject,
+            SerializedObject so,
             VisualElement uxml,
             IExpansionInspectorCustomizerTargetMarker targetObject,
             InspectorCustomizerStatus status)
@@ -394,41 +360,26 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <summary>
         /// PropertyDrawer用OnCleanup処理
         /// </summary>
-        /// <param name="property"></param>
+        /// <param name="sp"></param>
         /// <param name="uxml"></param>
         /// <param name="targetObject"></param>
         /// <param name="status"></param>
         public virtual void OnCleanup(
-            SerializedProperty property,
+            SerializedProperty sp,
             VisualElement uxml,
             IExpansionInspectorCustomizerTargetMarker targetObject,
             InspectorCustomizerStatus status)
         { }
 
-        private static SerializedDataType ValidateSerializedDataType(IDisposable serializedData)
-        {
-            SerializedDataType dataType = GetSerializedDataType(serializedData);
-            if (dataType == SerializedDataType.Other)
-                throw new ArgumentException($"{nameof(serializedData)}の型が不正です。", nameof(serializedData));
-            return dataType;
-        }
-
-        private static SerializedDataType GetSerializedDataType(IDisposable serializedData)
-        {
-            if (serializedData is SerializedObject) return SerializedDataType.Object;
-            else if (serializedData is SerializedProperty) return SerializedDataType.Property;
-            else return SerializedDataType.Object;
-        }
-
-        private static void HandleSerializedType(IDisposable serializedData, Action<SerializedObject> objectAction, Action<SerializedProperty> propertyAction)
+        private static void HandleSerializedType(IDisposable serializedData, Action<SerializedObject> soAction, Action<SerializedProperty> spAction)
         {
             switch (serializedData)
             {
-                case SerializedObject serializedObject:
-                    objectAction(serializedObject);
+                case SerializedObject so:
+                    soAction(so);
                     break;
-                case SerializedProperty property:
-                    propertyAction(property);
+                case SerializedProperty sp:
+                    spAction(sp);
                     break;
                 default:
                     throw new ArgumentException($"{nameof(serializedData)}の型が不正です。", nameof(serializedData));
@@ -465,12 +416,5 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         }
 
         // ▲ メソッド ========================= ▲
-
-        private enum SerializedDataType
-        {
-            Object,
-            Property,
-            Other
-        }
     }
 }

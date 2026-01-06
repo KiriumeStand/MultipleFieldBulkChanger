@@ -4,10 +4,10 @@ using UnityEditor;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public static class ViewModelHelper
+    internal static class ViewModelHelper
     {
-        public static TPropVM EnsureAndRecalculate<TPropVM, TPropModel>(this TPropVM propVM, SerializedProperty propSP)
-            where TPropVM : PropertyViewModelBase<TPropModel>, new()
+        internal static TPropVM EnsureAndRecalculate<TPropVM, TPropModel>(this TPropVM propVM, SerializedProperty propSP)
+            where TPropVM : ViewModelPropertyBase<TPropModel>, new()
             where TPropModel : class
         {
             if (propVM == null)
@@ -21,8 +21,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return propVM;
         }
 
-        public static void EnsureAndRecalculateByList<TPropVM, TPropModel>(List<TPropVM> propVMList, SerializedProperty propListSP)
-            where TPropVM : PropertyViewModelBase<TPropModel>, new()
+        internal static void EnsureAndRecalculateByList<TPropVM, TPropModel>(List<TPropVM> propVMList, SerializedProperty propListSP)
+            where TPropVM : ViewModelPropertyBase<TPropModel>, new()
             where TPropModel : class
         {
             if (propVMList.Count() > propListSP.arraySize)

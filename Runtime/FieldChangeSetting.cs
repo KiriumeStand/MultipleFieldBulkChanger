@@ -20,10 +20,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
 
         public object Clone()
         {
-            FieldChangeSetting clone = new();
-
-            clone._Enable = _Enable;
-            clone._Expression = _Expression;
+            FieldChangeSetting clone = new()
+            {
+                _Enable = _Enable,
+                _Expression = _Expression
+            };
             foreach (MultipleFieldSelectorContainer tfItem in _TargetFields)
             {
                 clone._TargetFields.Add((MultipleFieldSelectorContainer)tfItem.Clone());

@@ -9,12 +9,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     [CustomPropertyDrawer(typeof(FieldChangeSetting))]
     public class FieldChangeSettingDrawerImpl : ExpansionPropertyDrawerImpl<FieldChangeSettingDrawer>
     {
-
-        private static string GetMultiFieldSelectorContainerPath(int index1) => $"{nameof(FieldChangeSetting._TargetFields)}.Array.data[{index1}]";
-        private static string GetFieldSelectorPath(int index1, int index2) => $"{GetMultiFieldSelectorContainerPath(index1)}.{nameof(MultipleFieldSelectorContainer._FieldSelectors)}.Array.data[{index2}]";
-
-        public FieldChangeSettingDrawerImpl() : base() { }
-
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
@@ -62,24 +56,20 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
+                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
                     bool isSenderIsAncestorProperty = false;
                     foreach (int index in e.RemovedIndex)
                     {
                         string targetPathPrefix = $"{senderBindingPropertyInstancePath}.Array.data[{index}]";
-                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetPropertyInstancePath(property).StartsWith(targetPathPrefix);
+                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetSerializedPropertyInstancePath(property).StartsWith(targetPathPrefix);
                     }
 
                     return isSameEditorInstance && isSenderIsAncestorProperty;
                 },
                 true
             );
-        }
-
-        public override void DelayCallCore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
-        {
         }
 
         // ▲ 初期化定義 ========================= ▲

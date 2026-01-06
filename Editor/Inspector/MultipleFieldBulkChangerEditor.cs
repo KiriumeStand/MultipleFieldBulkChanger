@@ -4,19 +4,14 @@ using System.Text.RegularExpressions;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEditor.UIElements;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-
-
     [CustomEditor(typeof(MultipleFieldBulkChanger))]
     public class MultipleFieldBulkChangerEditor : ExpansionEditor
     {
         private static readonly Regex XIndexRegex = new(@"^(.+?)(\d+)$", RegexOptions.Compiled);
-
-        public MultipleFieldBulkChangerEditor() : base() { }
 
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
@@ -27,17 +22,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             MultipleFieldBulkChangerVM viewModel = MultipleFieldBulkChangerVM.GetInstance(serializedObject);
 
-            // MARK: デバッグ用
+            // MARK: デバッグ用(常設)
             Button u_DebugButton = UIQuery.Q<Button>(uxml, "MFBC_DebugButton");
-            u_DebugButton.clicked += () =>
-            {
-                (int count, int validCount) = UniversalEventManager.ManagedEventCount;
-                DebugUtil.DebugLog(
-                    $"drawerId:{EditorUtil.ObjectIdUtil.GetObjectId(this)}/targetId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedObject.targetObject)}/propertyId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedObject)}/Unsubscriptions/ManagedEventCount:{count}/valid:{validCount}/\r\n" +
-                    $"\r\n" +
-                    $"{UniversalDataManager.Debugger.UnsubscribeActionsInfoList}"
-                    , LogType.Log);
-            };
+            u_DebugButton.clicked += () => { };
             VisualElementUtil.SetDisplay(u_DebugButton, Settings.Instance._DebugMode);
 
             Toggle u_Enable = BindHelper.Bind<Toggle>(uxml, UxmlNames.Enable, serializedObject, nameof(MultipleFieldBulkChanger._Enable));
@@ -122,28 +109,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             // 参照値の更新をリクエストするイベントの発行処理
             void editorApplicationUpdateCallback()
             {
-                if (!SerializedObjectUtil.IsValid(serializedObject))
-                {
-                    // MARK: デバッグ用
-                    DebugUtil.DebugLog($"serializedObject/IsValid == false/editorApplicationUpdateCallback", LogType.Warning);
-                    return;
-                }
-                if (serializedObject == null)
-                {
-                    // MARK: デバッグ用
-                    DebugUtil.DebugLog($"ここは必要みたいです/editorApplicationUpdateCallback", LogType.Warning);
-                    return;
-                }
-
-                // MARK: デバッグ用
-                var argumentDataDictionary = UniversalDataManager.GetUniqueObjectDictionary<ArgumentData>(UniversalDataManager.IdentifierNames.ArgumentData);
-                string text = $"argumentDataDictionary/{argumentDataDictionary.Count()}";
-                DebugUtil.SetDebugLabelText(uxml, text);
+                if (!SerializedObjectUtil.IsValid(serializedObject)) { return; }
+                if (serializedObject == null) { return; }
 
                 viewModel.Recalculate();
-
-                SelectedFieldSerializedPropertyReloadRequestEventArgs args = new(this, serializedObject, uxml, status);
-                ((IExpansionInspectorCustomizer)this).Publish(args);
             }
 
             // 後で解除するために必要なのでUniqueObjectとして上記のイベントの発行処理を保管

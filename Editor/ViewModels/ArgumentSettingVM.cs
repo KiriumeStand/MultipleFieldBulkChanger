@@ -6,31 +6,45 @@ using UnityEngine;
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     [Serializable]
-    public class ArgumentSettingVM : PropertyViewModelBase<ArgumentSetting>
+    internal class ArgumentSettingVM : ViewModelPropertyBase<ArgumentSetting>
     {
-        public FieldSPType vm_ReferenceArgumentType;
+        [SerializeField]
+        internal FieldSPType vm_ReferenceArgumentType;
 
-        public bool vm_ReferenceBoolValue;
-        public double vm_ReferenceNumberValue;
-        public string vm_ReferenceStringValue = "";
-        public Color vm_ReferenceColorValue;
-        public UnityEngine.Object vm_ReferenceObjectValue;
-        public Vector2 vm_ReferenceVector2Value;
-        public Vector3 vm_ReferenceVector3Value;
-        public Vector4 vm_ReferenceVector4Value;
-        public Bounds vm_ReferenceBoundsValue;
-        public AnimationCurve vm_ReferenceCurveValue;
-        public Gradient vm_ReferenceGradientValue;
-        public string vm_ReferenceInvalidValueLabel;
+        [SerializeField]
+        internal bool vm_ReferenceBoolValue;
+        [SerializeField]
+        internal double vm_ReferenceNumberValue;
+        [SerializeField]
+        internal string vm_ReferenceStringValue = "";
+        [SerializeField]
+        internal Color vm_ReferenceColorValue;
+        [SerializeField]
+        internal UnityEngine.Object vm_ReferenceObjectValue;
+        [SerializeField]
+        internal Vector2 vm_ReferenceVector2Value;
+        [SerializeField]
+        internal Vector3 vm_ReferenceVector3Value;
+        [SerializeField]
+        internal Vector4 vm_ReferenceVector4Value;
+        [SerializeField]
+        internal Bounds vm_ReferenceBoundsValue;
+        [SerializeField]
+        internal AnimationCurve vm_ReferenceCurveValue;
+        [SerializeField]
+        internal Gradient vm_ReferenceGradientValue;
+        [SerializeField]
+        internal string vm_ReferenceInvalidValueLabel;
 
-        public SingleFieldSelectorContainerVM vm_SourceField;
+        [SerializeField]
+        internal SingleFieldSelectorContainerVM vm_SourceField;
 
-        public Trackable<bool> m_IsReferenceMode { get; private set; }
-        public Trackable<string> m_ArgumentName { get; private set; }
+        internal Trackable<bool> m_IsReferenceMode { get; private set; }
+        internal Trackable<string> m_ArgumentName { get; private set; }
 
-        public Trackable<Optional<object>> ResultSelectValue { get; private set; }
+        internal Trackable<Optional<object>> ResultSelectValue { get; private set; }
 
-        public Trackable<ArgumentData> ArgumentData { get; private set; }
+        internal Trackable<ArgumentData> ArgumentData { get; private set; }
 
         public override void Recalculate()
         {
@@ -123,7 +137,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     vm_ReferenceGradientValue = MFBCHelper.CustomCast<Gradient>(selectObject);
                     break;
                 default:
-                    bool isObjNull = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObject);
+                    bool isObjNull = EditorUtil.FakeNullUtil.IsNullOrFakeNull(selectObject);
                     string objTypeName = isObjNull ? "" : $"{selectObject?.GetType().FullName} : ";
                     string objInfo = isObjNull ? "Null" : selectObject.ToString();
                     string invalidText = $"Invalid ({objTypeName}{objInfo})";

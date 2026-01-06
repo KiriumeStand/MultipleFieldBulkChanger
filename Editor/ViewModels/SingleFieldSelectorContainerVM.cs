@@ -1,13 +1,15 @@
 using System;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
+using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     [Serializable]
-    public class SingleFieldSelectorContainerVM : FieldSelectorContainerViewModelBase<SingleFieldSelectorContainer>
+    internal class SingleFieldSelectorContainerVM : FieldSelectorContainerViewModelBase<SingleFieldSelectorContainer>
     {
-        public FieldSelectorVM vm_FieldSelector;
+        [SerializeField]
+        internal FieldSelectorVM vm_FieldSelector;
 
         public override void Recalculate()
         {

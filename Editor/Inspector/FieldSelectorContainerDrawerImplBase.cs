@@ -6,8 +6,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     public abstract class FieldSelectorContainerDrawerImplBase<TDrawer> : ExpansionPropertyDrawerImpl<TDrawer> where TDrawer : ExpansionPropertyDrawer
     {
-        public FieldSelectorContainerDrawerImplBase() : base() { }
-
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
@@ -28,14 +26,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
+                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
                     bool isSenderIsAncestorProperty = false;
                     foreach (int index in e.RemovedIndex)
                     {
                         string targetPathPrefix = $"{senderBindingPropertyInstancePath}.Array.data[{index}]";
-                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetPropertyInstancePath(property).StartsWith(targetPathPrefix);
+                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetSerializedPropertyInstancePath(property).StartsWith(targetPathPrefix);
                     }
 
                     return isSameEditorInstance && isSenderIsAncestorProperty;
@@ -52,13 +50,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <summary>
         /// 選択オブジェクトが変更された時のイベント処理
         /// </summary>
-        /// <param name="args"></param>
+        /// <param name="e"></param>
         /// <param name="property"></param>
         /// <param name="propertyInstancePath"></param>
-        protected void OnFieldSelectorSelectObjectChangedEventHandler(FieldValueChangedEventArgs<UnityEngine.Object> args, VisualElement uxml, InspectorCustomizerStatus status)
+        protected void OnFieldSelectorSelectObjectChangedEventHandler(ChangeEvent<UnityEngine.Object> e, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
         {
             // ノードツリーのキャッシュを更新
-            UpdateSerializedPropertiesCache(args.SenderInspectorCustomizerSerializedProperty, uxml, status, args.NewValue);
+            UpdateSerializedPropertiesCache(property, uxml, status, e.newValue);
         }
 
         protected void OnListViewAncestorItemRemovedEventHandler(ListViewItemsRemovedEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
@@ -83,17 +81,17 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         protected void UpdateSerializedPropertiesCache(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, UnityEngine.Object selectedObject)
         {
             // 偽装NullかNullならNullに統一
-            selectedObject = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject) ? null : selectedObject;
+            selectedObject = EditorUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject) ? null : selectedObject;
 
             SerializedPropertyTreeNode propertyRoot = new("None", null, null);
-            if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject))
+            if (!EditorUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject))
             {
-                propertyRoot = SerializedPropertyTreeNode.GetPropertyTreeWithImporter(new(selectedObject), new());
+                propertyRoot = SerializedPropertyTreeNode.GetSerializedPropertyTreeWithImporter(new(selectedObject), new());
             }
 
             FieldSelectorContainerBase targetObject = MFBCHelper.GetTargetObject(property) as FieldSelectorContainerBase;
 
-            UniversalDataManager.targetObjectPropertyTreeRootCache.AddOrUpdate(targetObject, propertyRoot);
+            UniversalDataManager.targetObjectSerializedPropertyTreeRootCache.AddOrUpdate(targetObject, propertyRoot);
         }
 
         // ▲ メソッド ========================= ▲

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.runtime
+namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
 {
     [Serializable]
     public class FieldChangeTester : MonoBehaviour

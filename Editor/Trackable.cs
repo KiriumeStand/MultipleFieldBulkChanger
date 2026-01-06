@@ -2,20 +2,20 @@ using System.Collections.Generic;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public record Trackable<T>
+    internal record Trackable<T>
     {
         private T _currentValue;
         private T _originalValue;
 
-        public T Value
+        internal T Value
         {
             get => _currentValue;
             set => _currentValue = value;
         }
 
-        public T OriginalValue => _originalValue;
+        internal T OriginalValue => _originalValue;
 
-        public bool IsModified
+        internal bool IsModified
         {
             get
             {
@@ -26,30 +26,30 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public bool IsInitialValue { get; private set; }
+        internal bool IsInitialValue { get; private set; }
 
-        public Trackable(T initialValue, bool initIsModified = false)
+        internal Trackable(T initialValue, bool initIsModified = false)
         {
             _currentValue = initialValue;
             _originalValue = initialValue;
             IsInitialValue = initIsModified;
         }
 
-        public void AcceptChanges()
+        internal void AcceptChanges()
         {
             _originalValue = _currentValue;
             IsInitialValue = false;
         }
 
-        public void RejectChanges()
+        internal void RejectChanges()
         {
             _currentValue = _originalValue;
         }
     }
 
-    public static class TrackableHelper
+    internal static class TrackableHelper
     {
-        public static Trackable<T> CreateOrUpdate<T>(this Trackable<T> trackable, T setValue)
+        internal static Trackable<T> CreateOrUpdate<T>(this Trackable<T> trackable, T setValue)
         {
             if (trackable == null)
             {

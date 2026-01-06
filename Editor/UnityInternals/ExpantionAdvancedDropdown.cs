@@ -154,10 +154,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         private class ExpantionAdvancedDropdownDataSource : AdvancedDropdownDataSource
         {
             private static readonly Func<AdvancedDropdownDataSource, AdvancedDropdownItem> _currentContextTreeGetter;
-            private AdvancedDropdownItem _lastSearchableElementsRoot;
+            private readonly AdvancedDropdownItem _lastSearchableElementsRoot;
 
-            private Func<TItem> _buildRootCallback;
-            private Func<List<TItem>, string, TItem> _searchCallback;
+            private readonly Func<TItem> _buildRootCallback;
+            private readonly Func<List<TItem>, string, TItem> _searchCallback;
 
             internal ExpantionAdvancedDropdownDataSource(
                 IEnumerable<int> selectedItemIds,
@@ -242,7 +242,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private class ExpantionAdvancedDropdownGUI : AdvancedDropdownGUI
         {
-            Func<TItem, string, Texture2D, bool, bool, bool, bool, (string itemName, string description, string tooltip)> _buildDisplayTextsCallback;
+            readonly Func<TItem, string, Texture2D, bool, bool, bool, bool, (string itemName, string description, string tooltip)> _buildDisplayTextsCallback;
 
             public ExpantionAdvancedDropdownGUI(
                 ExpantionAdvancedDropdownDataSource dataSource,
@@ -253,7 +253,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 _buildDisplayTextsCallback = buildDisplayTextsCallback;
             }
 
-            ExpantionAdvancedDropdownDataSource m_DataSource;
+            readonly ExpantionAdvancedDropdownDataSource m_DataSource;
 
             internal override sealed void DrawItem(AdvancedDropdownItem item, string name, Texture2D icon, bool enabled, bool drawArrow, bool selected, bool hasSearch)
             {
@@ -273,7 +273,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 // アイテムの表示領域計算用の仮Content
                 GUIContent cloneContent1 = new(nameAndIconContent);
-                cloneContent1.image ??= Texture2D.whiteTexture;
+                cloneContent1.image = cloneContent1.image != null ? cloneContent1.image : Texture2D.whiteTexture;
 
                 // アイテムの表示領域
                 Rect itemRect = GUILayoutUtility.GetRect(cloneContent1, Styles.lineStyleFaint, GUILayout.ExpandWidth(true));

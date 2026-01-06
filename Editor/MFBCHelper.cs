@@ -15,10 +15,9 @@ using Object = UnityEngine.Object;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public static class MFBCHelper
+    internal static class MFBCHelper
     {
-
-        public static ArgumentData GetArgumentData(ArgumentSetting asObj)
+        internal static ArgumentData GetArgumentData(ArgumentSetting asObj)
         {
             Optional<object> argValue;
             if (asObj._IsReferenceMode)
@@ -40,23 +39,23 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return argData;
         }
 
-        public static Optional<object> GetSelectValue(SingleFieldSelectorContainer sfscObj)
+        internal static Optional<object> GetSelectValue(SingleFieldSelectorContainer sfscObj)
         {
             Object selectObj = sfscObj._SelectObject;
             string selectFieldPath = sfscObj._FieldSelector._SelectFieldPath;
-            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
+            if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
             {
                 return Optional<object>.None;
             }
             return GetSelectPathValueWithImporter(selectObj, selectFieldPath);
         }
 
-        public static Optional<object>[] GetSelectValues(MultipleFieldSelectorContainer sfscObj)
+        internal static Optional<object>[] GetSelectValues(MultipleFieldSelectorContainer sfscObj)
         {
             Object selectObj = sfscObj._SelectObject;
             string[] selectFieldPathes = sfscObj._FieldSelectors.Select(x => x._SelectFieldPath).ToArray();
 
-            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
+            if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(selectObj))
             {
                 return Array.Empty<Optional<object>>();
             }
@@ -69,18 +68,18 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return results.ToArray();
         }
 
-        public static IExpansionInspectorCustomizerTargetMarker GetTargetObject(IDisposable serializedData) => serializedData switch
+        internal static IExpansionInspectorCustomizerTargetMarker GetTargetObject(IDisposable serializedData) => serializedData switch
         {
-            SerializedObject serializedObject => GetTargetObject(serializedObject),
-            SerializedProperty property => GetTargetObject(property),
+            SerializedObject so => GetTargetObject(so),
+            SerializedProperty sp => GetTargetObject(sp),
             _ => throw new ArgumentException($"{nameof(serializedData)}の型が不正です。", nameof(serializedData))
         };
 
-        public static IExpansionInspectorCustomizerTargetMarker GetTargetObject(SerializedObject serializedObject)
+        private static IExpansionInspectorCustomizerTargetMarker GetTargetObject(SerializedObject so)
         {
             try
             {
-                return (IExpansionInspectorCustomizerTargetMarker)serializedObject?.targetObject;
+                return (IExpansionInspectorCustomizerTargetMarker)so?.targetObject;
             }
             catch (ObjectDisposedException ex)
             {
@@ -94,12 +93,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        // MARK: TODO:ここの返値の型をobjectにする
-        public static IExpansionInspectorCustomizerTargetMarker GetTargetObject(SerializedProperty property)
+        private static IExpansionInspectorCustomizerTargetMarker GetTargetObject(SerializedProperty sp)
         {
             try
             {
-                return (IExpansionInspectorCustomizerTargetMarker)property?.managedReferenceValue;
+                return (IExpansionInspectorCustomizerTargetMarker)sp.managedReferenceValue;
             }
             catch (ObjectDisposedException ex)
             {
@@ -118,68 +116,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public static void SetPropertyValue(SerializedProperty property, object value)
-        {
-            switch (property.propertyType)
-            {
-                case SerializedPropertyType.Boolean:
-                    property.boolValue = (bool)value;
-                    break;
-                case SerializedPropertyType.Integer:
-                    property.longValue = Convert.ToInt64(value);
-                    break;
-                case SerializedPropertyType.Float:
-                    property.doubleValue = Convert.ToDouble(value);
-                    break;
-                case SerializedPropertyType.String:
-                    property.stringValue = (string)value;
-                    break;
-                case SerializedPropertyType.ObjectReference:
-                    property.objectReferenceValue = (Object)value;
-                    break;
-                case SerializedPropertyType.Generic:
-                case var _:
-                    throw new ArgumentException("非対応のタイプのSerializedPropertyです", nameof(property));
-            }
-        }
-
-        public static SerializedPropertyType Parse2SerializedPropertyType(FieldSPType fieldSPType) => (SerializedPropertyType)fieldSPType;
-
-        public static (bool success, Type type) GetValueHolderValueType<T>(SerializedProperty valueHolderProperty) where T : ValueHolderBase<T>, new()
-        {
-            T valueHolder = (T)valueHolderProperty.managedReferenceValue;
-            // 現在の値のフィールドの名前
-            string currentValueFieldName = valueHolder.GetCurrentValueFieldName();
-
-            if (currentValueFieldName == null) return (false, null);
-
-            // 現在の値を取得
-            SerializedProperty currentValueFieldProperty = valueHolderProperty.SafeFindPropertyRelative(currentValueFieldName);
-            object boxedValue = null;
-            try
-            {
-                boxedValue = currentValueFieldProperty.boxedValue;
-            }
-            catch
-            {
-                return (false, null);
-            }
-
-            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(boxedValue)) return (true, null);
-            return (true, boxedValue.GetType());
-        }
+        internal static SerializedPropertyType Parse2SerializedPropertyType(FieldSPType fieldSPType) => (SerializedPropertyType)fieldSPType;
 
         private static readonly Regex BlankCharRegex = new(@"\s+", RegexOptions.Compiled);
 
-        public static (Optional<object> result, Type valueType, string errorLog) CalculateExpression(string expressionString, List<ArgumentData> argumentDatas)
-        {
-            ExpressionData expressionData = ParseExpression(expressionString);
-            if (expressionData.Expression == null) { return (Optional<object>.None, null, expressionData.ErrorLog); }
-
-            return CalculateExpression(expressionData, argumentDatas);
-        }
-
-        public static ExpressionData ParseExpression(string expressionString)
+        internal static ExpressionData ParseExpression(string expressionString)
         {
             // 数式パーサー
             Processor processor = new();
@@ -214,7 +155,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return expressionData;
         }
 
-        public static (Optional<object> result, Type valueType, string errorLog) CalculateExpression(ExpressionData expressionData, List<ArgumentData> argumentDatas)
+        internal static (Optional<object> result, Type valueType, string errorLog) CalculateExpression(ExpressionData expressionData, List<ArgumentData> argumentDatas)
         {
             // 使用するArgumentDataのみを抽出
             (List<ArgumentData> filteredArgumentDatas, List<Variable> missingVariables) = FilterArgumentDatas(argumentDatas, expressionData.Variables);
@@ -247,7 +188,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     // 計算式に利用できないデータを代入する場合の特殊処理
                     ArgumentData argumentData = notAllowCalcArgumentDatas.First();
                     object valueObj = argumentData.Value.Value;
-                    if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(valueObj))
+                    if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(valueObj))
                     {
                         return (new(null), argumentData.Type, "");
                     }
@@ -432,7 +373,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return parameters;
         }
 
-        public static bool ValidationTypeAssignable(Type assignType, Type targetType)
+        internal static bool ValidationTypeAssignable(Type assignType, Type targetType)
         {
             bool typeCheckResult = false;
             if (targetType != null)
@@ -454,15 +395,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return typeCheckResult;
         }
 
-        public static T CustomCast<T>(object assignValue)
+        internal static T CustomCast<T>(object assignValue)
         {
             object castedObj = CustomCast(assignValue, typeof(T));
             return (T)castedObj;
         }
 
-        public static object CustomCast(object assignValue, Type targetType)
+        internal static object CustomCast(object assignValue, Type targetType)
         {
-            if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(assignValue))
+            if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(assignValue))
             {
                 return null;
             }
@@ -669,12 +610,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private class TypeConverter<T1, T2> : ITypeConverter
         {
-            public TypeConverter(Func<T1, Type, Type, T2> converter)
+            internal TypeConverter(Func<T1, Type, Type, T2> converter)
             {
                 Converter1 = converter;
             }
 
-            public TypeConverter(Func<T1, T2> converter)
+            internal TypeConverter(Func<T1, T2> converter)
             {
                 Converter2 = converter;
             }
@@ -698,24 +639,29 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public static Optional<object> GetSelectPathValueWithImporter(Object unityObj, string propertyPath)
+        internal static Optional<object> GetSelectPathValueWithImporter(Object unityObj, string spPath)
         {
-            SerializedProperty sp = GetSelectPathSerializedPropertyWithImporter(unityObj, propertyPath);
+            SerializedProperty sp = GetSelectPathSerializedPropertyWithImporter(unityObj, spPath);
             return GetSerializedPropertyValue(sp);
         }
 
-        public static Optional<object> GetSelectPathValue(Object unityObj, string propertyPath)
+        internal static Optional<object> GetSelectPathValue(Object unityObj, string spPath)
         {
-            SerializedProperty sp = GetSelectPathSerializedProperty(unityObj, propertyPath);
+            SerializedProperty sp = GetSelectPathSerializedProperty(unityObj, spPath);
             return GetSerializedPropertyValue(sp);
         }
 
-        public static SerializedProperty GetSelectPathSerializedPropertyWithImporter(Object unityObj, string propertyPath)
+        internal static SerializedProperty GetSelectPathSerializedPropertyWithImporter(Object unityObj, string spPath)
         {
-            SerializedProperty result = null;
-            if (!propertyPath.StartsWith("@Importer"))
+            if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(unityObj) || string.IsNullOrEmpty(spPath))
             {
-                result = GetSelectPathSerializedProperty(unityObj, propertyPath);
+                return null;
+            }
+
+            SerializedProperty result = null;
+            if (!spPath.StartsWith("@Importer"))
+            {
+                result = GetSelectPathSerializedProperty(unityObj, spPath);
             }
             else
             {
@@ -725,8 +671,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     AssetImporter importer = AssetImporter.GetAtPath(assetPath);
                     if (importer != null)
                     {
-                        int firstPeriodIndex = propertyPath.IndexOf('.');
-                        string fixedPropertyPath = propertyPath[(firstPeriodIndex + 1)..];
+                        int firstPeriodIndex = spPath.IndexOf('.');
+                        string fixedPropertyPath = spPath[(firstPeriodIndex + 1)..];
                         result = GetSelectPathSerializedProperty(importer, fixedPropertyPath);
                     }
                 }
@@ -734,17 +680,17 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return result;
         }
 
-        public static SerializedProperty GetSelectPathSerializedProperty(Object unityObj, string propertyPath)
+        internal static SerializedProperty GetSelectPathSerializedProperty(Object unityObj, string spPath)
         {
             SerializedObject so = new(unityObj);
-            if (so != null && !string.IsNullOrWhiteSpace(propertyPath))
+            if (so != null && !string.IsNullOrWhiteSpace(spPath))
             {
-                return so.FindProperty(propertyPath);
+                return so.FindProperty(spPath);
             }
             return null;
         }
 
-        public static Optional<object> GetSerializedPropertyValue(SerializedProperty sp)
+        internal static Optional<object> GetSerializedPropertyValue(SerializedProperty sp)
         {
             if (sp == null)
             {
@@ -761,12 +707,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public record ExpressionData : IEquatable<ExpressionData>
+        internal record ExpressionData : IEquatable<ExpressionData>
         {
-            public string ExpressionString = "";
-            public IExpression Expression;
-            public List<Variable> Variables;
-            public string ErrorLog = "";
+            internal string ExpressionString = "";
+            internal IExpression Expression;
+            internal List<Variable> Variables;
+            internal string ErrorLog = "";
 
             public virtual bool Equals(ExpressionData other)
             {

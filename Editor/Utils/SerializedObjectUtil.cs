@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public static class SerializedObjectUtil
+    internal static class SerializedObjectUtil
     {
         private static readonly Dictionary<Type, PropertyInfo> _isValidPropertiesCache = new();
 
@@ -36,22 +36,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        internal static bool IsValid(SerializedObject serializedObject)
-        {
-            return IsValidPrivate(serializedObject);
-        }
-
-        internal static bool IsValid(SerializedProperty property)
-        {
-            return IsValidPrivate(property);
-        }
-
         internal static bool IsValid(IDisposable serializedData)
         {
-            return IsValidPrivate(serializedData);
+            return IsValidInternal(serializedData);
         }
 
-        private static bool IsValidPrivate<T>(T obj)
+        private static bool IsValidInternal<T>(T obj)
         {
             Type type = obj.GetType();
             bool? result;
@@ -80,28 +70,28 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return (bool)result;
         }
 
-        public static SerializedProperty[] GetPropertyStack(SerializedProperty property)
+        internal static SerializedProperty[] GetSerializedPropertyStack(SerializedProperty sp)
         {
-            List<SerializedProperty> propertyStack = new();
-            (SerializedObject, SerializedProperty) curProp = (property.serializedObject, property);
-            while (curProp.Item2 != null)
+            List<SerializedProperty> spStack = new();
+            (SerializedObject, SerializedProperty) curSerializedData = (sp.serializedObject, sp);
+            while (curSerializedData.Item2 != null)
             {
-                propertyStack.Add(curProp.Item2);
-                curProp = GetParentPropertyAndRootObject(curProp);
+                spStack.Add(curSerializedData.Item2);
+                curSerializedData = GetParentSerializedPropertyAndRootSerializedObject(curSerializedData);
             }
 
-            propertyStack.Reverse();
+            spStack.Reverse();
 
-            return propertyStack.ToArray();
+            return spStack.ToArray();
         }
 
-        public static SerializedProperty GetParentProperty(SerializedProperty property) => GetParentPropertyAndRootObject(property).Item2;
+        internal static SerializedProperty GetParentSerializedProperty(SerializedProperty sp) => GetParentSerializedPropertyAndRootSerializedObject(sp).Item2;
 
-        public static (SerializedObject, SerializedProperty) GetParentPropertyAndRootObject(SerializedProperty property)
+        internal static (SerializedObject, SerializedProperty) GetParentSerializedPropertyAndRootSerializedObject(SerializedProperty sp)
         {
             try
             {
-                return GetParentPropertyAndRootObject((property.serializedObject, property));
+                return GetParentSerializedPropertyAndRootSerializedObject((sp.serializedObject, sp));
             }
             catch (ObjectDisposedException ex)
             {
@@ -110,22 +100,22 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public static (SerializedObject, SerializedProperty) GetParentPropertyAndRootObject((SerializedObject, SerializedProperty) args)
+        internal static (SerializedObject, SerializedProperty) GetParentSerializedPropertyAndRootSerializedObject((SerializedObject, SerializedProperty) serializedDatas)
         {
             try
             {
-                (SerializedObject serializedObject, SerializedProperty property) = args;
-                if (serializedObject == null) return (null, null);
-                if (property == null) return (serializedObject, null);
+                (SerializedObject so, SerializedProperty sp) = serializedDatas;
+                if (so == null) return (null, null);
+                if (sp == null) return (so, null);
                 // プロパティのパス
-                string[] propertyPathComponents = GetPropertyPath(property).Split('.');
+                string[] spPathComponents = sp.propertyPath.Split('.');
 
                 string prevComponent = "";
                 // 逆順で処理して親を見つける
-                for (int i = propertyPathComponents.Length - 2; i >= 0; i--)
+                for (int i = spPathComponents.Length - 2; i >= 0; i--)
                 // -2から開始（自分自身をスキップ）
                 {
-                    string currentComponent = propertyPathComponents[i];
+                    string currentComponent = spPathComponents[i];
 
                     // foge.Array.data[x] の場合はfogeを過ぎるまでスキップ
                     if (currentComponent == "Array" || prevComponent == "Array")
@@ -134,13 +124,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         continue;
                     }
 
-                    string[] parentPropertyPathComponents = propertyPathComponents[0..(i + 1)];
-                    string parentPropertyPath = string.Join('.', parentPropertyPathComponents);
-                    SerializedProperty parentProperty = serializedObject.FindProperty(parentPropertyPath);
-                    return (serializedObject, parentProperty);
+                    string[] parentSPPathComponents = spPathComponents[0..(i + 1)];
+                    string parentSPPath = string.Join('.', parentSPPathComponents);
+                    SerializedProperty parentSP = so.FindProperty(parentSPPath);
+                    return (so, parentSP);
                 }
 
-                return (serializedObject, null);
+                return (so, null);
             }
             catch (ObjectDisposedException ex)
             {
@@ -149,11 +139,21 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public static string GetParentPropertyInstancePath(SerializedProperty property)
+        internal static string GetSerializedPropertyInstancePath(SerializedProperty sp)
+        {
+            return GetSerializedPropertyInstancePath((sp.serializedObject, sp));
+        }
+
+        private static string GetSerializedPropertyInstancePath((SerializedObject, SerializedProperty) serializedDatas)
         {
             try
             {
-                return GetParentPropertyInstancePath((property.serializedObject, property));
+                (SerializedObject so, SerializedProperty sp) = serializedDatas;
+                if (so == null) return "";
+
+                string instanceID = GetSerializedObjectInstanceId(so);
+                string spPath = sp != null ? sp.propertyPath : "";
+                return spPath != "" ? $"{instanceID}.{spPath}" : instanceID;
             }
             catch (ObjectDisposedException ex)
             {
@@ -162,22 +162,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public static string GetParentPropertyInstancePath((SerializedObject, SerializedProperty) args)
-        {
-            (SerializedObject serializedObject, SerializedProperty property) = args;
-
-            (SerializedObject rootObject, SerializedProperty parentProperty) = GetParentPropertyAndRootObject((serializedObject, property));
-            if (rootObject == null) return "";
-
-            return GetPropertyInstancePath((rootObject, parentProperty));
-        }
-
-        // MARK: TODO ここ呼び出してるやつのバグチェック
-        public static string GetPropertyInstancePath(SerializedProperty property)
+        internal static string GetSerializedObjectInstanceId(SerializedObject so)
         {
             try
             {
-                return GetPropertyInstancePath((property.serializedObject, property));
+                return so.targetObject.GetInstanceID().ToString();
             }
             catch (ObjectDisposedException ex)
             {
@@ -186,49 +175,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public static string GetPropertyInstancePath((SerializedObject, SerializedProperty) args)
+        internal static bool EqualPropertyRefrence(SerializedProperty spX, SerializedProperty spY)
         {
-            try
-            {
-                (SerializedObject serializedObject, SerializedProperty property) = args;
-                if (serializedObject == null) return "";
-
-                string instanceID = GetSerializedObjectInstanceId(serializedObject);
-                string propertyPath = property != null ? GetPropertyPath(property) : "";
-                return propertyPath != "" ? $"{instanceID}.{propertyPath}" : instanceID;
-            }
-            catch (ObjectDisposedException ex)
-            {
-                DebugUtil.ErrorDebugLog(ex.ToString(), LogType.Warning);
-                return "";
-            }
+            return spX.serializedObject.targetObject == spY.serializedObject.targetObject && spX.propertyPath == spY.propertyPath;
         }
-
-        public static string GetSerializedObjectInstanceId(SerializedObject serializedObject)
-        {
-            try
-            {
-                return serializedObject.targetObject.GetInstanceID().ToString();
-            }
-            catch (ObjectDisposedException ex)
-            {
-                DebugUtil.ErrorDebugLog(ex.ToString(), LogType.Warning);
-                return "";
-            }
-        }
-
-        public static string GetPropertyPath(SerializedProperty property) => property.propertyPath;
-
-        public static bool EqualPropertyRefrence(SerializedProperty x, SerializedProperty y)
-        {
-            return x.serializedObject.targetObject == y.serializedObject.targetObject && x.propertyPath == y.propertyPath;
-        }
-
-        public static SerializedObject GetSerializedObject(IDisposable obj) => obj switch
-        {
-            SerializedObject serializedObject => serializedObject,
-            SerializedProperty property => property.serializedObject,
-            _ => null,
-        };
     }
 }

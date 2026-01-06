@@ -5,27 +5,29 @@ using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public class Settings : ScriptableObject
+    internal class Settings : ScriptableObject
     {
-        public const string DebugSettingsPath = "Assets/MultipleFieldBulkChangerDebugSettings.asset";
+        private const string DebugSettingsPath = "Assets/MultipleFieldBulkChangerDebugSettings.asset";
 
         private static Settings _instance;
 
-        public bool _Limitter = true;
-        public bool _DebugMode = false;
-        public bool _DebugLog = false;
+        [SerializeField]
+        internal bool _Limitter = true;
+        [SerializeField]
+        internal bool _DebugMode = false;
+        [SerializeField]
+        internal bool _DebugLog = false;
 
         private Settings() { }
 
-
-        public static Settings Instance
+        internal static Settings Instance
         {
             get
             {
-                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(_instance))
+                if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(_instance))
                 {
                     Settings loadedSettings = AssetDatabase.LoadAssetAtPath<Settings>(DebugSettingsPath);
-                    if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(loadedSettings))
+                    if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(loadedSettings))
                     {
                         _instance = CreateInstance<Settings>();
                         AssetDatabase.CreateAsset(_instance, DebugSettingsPath);
@@ -41,12 +43,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         }
     }
 
-    public static class DebugSettingsRegister
+    internal static class DebugSettingsRegister
     {
         [SettingsProvider]
-        public static SettingsProvider CreateProvider()
+        internal static SettingsProvider CreateProvider()
         {
-            var provider = new SettingsProvider("Preferences/MutipleFieldBulkChanger", SettingsScope.User, null)
+            SettingsProvider provider = new("Preferences/MutipleFieldBulkChanger", SettingsScope.User, null)
             {
                 // タイトル
                 label = "Mutiple Field Bulk Changer",

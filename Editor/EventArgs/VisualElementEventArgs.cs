@@ -61,7 +61,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public string GetSenderInspectorCustomizerInstancePath()
         {
-            if (IsSenderFromPropertyDrawer) return SerializedObjectUtil.GetPropertyInstancePath(SenderInspectorCustomizerSerializedProperty);
+            if (IsSenderFromPropertyDrawer) return SerializedObjectUtil.GetSerializedPropertyInstancePath(SenderInspectorCustomizerSerializedProperty);
             else return SenderEditorSerializedObject.targetObject.GetInstanceID().ToString();
         }
     }

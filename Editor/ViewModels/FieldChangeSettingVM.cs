@@ -3,22 +3,25 @@ using System.Collections.Generic;
 using System.Linq;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
+using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     [Serializable]
-    public class FieldChangeSettingVM : PropertyViewModelBase<FieldChangeSetting>
+    internal class FieldChangeSettingVM : ViewModelPropertyBase<FieldChangeSetting>
     {
-        public string vm_ValuePreview = "";
+        [SerializeField]
+        internal string vm_ValuePreview = "";
 
-        public Trackable<string> m_Expression { get; private set; }
+        [SerializeField]
+        internal List<MultipleFieldSelectorContainerVM> vm_TargetFields = new();
 
-        public List<MultipleFieldSelectorContainerVM> vm_TargetFields = new();
+        internal Trackable<string> m_Expression { get; private set; }
 
-        public Trackable<MFBCHelper.ExpressionData> ExpressionData { get; private set; }
+        internal Trackable<MFBCHelper.ExpressionData> ExpressionData { get; private set; }
 
-        public Trackable<Optional<object>> ExpressionResult { get; private set; }
-        public Trackable<Optional<string>> ExpressionErrorLog { get; private set; }
+        internal Trackable<Optional<object>> ExpressionResult { get; private set; }
+        internal Trackable<Optional<string>> ExpressionErrorLog { get; private set; }
 
         public override void Recalculate()
         {
@@ -38,7 +41,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public void CalculateExpression(List<Trackable<ArgumentData>> argumentDatas)
+        internal void CalculateExpression(List<Trackable<ArgumentData>> argumentDatas)
         {
             (Optional<object> result, Optional<string> errorLog) = GetExpressionResult(argumentDatas);
 
@@ -116,7 +119,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public (Optional<object> result, Optional<string> errorLog) GetExpressionResult(List<Trackable<ArgumentData>> argumentDatas)
+        private (Optional<object> result, Optional<string> errorLog) GetExpressionResult(List<Trackable<ArgumentData>> argumentDatas)
         {
             Optional<object> result = Optional<object>.None;
             Optional<string> errorLog = Optional<string>.None;

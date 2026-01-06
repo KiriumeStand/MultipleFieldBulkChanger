@@ -5,34 +5,15 @@ using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public static class UniversalDataManager
+    internal static class UniversalDataManager
     {
-        public class Debugger
+        internal class Debugger
         {
-            public static List<InspectorCustomizerIdentifier> _InstancePathLists = new();
+            internal static List<InspectorCustomizerIdentifier> _InstancePathLists = new();
 
-            public static readonly Dictionary<InspectorCustomizerIdentifier, List<(long drawerId, string subscriberType, string argsType)>> UnsubscribeActionInfosDictionary = new();
+            internal static readonly Dictionary<InspectorCustomizerIdentifier, List<(long drawerId, string subscriberType, string argsType)>> UnsubscribeActionInfosDictionary = new();
 
-            public static string UnsubscribeActionsInfoList
-            {
-                get
-                {
-                    List<string> strings = new();
-                    foreach (var keyValuePair in UnsubscribeActionInfosDictionary)
-                    {
-                        var keyDrawerId = EditorUtil.ObjectIdUtil.GetObjectId(keyValuePair.Key.InspectorCustomizer.Target);
-                        var keyTargetId = EditorUtil.ObjectIdUtil.GetObjectId(keyValuePair.Key.TargetObject);
-                        var keyPropertyId = EditorUtil.ObjectIdUtil.GetObjectId(keyValuePair.Key.SerializedData);
-                        foreach (var (drawerId, subscriberType, argsType) in keyValuePair.Value)
-                        {
-                            strings.Add($"{strings.Count}/keyDrawerId:{keyDrawerId}/keyTargetId:{keyTargetId}/keyPropertyId:{keyPropertyId}/    /drawerId:{drawerId}/drawerType:{subscriberType}/argsType:{argsType}");
-                        }
-                    }
-                    return string.Join("\r\n", strings);
-                }
-            }
-
-            public static void CleanupByInspectorCustomizerIdentifier(InspectorCustomizerIdentifier customizerIdentifier)
+            internal static void CleanupByInspectorCustomizerIdentifier(InspectorCustomizerIdentifier customizerIdentifier)
             {
                 if (_InstancePathLists.Contains(customizerIdentifier))
                     _InstancePathLists.Remove(customizerIdentifier);
@@ -42,25 +23,22 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public record IdentifierNames
+        internal record IdentifierNames
         {
-            public static readonly string UnsubscribeAction = "UnsubscribeAction";
-            public static readonly string EditorApplicationUpdateIdentifier = "EditorApplication.update";
-            public static readonly string ArgumentData = "ArgumentData";
+            internal static readonly string UnsubscribeAction = "UnsubscribeAction";
+            internal static readonly string EditorApplicationUpdateIdentifier = "EditorApplication.update";
         }
 
         /// <summary>
         /// 各ドロワーの各オブジェクトごとにユニークなオブジェクトを保管しておく場所
         /// </summary>
         /// <returns></returns>
-        public static readonly Dictionary<UniqueObjectIdentifier, Dictionary<InspectorCustomizerIdentifier, object>> UniversalUniqueObjectDictionaries = new();
+        internal static readonly Dictionary<UniqueObjectIdentifier, Dictionary<InspectorCustomizerIdentifier, object>> UniversalUniqueObjectDictionaries = new();
 
         // ▼ SerializedProperty系 ========================= ▼
         // MARK: ==SerializedProperty系==
 
-        public static readonly ConditionalWeakTable<FieldSelectorContainerBase, SerializedPropertyTreeNode> targetObjectPropertyTreeRootCache = new();
-
-        public static readonly ConditionalWeakTable<FieldChangeSetting, Optional<object>> expressionResultCache = new();
+        internal static readonly ConditionalWeakTable<FieldSelectorContainerBase, SerializedPropertyTreeNode> targetObjectSerializedPropertyTreeRootCache = new();
 
         // ▲ SerializedProperty系 ========================= ▲
 
@@ -68,14 +46,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ メソッド ========================= ▼
         // MARK: ==メソッド==
 
-        public static void RegisterUniqueObject<T>(InspectorCustomizerIdentifier customizerIdentifier, string dataTypeIdentifier, T uniqueObject)
+        internal static void RegisterUniqueObject<T>(InspectorCustomizerIdentifier customizerIdentifier, string dataTypeIdentifier, T uniqueObject)
         {
             var dictionary = GetUniqueObjectDictionary<T>(dataTypeIdentifier);
             dictionary[customizerIdentifier] = uniqueObject;
         }
 
 
-        public static T GetUniqueObject<T>(InspectorCustomizerIdentifier customizerIdentifier, string dataTypeIdentifier)
+        internal static T GetUniqueObject<T>(InspectorCustomizerIdentifier customizerIdentifier, string dataTypeIdentifier)
         {
             var dictionary = GetUniqueObjectDictionary<T>(dataTypeIdentifier);
             dictionary.TryGetValue(customizerIdentifier, out object uniqueObject);
@@ -86,13 +64,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             };
         }
 
-        public static void ClearUniqueObject<T>(InspectorCustomizerIdentifier customizerIdentifier, string dataTypeIdentifier)
+        internal static void ClearUniqueObject<T>(InspectorCustomizerIdentifier customizerIdentifier, string dataTypeIdentifier)
         {
             var dictionary = GetUniqueObjectDictionary<T>(dataTypeIdentifier);
             dictionary.Remove(customizerIdentifier);
         }
 
-        public static Dictionary<InspectorCustomizerIdentifier, object> GetUniqueObjectDictionary<T>(string dataTypeIdentifier)
+        internal static Dictionary<InspectorCustomizerIdentifier, object> GetUniqueObjectDictionary<T>(string dataTypeIdentifier)
         {
             if (!UniversalUniqueObjectDictionaries.ContainsKey((typeof(T), dataTypeIdentifier)))
                 UniversalUniqueObjectDictionaries[(typeof(T), dataTypeIdentifier)] = new();
@@ -100,7 +78,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return dictionary;
         }
 
-        public static void CleanupByInspectorCustomizerIdentifier(InspectorCustomizerIdentifier customizerIdentifier)
+        internal static void CleanupByInspectorCustomizerIdentifier(InspectorCustomizerIdentifier customizerIdentifier)
         {
             // 空になった辞書を削除するのでToArray()をしておく
             foreach (var innerDictionaryKVPairs in UniversalUniqueObjectDictionaries.ToArray())

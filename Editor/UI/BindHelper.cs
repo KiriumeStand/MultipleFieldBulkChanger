@@ -11,15 +11,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         public static T Bind<T>(
             VisualElement root,
             string elementName,
-            SerializedObject serializedObject,
-            string propertyPath
+            SerializedObject so,
+            string spPath
         ) where T : VisualElement, IBindable
         {
-            if (serializedObject == null) throw new ArgumentNullException(nameof(serializedObject));
+            if (so == null) throw new ArgumentNullException(nameof(so));
             T element = UIQuery.Q<T>(root, elementName);
-            SerializedProperty property = serializedObject.FindProperty(propertyPath);
+            SerializedProperty property = so.FindProperty(spPath);
             if (property == null)
-                throw new ArgumentException($"SerializedProperty not found: path='{propertyPath}'", nameof(propertyPath));
+                throw new ArgumentException($"SerializedProperty not found: path='{spPath}'", nameof(spPath));
             element.BindProperty(property);
             return element;
         }
@@ -28,26 +28,26 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         public static T BindRelative<T>(
             VisualElement root,
             string elementName,
-            SerializedProperty parent,
+            SerializedProperty parentSP,
             string relativePath
         ) where T : VisualElement, IBindable
         {
-            if (parent == null)
-                throw new ArgumentNullException(nameof(parent));
+            if (parentSP == null)
+                throw new ArgumentNullException(nameof(parentSP));
             T element = UIQuery.Q<T>(root, elementName);
-            SerializedProperty property = parent.SafeFindPropertyRelative(relativePath);
+            SerializedProperty property = parentSP.FindPropertyRelative(relativePath);
             if (property == null)
-                throw new ArgumentException($"Relative SerializedProperty not found: parent='{parent.propertyPath}', relativePath='{relativePath}'", nameof(relativePath));
+                throw new ArgumentException($"Relative SerializedProperty not found: parent='{parentSP.propertyPath}', relativePath='{relativePath}'", nameof(relativePath));
             element.BindProperty(property);
             return element;
         }
 
         // 既に取得済みの要素に対して BindProperty（任意）
-        public static void Bind<T>(T element, SerializedProperty property) where T : VisualElement, IBindable
+        public static void Bind<T>(T element, SerializedProperty sp) where T : VisualElement, IBindable
         {
             if (element == null) throw new ArgumentNullException(nameof(element));
-            if (property == null) throw new ArgumentNullException(nameof(property));
-            element.BindProperty(property);
+            if (sp == null) throw new ArgumentNullException(nameof(sp));
+            element.BindProperty(sp);
         }
 
         // 任意（存在しない場合は何もしない）
@@ -58,11 +58,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             string relativePath
         ) where T : VisualElement, IBindable
         {
-            var element = UIQuery.QOrNull<T>(root, elementName);
+            T element = UIQuery.QOrNull<T>(root, elementName);
             if (element == null || parent == null) return null;
 
-            var property = parent.SafeFindPropertyRelative(relativePath);
-            if (property != null) element.BindProperty(property);
+            SerializedProperty sp = parent.FindPropertyRelative(relativePath);
+            if (sp != null) element.BindProperty(sp);
 
             return element;
         }

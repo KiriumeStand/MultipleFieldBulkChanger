@@ -14,9 +14,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
 
         public object Clone()
         {
-            MultipleFieldSelectorContainer clone = new();
-
-            clone._SelectObject = _SelectObject;
+            MultipleFieldSelectorContainer clone = new()
+            {
+                _SelectObject = _SelectObject
+            };
             foreach (FieldSelector sfItem in _FieldSelectors)
             {
                 clone._FieldSelectors.Add((FieldSelector)sfItem.Clone());

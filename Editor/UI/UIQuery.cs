@@ -9,9 +9,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         public static T Q<T>(VisualElement root, string name) where T : VisualElement
         {
             if (root == null) throw new ArgumentNullException(nameof(root));
-            T element = root.Q<T>(name);
-            if (element == null)
-                throw new ArgumentException($"UXML element not found: name='{name}', type='{typeof(T).Name}'", nameof(name));
+            T element = root.Q<T>(name) ?? throw new ArgumentException($"UXML element not found: name='{name}', type='{typeof(T).Name}'", nameof(name));
             return element;
         }
 
@@ -20,15 +18,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             if (root == null) return null;
             return root.Q<T>(name);
-        }
-
-        // 失敗時に bool を返す（例外非依存）
-        public static bool TryQ<T>(VisualElement root, string name, out T element) where T : VisualElement
-        {
-            element = default;
-            if (root == null) return false;
-            element = root.Q<T>(name);
-            return element != null;
         }
     }
 }

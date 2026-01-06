@@ -9,23 +9,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     public static class DebugUtil
     {
-        [InitializeOnLoadMethod]
-        public static void Init()
-        {
-            // 重複登録を防ぐため、一度削除してから追加
-            Debug.Log("エディターログ監視を開始しました");
-        }
-        public static int testCounter { get; set; } = 0;
-
-        static void HandleLog(string logString, string stackTrace, LogType type)
-        {
-            if (type == LogType.Exception)
-            {
-                // 例外が発生した時の処理
-                Debug.Log($"例外をキャッチしました: {logString}");
-            }
-        }
-
         public static void EventManagerDebugLog(BaseEventArgs args, bool isStart, bool isDebugMode)
         {
             if (!isDebugMode) return;
@@ -48,7 +31,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (targetProperty != null)
             {
                 SerializedProperty property = targetProperty.GetValue(eventArgs) as SerializedProperty;
-                return SerializedObjectUtil.GetPropertyInstancePath(property);
+                return SerializedObjectUtil.GetSerializedPropertyInstancePath(property);
             }
             return "";
         }

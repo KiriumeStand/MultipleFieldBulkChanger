@@ -3,7 +3,7 @@ using System;
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     [Serializable]
-    public abstract class FieldSelectorContainerViewModelBase<TModel> : PropertyViewModelBase<TModel>
+    internal abstract class FieldSelectorContainerViewModelBase<TModel> : ViewModelPropertyBase<TModel>
         where TModel : class
     {
         public Trackable<UnityEngine.Object> m_SelectObject { get; protected set; }

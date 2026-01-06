@@ -14,11 +14,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     [CustomPropertyDrawer(typeof(FieldSelector))]
     public class FieldSelectorDrawerImpl : ExpansionPropertyDrawerImpl<FieldSelectorDrawer>
     {
-        public FieldSelectorDrawerImpl() : base() { }
-
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
-
 
         public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
@@ -31,13 +28,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Label u_LogLabel = BindHelper.BindRelative<Label>(uxml, UxmlNames.LogLabel, vmProperty, nameof(FieldSelectorVM.vm_LogLabel));
 
             // イベント発行の登録
-            EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectFieldPath, this, property, status);
-            u_LogLabel.RegisterValueChangedCallback(e =>
-            {
-                if (e.previousValue == e.newValue) return;
-                TextElementValueChangedEventArgs args = new(this, property, u_LogLabel, status, e.previousValue, e.newValue);
-                ((IExpansionInspectorCustomizer)this).Publish(args);
-            });
+            u_LogLabel.RegisterValueChangedCallback(e => OnTextElementValueChangedEventHandler(e, property, uxml, status, vmProperty));
 
             // イベント購読の登録
             ((IExpansionInspectorCustomizer)this).Subscribe<ListViewItemsRemovedEventArgs>(this,
@@ -54,14 +45,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
+                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
                     bool isSenderIsAncestorProperty = false;
                     foreach (int index in e.RemovedIndex)
                     {
                         string targetPathPrefix = $"{senderBindingPropertyInstancePath}.Array.data[{index}]";
-                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetPropertyInstancePath(property).StartsWith(targetPathPrefix);
+                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetSerializedPropertyInstancePath(property).StartsWith(targetPathPrefix);
                     }
 
                     return isSameEditorInstance && isSenderIsAncestorProperty;
@@ -85,32 +76,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             UpdateLogLabel(uxml, vmProperty);
 
             // イベント購読の登録
-            ((IExpansionInspectorCustomizer)this).Subscribe<TextElementValueChangedEventArgs>(this,
-                property, status,
-                (sender, args) => { OnTextElementValueChangedEventHandler(args, property, uxml, status, vmProperty); },
-                e =>
-                {
-                    if (!SerializedObjectUtil.IsValid(property)) return false;
-                    return e.SenderElement == u_LogLabel;
-                },
-                false
-            );
             u_SelectFieldButton.clicked += () =>
             {
-                SerializedProperty fieldSelectorContainerProperty = SerializedObjectUtil.GetParentProperty(property);
-                FieldSelectorContainerBase fieldSelectorContainerObject = MFBCHelper.GetTargetObject(fieldSelectorContainerProperty) as FieldSelectorContainerBase;
-
-                SerializedProperty grandparentProperty = SerializedObjectUtil.GetParentProperty(fieldSelectorContainerProperty);
-                IExpansionInspectorCustomizerTargetMarker grandparentObject = MFBCHelper.GetTargetObject(fieldSelectorContainerProperty);
-                bool ddItemEditableOnly = grandparentObject is FieldChangeSetting;
-
-                UniversalDataManager.targetObjectPropertyTreeRootCache.TryGetValue(fieldSelectorContainerObject, out SerializedPropertyTreeNode rootNode);
-                SerializedProperty selectFieldPathProp = property.SafeFindPropertyRelative(nameof(FieldSelector._SelectFieldPath));
-                FieldSelectorAdvancedDropdown dropdown = new(
-                    new List<string>() { u_SelectFieldPath.value }, new AdvancedDropdownState(),
-                    rootNode, selectFieldPathProp, ddItemEditableOnly
-                );
-                dropdown.Show(u_SelectFieldButton.parent.worldBound);
+                OnSelectFieldButtonClickedEventHandler(property, uxml, status);
             };
         }
 
@@ -126,9 +94,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             ((IExpansionInspectorCustomizer)this).OnDetachFromPanelEvent(property, uxml, targetObject, status);
         }
 
-        private static void OnTextElementValueChangedEventHandler(TextElementValueChangedEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedProperty vmProperty)
+        private static void OnTextElementValueChangedEventHandler(ChangeEvent<string> e, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedProperty vmProperty)
         {
             UpdateLogLabel(uxml, vmProperty);
+        }
+
+        private static void OnSelectFieldButtonClickedEventHandler(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
+        {
+            ShowFieldSelectorAdvancedDropdown(property, uxml);
         }
 
         // ▲ イベントハンドラー ========================= ▲
@@ -149,19 +122,39 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 case "Error":
                     u_LogLabel.style.color = new StyleColor(Color.red);
                     u_LogLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-                    //u_LogLabel.style.fontSize = 12;
+                    u_LogLabel.style.fontSize = 12;
                     break;
                 case "Normal":
                 default:
                     u_LogLabel.style.color = new StyleColor(Color.white);
                     u_LogLabel.style.unityFontStyleAndWeight = FontStyle.Normal;
-                    //u_LogLabel.style.fontSize = 12;
+                    u_LogLabel.style.fontSize = 12;
                     break;
             }
 
             if (!string.IsNullOrWhiteSpace(u_LogLabel.text))
                 VisualElementUtil.SetDisplay(u_LogLabel, true);
             else VisualElementUtil.SetDisplay(u_LogLabel, false);
+        }
+
+        private static void ShowFieldSelectorAdvancedDropdown(SerializedProperty property, VisualElement uxml)
+        {
+            TextField u_SelectFieldPath = UIQuery.Q<TextField>(uxml, UxmlNames.SelectFieldPath);
+            Button u_SelectFieldButton = UIQuery.Q<Button>(uxml, UxmlNames.SelectFieldButton);
+
+            SerializedProperty fieldSelectorContainerSP = SerializedObjectUtil.GetParentSerializedProperty(property);
+            FieldSelectorContainerBase fieldSelectorContainerObject = MFBCHelper.GetTargetObject(fieldSelectorContainerSP) as FieldSelectorContainerBase;
+
+            IExpansionInspectorCustomizerTargetMarker grandparentObject = MFBCHelper.GetTargetObject(fieldSelectorContainerSP);
+            bool ddItemEditableOnly = grandparentObject is FieldChangeSetting;
+
+            UniversalDataManager.targetObjectSerializedPropertyTreeRootCache.TryGetValue(fieldSelectorContainerObject, out SerializedPropertyTreeNode rootNode);
+            SerializedProperty selectFieldPathProp = property.FindPropertyRelative(nameof(FieldSelector._SelectFieldPath));
+            FieldSelectorAdvancedDropdown dropdown = new(
+                new List<string>() { u_SelectFieldPath.value }, new AdvancedDropdownState(),
+                rootNode, selectFieldPathProp, ddItemEditableOnly
+            );
+            dropdown.Show(u_SelectFieldButton.parent.worldBound);
         }
 
         // ▲ メソッド ========================= ▲
@@ -185,9 +178,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private class FieldSelectorAdvancedDropdown : ExpantionAdvancedDropdown<FieldSelectorAdvancedDropdownItem>
         {
-            public int temp = 0;
-
-            protected override FieldSelectorAdvancedDropdownItem GetNewSearchTreeRoot() => new("Search Results", "", false, null);
+            protected override FieldSelectorAdvancedDropdownItem GetNewSearchTreeRoot() => new("Search Results", false, null);
 
             private readonly SerializedPropertyTreeNode _rootNode;
 
@@ -195,8 +186,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             private readonly bool _editableOnly;
 
-            private HashSet<SerializedPropertyTreeNode.Filter> _selectableFilters = new();
-            private HashSet<SerializedPropertyTreeNode.Filter> _innerNodeFilters = new();
+            private readonly HashSet<SerializedPropertyTreeNode.Filter> _selectableFilters = new();
+            private readonly HashSet<SerializedPropertyTreeNode.Filter> _innerNodeFilters = new();
 
             public FieldSelectorAdvancedDropdown(
                 List<string> selectedItemPaths, AdvancedDropdownState state, SerializedPropertyTreeNode root,
@@ -226,14 +217,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             protected override FieldSelectorAdvancedDropdownItem GenericBuildRoot()
             {
                 if (_rootNode == null)
-                    return new(_rootNode?.Name, "", false, _rootNode);
+                    return new(_rootNode?.Name, false, _rootNode);
 
-                Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs = new() { { _rootNode, new(_rootNode.Name, "", false, _rootNode) } };
+                Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs = new() { { _rootNode, new(_rootNode.Name, false, _rootNode) } };
                 foreach (SerializedPropertyTreeNode child in _rootNode.Children)
                 {
                     BuildRootInternal(child, nodeADItemPairs);
                 }
-                temp = nodeADItemPairs.Count();
                 return nodeADItemPairs[_rootNode];
             }
 
@@ -241,9 +231,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 SerializedPropertyTreeNode curNode, Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs
             )
             {
-                if (curNode.Property == null)
+                if (curNode.SerializedProperty == null)
                 {
-                    FieldSelectorAdvancedDropdownItem innerItem = new($"{curNode.Name} ->", null, false, curNode);
+                    FieldSelectorAdvancedDropdownItem innerItem = new($"{curNode.Name} ->", false, curNode);
                     nodeADItemPairs[curNode.Parent].AddChild(innerItem);
 
                     FieldSelectorAdvancedDropdownItem dictRegisterItem = innerItem;
@@ -257,7 +247,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 else
                 {
                     SerializedPropertyTreeNode[] spNodeStack = curNode.GetNodeStackWithoutRoot();
-                    SerializedProperty[] spStack = spNodeStack.Select(x => x.Property).ToArray();
+                    SerializedProperty[] spStack = spNodeStack.Select(x => x.SerializedProperty).ToArray();
 
 
                     bool isSelectable = true;
@@ -281,14 +271,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         FieldSelectorAdvancedDropdownItem selectableItem = null;
                         if (isSelectable)
                         {
-                            selectableItem = new(curNode.Name, curNode.Property.propertyPath, true, curNode);
+                            selectableItem = new(curNode.Name, true, curNode);
                             nodeADItemPairs[curNode.Parent].AddChild(selectableItem);
                         }
 
                         FieldSelectorAdvancedDropdownItem innerItem = null;
                         if (isInnerNode)
                         {
-                            innerItem = new($"{curNode.Name} ->", curNode.Property.propertyPath, false, curNode);
+                            innerItem = new($"{curNode.Name} ->", false, curNode);
                             nodeADItemPairs[curNode.Parent].AddChild(innerItem);
                         }
 
@@ -314,7 +304,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 string tooltip = "";
 
                 itemName = item.name;
-                SerializedProperty prop = item.Node.Property;
+                SerializedProperty prop = item.Node.SerializedProperty;
                 if (prop != null)
                 {
                     string path = prop.propertyPath;
@@ -328,14 +318,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         if (item.name.StartsWith("data["))
                         {
                             string[] nameFieldNames = new[] { "m_name", "_name", "name" };
-                            IEnumerable<SerializedPropertyTreeNode> nameNodes = item.Node.Children.Where(x => nameFieldNames.Contains(x.Property.name.ToLower()));
+                            IEnumerable<SerializedPropertyTreeNode> nameNodes = item.Node.Children.Where(x => nameFieldNames.Contains(x.SerializedProperty.name.ToLower()));
 
                             foreach (SerializedPropertyTreeNode node in nameNodes)
                             {
-                                if (node.Property.propertyType == SerializedPropertyType.String)
+                                if (node.SerializedProperty.propertyType == SerializedPropertyType.String)
                                 {
                                     // マテリアルのプロパティ名を description に表示
-                                    description = $"({node.Property.stringValue})";
+                                    description = $"({node.SerializedProperty.stringValue})";
                                     break;
                                 }
                             }
@@ -343,7 +333,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                         {
                             UnityEngine.Object targetObject = prop.serializedObject.targetObject;
-                            bool isNull = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(targetObject);
+                            bool isNull = EditorUtil.FakeNullUtil.IsNullOrFakeNull(targetObject);
                             if (!isNull)
                             {
                                 string[] pathStack;
@@ -353,8 +343,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                         // マテリアルの m_SavedPropertiesの要素か
                                         if (
                                             prop.name == "data" &&
-                                            (item.Node.Parent.Property?.isArray ?? false) &&
-                                            item.Node.Parent.Parent.Property.arrayElementType == "pair" &&
+                                            (item.Node.Parent.SerializedProperty?.isArray ?? false) &&
+                                            item.Node.Parent.Parent.SerializedProperty.arrayElementType == "pair" &&
                                             (pathStack = path.Split('.')).Length == 4 &&
                                             pathStack[0] == "m_SavedProperties" &&
                                             new[] { "m_TexEnvs", "m_Ints", "m_Floats", "m_Colors" }.Contains(pathStack[1])
@@ -367,8 +357,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                     case AnimationClip:
                                         if (
                                             prop.name == "data" &&
-                                            (item.Node.Parent.Property?.isArray ?? false) &&
-                                            item.Node.Parent.Parent.Property.arrayElementType.EndsWith("Curve") &&
+                                            (item.Node.Parent.SerializedProperty?.isArray ?? false) &&
+                                            item.Node.Parent.Parent.SerializedProperty.arrayElementType.EndsWith("Curve") &&
                                             (pathStack = path.Split('.')).Length == 3 &&
                                             pathStack[0].EndsWith("Curves") &&
                                             true
@@ -377,21 +367,21 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                             string pathString = "";
                                             string attributeString = "";
 
-                                            SerializedPropertyTreeNode pathPropNode = item.Node.Children.FirstOrDefault(x => x.Property.name == "path");
-                                            if (pathPropNode != null && pathPropNode.Property.propertyType == SerializedPropertyType.String)
+                                            SerializedPropertyTreeNode pathPropNode = item.Node.Children.FirstOrDefault(x => x.SerializedProperty.name == "path");
+                                            if (pathPropNode != null && pathPropNode.SerializedProperty.propertyType == SerializedPropertyType.String)
                                             {
-                                                pathString = pathPropNode.Property.stringValue;
+                                                pathString = pathPropNode.SerializedProperty.stringValue;
                                             }
 
-                                            switch (item.Node.Parent.Parent.Property.arrayElementType)
+                                            switch (item.Node.Parent.Parent.SerializedProperty.arrayElementType)
                                             {
                                                 case "FloatCurve":
                                                 case "PPtrCurve":
-                                                    SerializedPropertyTreeNode attributePropNode = item.Node.Children.FirstOrDefault(x => x.Property.name == "attribute");
+                                                    SerializedPropertyTreeNode attributePropNode = item.Node.Children.FirstOrDefault(x => x.SerializedProperty.name == "attribute");
 
-                                                    if (attributePropNode != null && attributePropNode.Property.propertyType == SerializedPropertyType.String)
+                                                    if (attributePropNode != null && attributePropNode.SerializedProperty.propertyType == SerializedPropertyType.String)
                                                     {
-                                                        attributeString = attributePropNode.Property.stringValue;
+                                                        attributeString = attributePropNode.SerializedProperty.stringValue;
                                                     }
                                                     break;
                                                 case "Vector3Curve":
@@ -429,13 +419,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                                         }
                                         if (
                                             prop.name == "size" &&
-                                            (item.Node.Parent.Property?.isArray ?? false) &&
-                                            item.Node.Parent.Parent.Property.arrayElementType.EndsWith("Curve") &&
+                                            (item.Node.Parent.SerializedProperty?.isArray ?? false) &&
+                                            item.Node.Parent.Parent.SerializedProperty.arrayElementType.EndsWith("Curve") &&
                                             (pathStack = path.Split('.')).Length == 3 &&
                                             pathStack[0].EndsWith("Curves")
                                         )
                                         {
-                                            description = $"({item.Node.Parent.Parent.Property.arrayElementType})";
+                                            description = $"({item.Node.Parent.Parent.SerializedProperty.arrayElementType})";
                                         }
                                         break;
                                 }
@@ -463,7 +453,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             public override string FullPath => Node?.FullPath ?? "";
 
-            public FieldSelectorAdvancedDropdownItem(string displayName, string path, bool isSelectable, SerializedPropertyTreeNode node) : base(displayName)
+            public FieldSelectorAdvancedDropdownItem(string displayName, bool isSelectable, SerializedPropertyTreeNode node) : base(displayName)
             {
                 IsSelectable = isSelectable;
                 Node = node;

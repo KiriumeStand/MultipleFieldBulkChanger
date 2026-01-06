@@ -10,9 +10,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     [CustomPropertyDrawer(typeof(MultipleFieldSelectorContainer))]
     public class MultipleFieldSelectorContainerDrawerImpl : FieldSelectorContainerDrawerImplBase<MultipleFieldSelectorContainerDrawer>
     {
-        public MultipleFieldSelectorContainerDrawerImpl() : base() { }
-
-
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
@@ -24,7 +21,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             ListView u_SelectFields = BindHelper.BindRelative<ListView>(uxml, UxmlNames.FieldsSelector, property, nameof(MultipleFieldSelectorContainer._FieldSelectors));
 
             // イベント発行の登録
-            EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectObject, this, property, status);
             u_SelectFields.itemsAdded += (e) =>
             {
                 IExpansionInspectorCustomizer.AddListElementWithClone(((MultipleFieldSelectorContainer)targetObject)._FieldSelectors, e);
@@ -48,8 +44,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             ObjectField u_SelectObject = UIQuery.Q<ObjectField>(uxml, UxmlNames.SelectObject);
 
             // イベント購読の登録
-            EventUtil.SubscribeFieldValueChangedEvent(u_SelectObject, this, property, status,
-                (sender, args) => { OnFieldSelectorSelectObjectChangedEventHandler(args, uxml, status); });
+            u_SelectObject.RegisterValueChangedCallback(e => OnFieldSelectorSelectObjectChangedEventHandler(e, property, uxml, status));
 
             UpdateSerializedPropertiesCache(property, uxml, status, u_SelectObject.value);
         }

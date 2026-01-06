@@ -1,6 +1,6 @@
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public interface IViewModel
+    internal interface IViewModel
     {
         public abstract void Recalculate();
     }

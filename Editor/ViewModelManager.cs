@@ -7,7 +7,7 @@ using UnityEditor;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public static class ViewModelManager
+    internal static class ViewModelManager
     {
         static ViewModelManager()
         {
@@ -52,33 +52,33 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private static readonly List<(FieldInfo, FieldInfo)> target2VMFieldInfoPair = new();
 
-        public static string GetVMPropPath(SerializedProperty targetProp)
+        internal static string GetVMPropPath(SerializedProperty targetSP)
         {
-            SerializedProperty[] propStack = SerializedObjectUtil.GetPropertyStack(targetProp);
+            SerializedProperty[] spStack = SerializedObjectUtil.GetSerializedPropertyStack(targetSP);
 
             List<string> relativePathStack = new();
             string prevAbsolutePath = "";
-            for (int i = 0; i < propStack.Length; i++)
+            for (int i = 0; i < spStack.Length; i++)
             {
-                SerializedProperty curProp = propStack[i];
-                string curRelativePath = curProp.propertyPath;
+                SerializedProperty curSP = spStack[i];
+                string curRelativePath = curSP.propertyPath;
                 if (prevAbsolutePath != "")
                 {
-                    curRelativePath = curProp.propertyPath[(prevAbsolutePath.Length + 1)..];
+                    curRelativePath = curSP.propertyPath[(prevAbsolutePath.Length + 1)..];
                 }
                 relativePathStack.Add(curRelativePath);
 
-                prevAbsolutePath = curProp.propertyPath;
+                prevAbsolutePath = curSP.propertyPath;
 
                 Type parentType = null;
                 if (i > 0)
                 {
-                    (bool success, Type type, string errorLog) = propStack[i - 1].GetFieldType();
+                    (bool success, Type type, string errorLog) = spStack[i - 1].GetFieldType();
                     parentType = type;
                 }
                 else
                 {
-                    parentType = curProp.serializedObject.targetObject.GetType();
+                    parentType = curSP.serializedObject.targetObject.GetType();
                 }
 
                 (FieldInfo, FieldInfo) findPair = target2VMFieldInfoPair.FirstOrDefault(

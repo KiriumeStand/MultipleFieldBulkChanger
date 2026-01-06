@@ -10,11 +10,11 @@ using Object = UnityEngine.Object;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public class SerializedPropertyTreeNode
+    internal class SerializedPropertyTreeNode
     {
-        public string Name { get; }
+        internal string Name { get; }
 
-        public string FullPath
+        internal string FullPath
         {
             get
             {
@@ -23,30 +23,30 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public SerializedObject SerializedObject { get; }
+        internal SerializedObject SerializedObject { get; }
 
-        public SerializedProperty Property { get; }
+        internal SerializedProperty SerializedProperty { get; }
 
-        public SerializedPropertyTreeNode Parent { get; private set; }
+        internal SerializedPropertyTreeNode Parent { get; private set; }
 
-        public List<SerializedPropertyTreeNode> Children { get; } = new();
+        internal List<SerializedPropertyTreeNode> Children { get; } = new();
 
-        public HashSet<string> Tags { get; } = new();
+        internal HashSet<string> Tags { get; } = new();
 
-        public SerializedPropertyTreeNode(string name, SerializedObject serializedObject, SerializedProperty property)
+        internal SerializedPropertyTreeNode(string name, SerializedObject so, SerializedProperty sp)
         {
             Name = name;
-            SerializedObject = serializedObject;
-            Property = property;
+            SerializedObject = so;
+            SerializedProperty = sp;
             Parent?.Children.Add(this);
         }
 
-        public SerializedPropertyTreeNode[] GetNodeStackWithoutRoot()
+        internal SerializedPropertyTreeNode[] GetNodeStackWithoutRoot()
         {
-            return GetNodeStack().Where(x => x.Property != null).ToArray();
+            return GetNodeStack().Where(x => x.SerializedProperty != null).ToArray();
         }
 
-        public SerializedPropertyTreeNode[] GetNodeStack()
+        internal SerializedPropertyTreeNode[] GetNodeStack()
         {
             SerializedPropertyTreeNode curNode = this;
             List<SerializedPropertyTreeNode> nodeStack = new() { curNode };
@@ -61,17 +61,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return nodeStack.ToArray();
         }
 
-        public void AddChild(SerializedPropertyTreeNode node)
+        internal void AddChild(SerializedPropertyTreeNode node)
         {
-            if (node.Parent != null)
-            {
-                node.Parent.RemoveChild(node);
-            }
+            node.Parent?.RemoveChild(node);
             node.Parent = this;
             Children.Add(node);
         }
 
-        public void RemoveChild(SerializedPropertyTreeNode node)
+        internal void RemoveChild(SerializedPropertyTreeNode node)
         {
             if (Children.Contains(node))
             {
@@ -80,7 +77,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public SerializedPropertyTreeNode[] GetAllNode() => GetAllNode(this);
+        internal SerializedPropertyTreeNode[] GetAllNode() => GetAllNode(this);
 
         private static SerializedPropertyTreeNode[] GetAllNode(SerializedPropertyTreeNode root)
         {
@@ -92,9 +89,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return list.ToArray();
         }
 
-        public SerializedPropertyTreeNode[] Where(Filter filters) => Where(new[] { filters });
+        internal SerializedPropertyTreeNode[] Where(Filter filters) => Where(new[] { filters });
 
-        public SerializedPropertyTreeNode[] Where(IEnumerable<Filter> filters)
+        internal SerializedPropertyTreeNode[] Where(IEnumerable<Filter> filters)
         {
             List<SerializedPropertyTreeNode> resultList = new();
 
@@ -103,7 +100,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             foreach (SerializedPropertyTreeNode node in allNode)
             {
                 SerializedPropertyTreeNode[] nodeStack = node.GetNodeStackWithoutRoot();
-                SerializedProperty[] propStack = nodeStack.Select(n => n.Property).ToArray();
+                SerializedProperty[] propStack = nodeStack.Select(n => n.SerializedProperty).ToArray();
 
                 bool result = filters.All(f => f.Calc(node.SerializedObject, propStack));
                 if (result) resultList.Add(node);
@@ -112,12 +109,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return resultList.ToArray();
         }
 
-        public void SetTag(string tag)
+        internal void SetTag(string tag)
         {
             Tags.Add(tag);
         }
 
-        public void RemoveTag(string tag)
+        internal void RemoveTag(string tag)
         {
             if (Tags.Contains(tag))
             {
@@ -125,22 +122,21 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-
-        public static SerializedPropertyTreeNode GetPropertyTreeWithImporter(
-            SerializedObject serializedObject,
+        internal static SerializedPropertyTreeNode GetSerializedPropertyTreeWithImporter(
+            SerializedObject so,
             HashSet<Filter> enterChildrenFilters
         )
         {
-            SerializedPropertyTreeNode treeRoot = GetPropertyTree(serializedObject, enterChildrenFilters);
+            SerializedPropertyTreeNode treeRoot = GetSerializedPropertyTree(so, enterChildrenFilters);
 
-            string assetPath = AssetDatabase.GetAssetPath(serializedObject.targetObject);
+            string assetPath = AssetDatabase.GetAssetPath(so.targetObject);
             if (!string.IsNullOrEmpty(assetPath))
             {
                 AssetImporter importer = AssetImporter.GetAtPath(assetPath);
                 if (importer != null)
                 {
                     SerializedObject importerSO = new(importer);
-                    SerializedPropertyTreeNode importerTreeRoot = GetPropertyTree(importerSO, enterChildrenFilters);
+                    SerializedPropertyTreeNode importerTreeRoot = GetSerializedPropertyTree(importerSO, enterChildrenFilters);
                     SerializedPropertyTreeNode newImporterTreeRoot = new("@Importer", importerSO, null);
                     treeRoot.AddChild(newImporterTreeRoot);
 
@@ -154,84 +150,83 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return treeRoot;
         }
 
-        public static SerializedPropertyTreeNode GetPropertyTree(
-            SerializedObject serializedObject,
+        internal static SerializedPropertyTreeNode GetSerializedPropertyTree(
+            SerializedObject so,
             HashSet<Filter> enterChildrenFilters
         )
         {
             // 元リストを書き換えないようにコピー
             enterChildrenFilters = enterChildrenFilters.ToHashSet();
 
-            // nullなら空のリストにする
             enterChildrenFilters.Add(new(FilterFuncs.EnterChildrenObjectDefault, false));
 
-            SerializedProperty curProperty = serializedObject.GetIterator();
+            SerializedProperty curSP = so.GetIterator();
 
             // serializedObjectをフィルターにかける
-            bool enterChildren = enterChildrenFilters.All(x => x.Calc(serializedObject, Array.Empty<SerializedProperty>()));
+            bool enterChildren = enterChildrenFilters.All(x => x.Calc(so, Array.Empty<SerializedProperty>()));
 
             if (enterChildren)
             {
-                curProperty.Next(enterChildren);
-                SerializedPropertyTreeNode root = GetPropertyTreeInternal(curProperty, null, enterChildrenFilters);
+                curSP.Next(enterChildren);
+                SerializedPropertyTreeNode root = GetSerializedPropertyTreeInternal(curSP, null, enterChildrenFilters);
                 return root;
             }
 
             return new("", null, null);
         }
 
-        public static SerializedPropertyTreeNode GetPropertyTree(
-            SerializedProperty property,
+        internal static SerializedPropertyTreeNode GetSerializedPropertyTree(
+            SerializedProperty sp,
             HashSet<Filter> enterChildrenFilters
         )
         {
             bool includeInvisible = true;
             // このプロパティの子または孫ではない次のプロパティ
-            SerializedProperty cancelProperty = property.GetEndProperty(includeInvisible);
+            SerializedProperty cancelSP = sp.GetEndProperty(includeInvisible);
 
-            SerializedPropertyTreeNode root = GetPropertyTreeInternal(property, cancelProperty, enterChildrenFilters);
+            SerializedPropertyTreeNode root = GetSerializedPropertyTreeInternal(sp, cancelSP, enterChildrenFilters);
             return root;
         }
 
-        private static SerializedPropertyTreeNode GetPropertyTreeInternal(
-            SerializedProperty property,
-            SerializedProperty cancelProperty,
+        private static SerializedPropertyTreeNode GetSerializedPropertyTreeInternal(
+            SerializedProperty sp,
+            SerializedProperty cancelSP,
             HashSet<Filter> enterChildrenFilters
         )
         {
-            enterChildrenFilters.Add(new(FilterFuncs.EnterChildrenPropertyDefault, false));
+            enterChildrenFilters.Add(new(FilterFuncs.EnterChildrenSPDefault, false));
 
-            SerializedProperty curProperty = property.Copy();
+            SerializedProperty curSP = sp.Copy();
+            SerializedProperty curSPCopy;
 
-            SerializedObject so = new(curProperty.serializedObject.targetObject);
-            so.Update();
+            curSP.serializedObject.Update();
 
-            SerializedPropertyTreeNode root = new(so.targetObject.name, so, null);
+            SerializedPropertyTreeNode root = new(curSP.serializedObject.targetObject.name, curSP.serializedObject, null);
             SerializedPropertyTreeNode curParentNode = root;
 
-            List<SerializedProperty> propertyStack = new();
-            List<SerializedProperty> endPropertyStack = new();
+            List<SerializedProperty> spStack = new();
+            List<SerializedProperty> endSPStack = new();
 
             bool doLoop;
             do
             {
                 doLoop = false;
 
-                SerializedProperty sp = so.FindProperty(curProperty.propertyPath);
+                curSPCopy = curSP.Copy();
 
                 // スタックを追加
-                propertyStack.Add(sp);
+                spStack.Add(curSPCopy);
                 bool includeInvisible = true;
                 // このプロパティの子孫はない次のプロパティ
-                endPropertyStack.Add(sp.GetEndProperty(includeInvisible));
+                endSPStack.Add(curSP.GetEndProperty(includeInvisible));
 
                 // serializedPropertyをフィルターにかける
-                bool enterChildren = enterChildrenFilters.All(filter => filter.Calc(sp.serializedObject, propertyStack.ToArray()));
+                bool enterChildren = enterChildrenFilters.All(filter => filter.Calc(curSP.serializedObject, spStack.ToArray()));
 
-                int lastPathStartIndex = sp.propertyPath.LastIndexOf('.') + 1;
+                int lastPathStartIndex = curSP.propertyPath.LastIndexOf('.') + 1;
                 // ノードを作成する
-                string name = sp.propertyPath[lastPathStartIndex..];
-                SerializedPropertyTreeNode newChild = new(name, so, sp);
+                string name = curSP.propertyPath[lastPathStartIndex..];
+                SerializedPropertyTreeNode newChild = new(name, curSP.serializedObject, curSPCopy);
                 if (enterChildren)
                 {
                     curParentNode.AddChild(newChild);
@@ -239,21 +234,21 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
 
                 // 次の要素を取得
-                bool existNext = curProperty.Next(enterChildren);
+                bool existNext = curSP.Next(enterChildren);
 
-                while (endPropertyStack.Count() > 0 && SerializedObjectUtil.EqualPropertyRefrence(endPropertyStack.Last(), curProperty))
+                while (endSPStack.Count() > 0 && SerializedObjectUtil.EqualPropertyRefrence(endSPStack.Last(), curSP))
                 {
-                    if (curParentNode.Property != null && SerializedObjectUtil.EqualPropertyRefrence(propertyStack.Last(), curParentNode.Property))
+                    if (curParentNode.SerializedProperty != null && SerializedObjectUtil.EqualPropertyRefrence(spStack.Last(), curParentNode.SerializedProperty))
                     {
                         curParentNode = curParentNode.Parent;
                     }
                     // 次の要素が子でないならendPropertyStackから一致するものが無くなるまでスタックを遡る
-                    propertyStack.Remove(propertyStack[^1]);
-                    endPropertyStack.Remove(endPropertyStack[^1]);
+                    spStack.Remove(spStack[^1]);
+                    endSPStack.Remove(endSPStack[^1]);
                 }
 
                 // ループを続けるか
-                doLoop = existNext && (cancelProperty == null || !SerializedObjectUtil.EqualPropertyRefrence(curProperty, cancelProperty));
+                doLoop = existNext && (cancelSP == null || !SerializedObjectUtil.EqualPropertyRefrence(curSP, cancelSP));
             }
             while (doLoop);
 
@@ -310,7 +305,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
 
                 // ルートオブジェクトを見ているなら
-                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(root.targetObject))
+                if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(root.targetObject))
                 {
                     // ルートオブジェクトがnullなら
                     return false;
@@ -326,7 +321,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 return true;
             };
 
-            public static readonly FilterFuncType EnterChildrenPropertyDefault = static (root, spStack) =>
+            public static readonly FilterFuncType EnterChildrenSPDefault = static (root, spStack) =>
             {
                 if (spStack.Count() <= 0)
                 {
@@ -337,7 +332,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 Object targetObject = lastStack.serializedObject.targetObject;
                 string propertyPath = lastStack.propertyPath;
 
-                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(targetObject))
+                if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(targetObject))
                 {
                     return false;
                 }
@@ -364,7 +359,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 Object targetObject = lastStack.serializedObject.targetObject;
                 string propertyPath = lastStack.propertyPath;
 
-                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(targetObject))
+                if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(targetObject))
                 {
                     return false;
                 }
@@ -377,6 +372,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 return false;
             };
 
+            private static readonly Regex eulerCurvePropPathRegex = new(@"^m_EulerCurves\.Array\.data\[\d+?\]\.curve$", RegexOptions.Compiled);
             public static readonly FilterFuncType IsChange2Crash = static (root, spStack) =>
             {
                 if (spStack.Count() == 0)
@@ -418,7 +414,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     if (targetObject is AnimationClip)
                     {
-                        Regex eulerCurvePropPathRegex = new(@"^m_EulerCurves\.Array\.data\[\d+?\]\.curve$");
                         if (eulerCurvePropPathRegex.IsMatch(propertyPath))
                         {
                             // こいつが本当にヤバい。変更して Apply すると一瞬でクソデカメモリリークして恐ろしい負荷がかかる。絶対に変更してはいけない

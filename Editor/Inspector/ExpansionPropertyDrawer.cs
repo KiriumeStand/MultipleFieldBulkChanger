@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEngine;
@@ -10,6 +9,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     {
         public StyleSheet uss;
         public VisualTreeAsset uxml;
+
+        protected ExpansionPropertyDrawer() { }
     }
 
     /// <summary>
@@ -33,17 +34,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public StyleSheet USS => Drawer.uss;
         public VisualTreeAsset UXML => Drawer.uxml;
-
-        public string SourceFilePath { get; }
-
-        /// <summary>
-        /// 継承先は必ずこのコンストラクターを明示的に呼び出さなくてはならない
-        /// </summary>
-        /// <param name="sourceFilePath"></param>
-        public ExpansionPropertyDrawerImpl([CallerFilePath] string sourceFilePath = "")
-        {
-            SourceFilePath = new System.IO.FileInfo(sourceFilePath).FullName;
-        }
 
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==

@@ -8,12 +8,12 @@ using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public static class Extensions
+    internal static class Extensions
     {
         // 参考:https://qiita.com/_wataame/items/295c543317d89e86e7ea
 
         // ScriptAttributeUtility.GetFieldInfoAndStaticTypeFromPropertyメソッドのシグネチャを定義したデリゲート型
-        private delegate FieldInfo GetFieldInfoAndStaticTypeFromProperty(SerializedProperty property, out Type type);
+        private delegate FieldInfo GetFieldInfoAndStaticTypeFromProperty(SerializedProperty sp, out Type type);
 
         // UnityEditor.dllのアセンブリ名のフルネーム
         private const string UnityEditorDllAsmFullName = "UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null";
@@ -28,25 +28,22 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             _fieldInfoAndTypeGetter = GetFieldInfoAndTypeGetter();
 
-            DateTime time = DateTime.Now;
             _nativeUnityObjectAndSubTypes = GetAllNativeUnityObjectAndSubTypes();
-            TimeSpan timeSpan = DateTime.Now - time;
-            DebugUtil.DebugLog($"GetAllNativeUnityObjectAndSubTypes TimeSpan/{timeSpan}", LogType.Log, "blue");
         }
 
         private static GetFieldInfoAndStaticTypeFromProperty GetFieldInfoAndTypeGetter()
         {
             GetFieldInfoAndStaticTypeFromProperty fieldInfoAndTypeGetter = null;
-            // 1. UnityEditor.dllのアセンブリを探す
+            // UnityEditor.dllのアセンブリを探す
             var unityEditorDll = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(x => x.FullName == UnityEditorDllAsmFullName).FirstOrDefault();
+                .FirstOrDefault(x => x.FullName == UnityEditorDllAsmFullName);
             if (unityEditorDll != null)
             {
-                // 2. UnityEditor.dllからScriptAttributeUtilityクラスを探す
+                // UnityEditor.dllからScriptAttributeUtilityクラスを探す
                 var scriptAttributeUtil = unityEditorDll.GetType("UnityEditor.ScriptAttributeUtility");
                 if (scriptAttributeUtil != null)
                 {
-                    // 3. ScriptAttributeUtilityクラスからGetFieldInfoAndStaticTypeFromPropertyを探し、デリゲートを生成する
+                    // ScriptAttributeUtilityクラスからGetFieldInfoAndStaticTypeFromPropertyを探し、デリゲートを生成する
                     fieldInfoAndTypeGetter = scriptAttributeUtil
                         .GetMethod("GetFieldInfoAndStaticTypeFromProperty", BindingFlags.NonPublic | BindingFlags.Static)
                         ?.CreateDelegate(typeof(GetFieldInfoAndStaticTypeFromProperty)) as GetFieldInfoAndStaticTypeFromProperty;
@@ -85,7 +82,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return nativeUnityTypes;
         }
 
-        private static readonly Regex _pptrRegex = new(@"^PPtr<\$?(.+)>$");
+        private static readonly Regex _pptrRegex = new(@"^PPtr<\$?(.+)>$", RegexOptions.Compiled);
 
         private static readonly Dictionary<string, Type> _typeDict = new()
         {
@@ -111,7 +108,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             {"ArraySize",typeof(int)},
         };
 
-        public static (bool success, Type type, string errorLog) GetFieldType(this SerializedProperty property)
+        internal static (bool success, Type type, string errorLog) GetFieldType(this SerializedProperty sp)
         {
             if (_fieldInfoAndTypeGetter == null)
             {
@@ -121,7 +118,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             // プロパティのフィールド情報の取得を試みる
             // これで通常のフィールドと ManagedReference の型が取得できる
-            FieldInfo fieldInfo = _fieldInfoAndTypeGetter.Invoke(property, out Type fieldType);
+            FieldInfo fieldInfo = _fieldInfoAndTypeGetter.Invoke(sp, out Type fieldType);
             if (fieldInfo != null)
             {
                 Type fieldInfoType = fieldInfo.FieldType;
@@ -137,8 +134,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
 
             // SerializedProperty.type の値( "PPtr<$hoge>" )と一致する名前を持つクラスをUnityのネイティブコンポーネントから探す
-            string propertyTypeName = property.type;
-            Match matchResult = _pptrRegex.Match(propertyTypeName);
+            string spTypeName = sp.type;
+            Match matchResult = _pptrRegex.Match(spTypeName);
             if (matchResult.Success)
             {
                 string typeName = matchResult.Groups[1].Value;
@@ -150,32 +147,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
 
             // 型の辞書から SerializedProperty.type の値( "hoge" )と一致するクラスを探す
-            if (_typeDict.TryGetValue(propertyTypeName, out Type inDictType)) return (true, inDictType, "");
+            if (_typeDict.TryGetValue(spTypeName, out Type inDictType)) return (true, inDictType, "");
 
-            Type systemType = Type.GetType(propertyTypeName);
+            Type systemType = Type.GetType(spTypeName);
             if (systemType != null) return (true, systemType, "");
 
             return (false, null, "型の取得に失敗しました。");
-        }
-
-        /// <summary>
-        /// <see cref="SerializedProperty.FindPropertyRelative"/> に近い感覚で使えるよう拡張メソッドとして実装
-        /// </summary>
-        /// <param name="property"></param>
-        /// <param name="relativePropertyPath"></param>
-        /// <returns></returns>
-        public static SerializedProperty SafeFindPropertyRelative(this SerializedProperty property, string relativePropertyPath)
-        {
-            // MARK: デバッグ用 try-catchはデバッグログ出力用。最終的にtry-catchは削除。
-            try
-            {
-                return property.FindPropertyRelative(relativePropertyPath);
-            }
-            catch (ObjectDisposedException ex)
-            {
-                DebugUtil.ErrorDebugLog(ex.ToString(), LogType.Warning);
-                return null;
-            }
         }
     }
 }

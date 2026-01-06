@@ -2,16 +2,17 @@ using System;
 using System.Collections.Generic;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
+using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     [Serializable]
-    public class MultipleFieldBulkChangerVM : ViewModelBase<MultipleFieldBulkChangerVM, MultipleFieldBulkChanger>
+    internal class MultipleFieldBulkChangerVM : ViewModelRootBase<MultipleFieldBulkChangerVM, MultipleFieldBulkChanger>
     {
-        private MultipleFieldBulkChangerVM() { }
-
-        public List<ArgumentSettingVM> vm_ArgumentSettings = new();
-        public List<FieldChangeSettingVM> vm_FieldChangeSettings = new();
+        [SerializeField]
+        internal List<ArgumentSettingVM> vm_ArgumentSettings = new();
+        [SerializeField]
+        internal List<FieldChangeSettingVM> vm_FieldChangeSettings = new();
 
         public override void Recalculate()
         {

@@ -14,6 +14,4 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
         }
     }
-
-
 }

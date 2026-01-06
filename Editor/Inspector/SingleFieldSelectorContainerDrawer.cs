@@ -10,19 +10,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     [CustomPropertyDrawer(typeof(SingleFieldSelectorContainer))]
     public class SingleFieldSelectorContainerDrawerImpl : FieldSelectorContainerDrawerImplBase<SingleFieldSelectorContainerDrawer>
     {
-        public SingleFieldSelectorContainerDrawerImpl() : base() { }
-
-
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
         public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
             ObjectField u_SelectObject = BindHelper.BindRelative<ObjectField>(uxml, UxmlNames.SelectObject, property, nameof(SingleFieldSelectorContainer._SelectObject));
-            PropertyField u_SelectField = BindHelper.BindRelative<PropertyField>(uxml, UxmlNames.FieldSelector, property, nameof(SingleFieldSelectorContainer._FieldSelector));
-
-            // イベント発行の登録
-            EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectObject, this, property, status);
+            PropertyField u_FieldSelector = BindHelper.BindRelative<PropertyField>(uxml, UxmlNames.FieldSelector, property, nameof(SingleFieldSelectorContainer._FieldSelector));
 
             // イベント購読の登録
             SubscribeListViewItemsRemovedEvent(property, uxml, status);
@@ -33,8 +27,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             ObjectField u_SelectObject = UIQuery.Q<ObjectField>(uxml, UxmlNames.SelectObject);
 
             // イベント購読の登録
-            EventUtil.SubscribeFieldValueChangedEvent(u_SelectObject, this, property, status,
-                (sender, args) => { OnFieldSelectorSelectObjectChangedEventHandler(args, uxml, status); });
+            u_SelectObject.RegisterValueChangedCallback(e => OnFieldSelectorSelectObjectChangedEventHandler(e, property, uxml, status));
 
             UpdateSerializedPropertiesCache(property, uxml, status, u_SelectObject.value);
         }

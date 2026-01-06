@@ -1,19 +1,22 @@
 using System;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
+using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     [Serializable]
-    public class FieldSelectorVM : PropertyViewModelBase<FieldSelector>
+    internal class FieldSelectorVM : ViewModelPropertyBase<FieldSelector>
     {
-        public string vm_LogLabel = "";
-        public string vm_LogStyle = "";
+        [SerializeField]
+        internal string vm_LogLabel = "";
+        [SerializeField]
+        internal string vm_LogStyle = "";
 
-        public Trackable<string> m_SelectFieldPath { get; private set; }
+        internal Trackable<string> m_SelectFieldPath { get; private set; }
 
-        public Trackable<Optional<object>> SelectValue { get; private set; }
-        public Trackable<Optional<Type>> SelectFieldType { get; private set; }
+        internal Trackable<Optional<object>> SelectValue { get; private set; }
+        internal Trackable<Optional<Type>> SelectFieldType { get; private set; }
 
         public override void Recalculate()
         {
@@ -22,7 +25,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             m_SelectFieldPath = m_SelectFieldPath.CreateOrUpdate(Model._SelectFieldPath);
         }
 
-        public void UpdateSelectValue(UnityEngine.Object selectObject)
+        internal void UpdateSelectValue(UnityEngine.Object selectObject)
         {
             Optional<Type> result = Optional<Type>.None;
 
@@ -30,7 +33,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             if (selectProp != null)
             {
-                (bool success, Type type, string errorLog) = selectProp.GetFieldType();
+                (bool success, Type type, _) = selectProp.GetFieldType();
                 if (success)
                 {
                     result = new(type);

@@ -3,15 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using io.github.kiriumestand.multiplefieldbulkchanger.debug.runtime;
-using io.github.kiriumestand.multiplefieldbulkchanger.editor;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEngine;
 using FilterFuncType = System.Func<UnityEditor.SerializedObject, UnityEditor.SerializedProperty[], bool>;
 using Object = UnityEngine.Object;
 
-namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
+namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     [CustomEditor(typeof(FieldChangeTester))]
     public class FieldChangeTesterEditor : Editor
@@ -86,7 +84,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
             AssetCloner cloner = new();
             foreach (Object targetObject in component.TargetObjects)
             {
-                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(targetObject)) continue;
+                if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(targetObject)) continue;
 
                 Type targetType = targetObject.GetType();
                 LogData targetLogData = new(targetType, "");
@@ -139,7 +137,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
             Type origImporterType = null;
             SerializedObject origImporterSO = null;
 
-            SerializedPropertyTreeNode propTree = SerializedPropertyTreeNode.GetPropertyTreeWithImporter(origObjSO, enterChildrenFilters);
+            SerializedPropertyTreeNode propTree = SerializedPropertyTreeNode.GetSerializedPropertyTreeWithImporter(origObjSO, enterChildrenFilters);
             SerializedPropertyTreeNode importerTreeRoot = propTree.Children.FirstOrDefault(n => n.Name == "@Importer");
             if (importerTreeRoot != null)
             {
@@ -157,13 +155,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
 
             foreach (SerializedPropertyTreeNode propNode in allPropNodes)
             {
-                if (propNode.Property == null)
+                if (propNode.SerializedProperty == null)
                 {
                     continue;
                 }
                 Object origClone = null;
 
-                string propPath = propNode.Property.propertyPath;
+                string propPath = propNode.SerializedProperty.propertyPath;
                 LogData curLogData = null;
                 try
                 {
@@ -172,7 +170,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
                     Type curObjType = origObjType;
                     SerializedObject curOrigSO = origObjSO;
                     curLogData = new(origObjType, propPath);
-                    if (propNode.Property.serializedObject.targetObject == origImporter)
+                    if (propNode.SerializedProperty.serializedObject.targetObject == origImporter)
                     {
                         importerMode = true;
                         curObj = origImporter;
@@ -209,7 +207,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
                         curClone = importerClone;
                     }
 
-                    if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(curClone))
+                    if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(curClone))
                     {
                         StatusUpdate(curLogData, StatusStr.S_3_2_GetClone_E, true);
                         continue;
@@ -308,11 +306,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
 
                     object resValue = cloneProp2.boxedValue;
                     string resValueStr = "Null";
-                    bool isResValueNull = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(resValue);
+                    bool isResValueNull = EditorUtil.FakeNullUtil.IsNullOrFakeNull(resValue);
                     bool isChanged = false;
                     if (isResValueNull)
                     {
-                        isChanged = !RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(origProp.boxedValue);
+                        isChanged = !EditorUtil.FakeNullUtil.IsNullOrFakeNull(origProp.boxedValue);
                     }
                     else
                     {
@@ -325,7 +323,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
                     if (isChanged)
                     {
                         // 値が変化している場合
-                        isSrcAndResValueMatched = isResValueNull ? RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(srcValue) : resValue.Equals(srcValue);
+                        isSrcAndResValueMatched = isResValueNull ? EditorUtil.FakeNullUtil.IsNullOrFakeNull(srcValue) : resValue.Equals(srcValue);
 
                         if (isSrcAndResValueMatched)
                         {
@@ -451,7 +449,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
 
         private Object GetClone(Object orig, AssetCloner cloner)
         {
-            Object clone = null;
+            Object clone;
             if (AssetDatabase.Contains(orig))
             {
                 clone = cloner.DeepClone(orig, true);
@@ -462,7 +460,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
                 if (orig is GameObject origGO) gameObject = origGO;
                 else if (orig is Component origComp) gameObject = origComp.gameObject;
 
-                Transform parent = RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(gameObject) ? null : gameObject.transform.parent;
+                Transform parent = EditorUtil.FakeNullUtil.IsNullOrFakeNull(gameObject) ? null : gameObject.transform.parent;
                 clone = Instantiate(orig, parent);
             }
             return clone;
@@ -470,7 +468,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
 
         private void ImmediateClone(Object clone)
         {
-            if (!RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(clone))
+            if (!EditorUtil.FakeNullUtil.IsNullOrFakeNull(clone))
             {
                 if (clone is Component comp)
                 {
@@ -500,10 +498,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
             targetObjects.Add(this);
             foreach (Object item in targetObjects)
             {
-                if (RuntimeUtil.FakeNullUtil.IsNullOrFakeNull(item)) continue;
+                if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(item)) continue;
 
                 SerializedObject so = new(item);
-                SerializedPropertyTreeNode treeRoot = SerializedPropertyTreeNode.GetPropertyTreeWithImporter(so, enterChildrenFilters);
+                SerializedPropertyTreeNode treeRoot = SerializedPropertyTreeNode.GetSerializedPropertyTreeWithImporter(so, enterChildrenFilters);
                 targetObjTreeRoots.Add(treeRoot);
 
                 SerializedPropertyTreeNode importerNode = treeRoot.Children.FirstOrDefault(x => x.FullPath == "@Importer");
@@ -521,7 +519,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
             {
                 SerializedPropertyTreeNode[] nodes = targetObjTreeRoot.GetAllNode();
                 pathesByType.Add(
-                    nodes.Where(x => x.Property != null).Select(x => $"{x.Property.propertyPath}").ToList()
+                    nodes.Where(x => x.SerializedProperty != null).Select(x => $"{x.SerializedProperty.propertyPath}").ToList()
                 );
 
                 Type itemType = targetObjTreeRoot.SerializedObject.targetObject.GetType();
@@ -733,7 +731,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
 
         private class TSVParser
         {
-            private string _path = "";
+            private readonly string _path = "";
 
             private static readonly string _encodingName = "utf-8";
 
@@ -751,11 +749,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
 
                 if (!File.Exists(_path))
                 {
-                    using (StreamWriter writer = new(_path, true, _encoding))
-                    {
-                        string tsvHeader = $"TargetObjType\tPropertyPath\tTargetPropType\tIsUneditable\tStatus\tManualInfo\tInfo";
-                        writer.WriteLine(tsvHeader);
-                    }
+                    using StreamWriter writer = new(_path, true, _encoding);
+                    string tsvHeader = $"TargetObjType\tPropertyPath\tTargetPropType\tIsUneditable\tStatus\tManualInfo\tInfo";
+                    writer.WriteLine(tsvHeader);
                 }
 
                 AssetDatabase.Refresh();
@@ -775,10 +771,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
                     tsv = tsv.Where(x => !(x.Count() == 1 && string.IsNullOrEmpty(x[0]))).ToList();
                     string formatedText = string.Join('\n', tsv.Select(x => string.Join('\t', x)));
 
-                    using (StreamWriter writer = new(_path, false, _encoding))
-                    {
-                        writer.Write(formatedText);
-                    }
+                    using StreamWriter writer = new(_path, false, _encoding);
+                    writer.Write(formatedText);
                 }
 
                 return tsv;
@@ -800,10 +794,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.debug.editor
                     }
                     else
                     {
-                        using (StreamWriter writer = new(_path, true, _encoding))
-                        {
-                            writer.Write($"\n{line}");
-                        }
+                        using StreamWriter writer = new(_path, true, _encoding);
+                        writer.Write($"\n{line}");
                         return;
                     }
                 }

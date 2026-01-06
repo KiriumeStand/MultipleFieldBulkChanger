@@ -1,21 +1,18 @@
 using System;
 using System.Collections.Generic;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
-using UnityEditor;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public class ArgumentData : IEquatable<ArgumentData>
+    internal class ArgumentData : IEquatable<ArgumentData>
     {
-        public string Name { get; set; } = "";
+        internal string Name { get; set; } = "";
 
-        public Optional<object> Value { get; set; } = Optional<object>.None;
+        internal Optional<object> Value { get; set; } = Optional<object>.None;
 
-        public Type Type { get; set; } = null;
+        internal Type Type { get; set; } = null;
 
-        public SerializedPropertyNumericType SPNumericType { get; set; } = SerializedPropertyNumericType.Unknown;
-
-        public FieldSPType FieldSPType => FieldSPTypeHelper.Parse2FieldSPType(Type);
+        internal FieldSPType FieldSPType => FieldSPTypeHelper.Parse2FieldSPType(Type);
 
         public virtual bool Equals(ArgumentData other)
         {
