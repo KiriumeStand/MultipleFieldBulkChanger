@@ -38,11 +38,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
-        /// <summary>
-        /// UnityのCreatePropertyGUIをオーバーライドし、自動クリーンアップを追加
-        /// </summary>
-        /// <param name="property"></param>
-        /// <returns></returns>
         public sealed override VisualElement CreatePropertyGUI(SerializedProperty property)
         {
             VisualElement uxml = ((IExpansionInspectorCustomizer)this).CreateCustomizerGUI(property);
@@ -52,61 +47,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         public abstract void CreatePropertyGUICore(
             SerializedProperty property,
             VisualElement uxml,
-            IExpansionInspectorCustomizerTargetMarker targetObject,
-            InspectorCustomizerStatus status);
-
-        public void PostCreatePropertyGUICore(
-            SerializedProperty property,
-            VisualElement uxml,
-            IExpansionInspectorCustomizerTargetMarker targetObject,
-            InspectorCustomizerStatus status)
-        {
-            ((IExpansionInspectorCustomizer)this).Subscribe<OnDisableEventArgs>(this,
-                property, status,
-                (sender, args) => { OnDisableEventHandler(property, uxml, targetObject, status); },
-                e =>
-                {
-                    if (!SerializedObjectUtil.IsValid(property)) return false;
-                    return e.GetSerializedObject() == property.serializedObject;
-                },
-                true
-            );
-        }
+            IExpansionInspectorCustomizerTargetMarker targetObject);
 
         public virtual void DelayCallCore(
             SerializedProperty property,
             VisualElement uxml,
-            IExpansionInspectorCustomizerTargetMarker targetObject,
-            InspectorCustomizerStatus status)
+            IExpansionInspectorCustomizerTargetMarker targetObject)
         { }
 
         // ▲ 初期化定義 ========================= ▲
-
-
-        // ▼ イベントハンドラー ========================= ▼
-        // MARK: ==イベントハンドラー==
-
-        private void OnDisableEventHandler(
-            SerializedProperty property,
-            VisualElement uxml,
-            IExpansionInspectorCustomizerTargetMarker targetObject,
-            InspectorCustomizerStatus status)
-        {
-            ((IExpansionInspectorCustomizer)this).DrawerCleanup(property, uxml, targetObject, status);
-        }
-
-        // ▲ イベントハンドラー ========================= ▲
-
-        // ▼ メソッド ========================= ▼
-        // MARK: ==メソッド==
-
-        public virtual void OnCleanup(
-            SerializedProperty property,
-            VisualElement uxml,
-            IExpansionInspectorCustomizerTargetMarker targetObject,
-            InspectorCustomizerStatus status)
-        { }
-
-        // ▲ メソッド ========================= ▲
     }
 }

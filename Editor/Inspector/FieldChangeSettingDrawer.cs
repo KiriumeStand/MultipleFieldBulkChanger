@@ -12,12 +12,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
-        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
             MultipleFieldBulkChangerVM viewModel = MultipleFieldBulkChangerVM.GetInstance(property.serializedObject);
-            SerializedObject vmRootSO = new(viewModel);
-            string vmSPPath = ViewModelManager.GetVMSPPath(property);
-            SerializedProperty vmSP = vmRootSO.FindProperty(vmSPPath);
+            SerializedProperty vmSP = ViewModelManager.GetViewModelSerializedProperty<MultipleFieldBulkChangerVM, MultipleFieldBulkChanger>(property);
 
 
             Toggle u_Enable = BindHelper.BindRelative<Toggle>(uxml, UxmlNames.Enable, property, nameof(FieldChangeSetting._Enable));
@@ -35,62 +33,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             };
             u_TargetFields.itemsRemoved += (e) =>
             {
-                ListViewItemsRemovedEventArgs args = new(this, property, u_TargetFields, status, e);
-                ((IExpansionInspectorCustomizer)this).Publish(args);
-
                 viewModel.Recalculate();
             };
-
-            // イベント購読の登録
-            ((IExpansionInspectorCustomizer)this).Subscribe<ListViewItemsRemovedEventArgs>(this,
-                property, status,
-                (sender, args) => { OnListViewAncestorItemRemovedEventHandler(args, property, uxml, status); },
-                e =>
-                {
-                    if (!SerializedObjectUtil.IsValid(property)) return false;
-                    if (status.CurrentPhase < InspectorCustomizerStatus.Phase.BeforeDelayCall) return false;
-
-                    property.serializedObject.Update();
-
-                    SerializedObject senderSerializedObject = e.GetSerializedObject();
-
-                    bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
-
-                    string senderBindingSPInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(e.SenderBindingSerializedProperty);
-
-                    // イベント発行が先祖からかを確認
-                    bool isSenderIsAncestorProperty = false;
-                    foreach (int index in e.RemovedIndex)
-                    {
-                        string targetPathPrefix = $"{senderBindingSPInstancePath}.Array.data[{index}]";
-                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetSerializedPropertyInstancePath(property).StartsWith(targetPathPrefix);
-                    }
-
-                    return isSameEditorInstance && isSenderIsAncestorProperty;
-                },
-                true
-            );
         }
 
         // ▲ 初期化定義 ========================= ▲
-
-
-        // ▼ イベントハンドラー ========================= ▼
-        // MARK: ==イベントハンドラー==
-
-        private void OnListViewAncestorItemRemovedEventHandler(ListViewItemsRemovedEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
-        {
-            IExpansionInspectorCustomizerTargetMarker targetObject = MFBCHelper.GetTargetObject(property);
-            ((IExpansionInspectorCustomizer)this).OnDetachFromPanelEvent(property, uxml, targetObject, status);
-        }
-
-        // ▲ イベントハンドラー ========================= ▲
-
-
-        // ▼ メソッド ========================= ▼
-        // MARK: ==メソッド==
-
-        // ▲ メソッド ========================= ▲
 
 
         // ▼ 名前辞書 ========================= ▼

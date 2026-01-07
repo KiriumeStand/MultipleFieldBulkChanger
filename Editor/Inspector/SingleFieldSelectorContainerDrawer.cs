@@ -13,13 +13,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
-        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
             ObjectField u_SelectObject = BindHelper.BindRelative<ObjectField>(uxml, UxmlNames.SelectObject, property, nameof(SingleFieldSelectorContainer._SelectObject));
             PropertyField u_FieldSelector = BindHelper.BindRelative<PropertyField>(uxml, UxmlNames.FieldSelector, property, nameof(SingleFieldSelectorContainer._FieldSelector));
-
-            // イベント購読の登録
-            SubscribeListViewItemsRemovedEvent(property, uxml, status);
         }
 
         // ▲ 初期化定義 ========================= ▲

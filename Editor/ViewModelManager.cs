@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
+using UnityEngine;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
@@ -94,6 +95,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
             string vmSPPath = string.Join(".", relativePathStack);
             return vmSPPath;
+        }
+
+        internal static SerializedProperty GetViewModelSerializedProperty<TViewModel, TTarget>(SerializedProperty sp) where TViewModel : ViewModelRootBase<TViewModel, TTarget> where TTarget : Component
+        {
+            TViewModel viewModel = ViewModelRootBase<TViewModel, TTarget>.GetInstance(sp.serializedObject);
+            SerializedObject vmRootSO = new(viewModel);
+            string vmSPPath = GetVMSPPath(sp);
+            SerializedProperty vmSP = vmRootSO.FindProperty(vmSPPath);
+            return vmSP;
         }
     }
 }

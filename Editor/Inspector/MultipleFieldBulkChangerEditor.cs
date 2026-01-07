@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -11,12 +12,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     [CustomEditor(typeof(MultipleFieldBulkChanger))]
     public class MultipleFieldBulkChangerEditor : ExpansionEditor
     {
+        private EditorApplication.CallbackFunction editorApplicationUpdateCallback;
         private static readonly Regex XIndexRegex = new(@"^(.+?)(\d+)$", RegexOptions.Compiled);
 
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
-        public override void CreateInspectorGUICore(VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void CreateInspectorGUICore(VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
             MultipleFieldBulkChanger castedTargetObject = targetObject as MultipleFieldBulkChanger;
 
@@ -54,9 +56,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             };
             u_Arguments.itemsRemoved += (e) =>
             {
-                ListViewItemsRemovedEventArgs args = new(this, serializedObject, u_Arguments, status, e);
-                ((IExpansionInspectorCustomizer)this).Publish(args);
-
                 viewModel.Recalculate();
             };
 
@@ -92,9 +91,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             };
             u_ChangeSettings.itemsRemoved += (e) =>
             {
-                ListViewItemsRemovedEventArgs args = new(this, serializedObject, u_ChangeSettings, status, e);
-                ((IExpansionInspectorCustomizer)this).Publish(args);
-
                 viewModel.Recalculate();
             };
 
@@ -102,49 +98,35 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             uxml.Bind(serializedObject);
         }
 
-        public override void DelayCallCore(VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void DelayCallCore(VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
             MultipleFieldBulkChangerVM viewModel = MultipleFieldBulkChangerVM.GetInstance(serializedObject);
 
             // 参照値の更新をリクエストするイベントの発行処理
-            void editorApplicationUpdateCallback()
+            editorApplicationUpdateCallback = () =>
             {
                 if (!SerializedObjectUtil.IsValid(serializedObject)) { return; }
                 if (serializedObject == null) { return; }
 
                 viewModel.Recalculate();
-            }
-
-            // 後で解除するために必要なのでUniqueObjectとして上記のイベントの発行処理を保管
-            UniversalDataManager.RegisterUniqueObject((this, targetObject, serializedObject), UniversalDataManager.IdentifierNames.EditorApplicationUpdateIdentifier, (EditorApplication.CallbackFunction)editorApplicationUpdateCallback);
+            };
 
             // EditorApplication.updateに上記のイベントの発行処理を登録する
             EditorApplication.update += editorApplicationUpdateCallback;
+
+            // DetachFromPanelEventで自動クリーンアップ
+            uxml.RegisterCallback<DetachFromPanelEvent>(e =>
+            {
+                // EditorApplication.updateに登録していた処理を削除
+                EditorApplication.update -= editorApplicationUpdateCallback;
+            });
         }
 
         // ▲ 初期化定義 ========================= ▲
 
 
-        // ▼ イベントハンドラー ========================= ▼
-        // MARK: ==イベントハンドラー==
-
-        // ▲ イベントハンドラー ========================= ▲
-
-
         // ▼ メソッド ========================= ▼
         // MARK: ==メソッド==
-
-        public override void OnCleanup(SerializedObject serializedObject, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
-        {
-            string identifier = UniversalDataManager.IdentifierNames.EditorApplicationUpdateIdentifier;
-            // EditorApplication.updateに登録した処理を取得
-            var editorApplicationUpdateCallback = UniversalDataManager.GetUniqueObject<EditorApplication.CallbackFunction>((this, targetObject, serializedObject), identifier);
-            // 不要なのでDBからは削除
-            UniversalDataManager.ClearUniqueObject<EditorApplication.CallbackFunction>((this, targetObject, serializedObject), identifier);
-
-            // EditorApplication.updateに登録していた処理を削除
-            EditorApplication.update -= editorApplicationUpdateCallback;
-        }
 
         private string[] GetNextIndexedName(IEnumerable<string> usedNames, string prefix, int needCount)
         {

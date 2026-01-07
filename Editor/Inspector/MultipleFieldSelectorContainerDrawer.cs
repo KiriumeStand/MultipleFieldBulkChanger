@@ -13,7 +13,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
-        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
             MultipleFieldBulkChangerVM viewModel = MultipleFieldBulkChangerVM.GetInstance(property.serializedObject);
 
@@ -29,14 +29,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             };
             u_SelectFields.itemsRemoved += (e) =>
             {
-                ListViewItemsRemovedEventArgs args = new(this, property, u_SelectFields, status, e);
-                ((IExpansionInspectorCustomizer)this).Publish(args);
-
                 viewModel.Recalculate();
             };
-
-            // イベント購読の登録
-            SubscribeListViewItemsRemovedEvent(property, uxml, status);
         }
 
         // ▲ 初期化定義 ========================= ▲

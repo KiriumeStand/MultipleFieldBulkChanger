@@ -5,32 +5,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     public static class EditorUtil
     {
-        // ▼ ObjectID関連 ========================= ▼
-        // MARK: ==ObjectID関連==
-
-        public static class ObjectIdUtil
-        {
-            private static readonly ObjectIDGenerator _objectIDGenerator = new();
-
-            public static long GetObjectId(object obj)
-            {
-                if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(obj)) return -1;
-                return _objectIDGenerator.GetId(obj, out _);
-            }
-
-            public static long GetObjectId(object obj, out bool firstTime)
-            {
-                if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(obj))
-                {
-                    firstTime = false;
-                    return -1;
-                }
-                return _objectIDGenerator.GetId(obj, out firstTime);
-            }
-        }
-
-        // ▲ オブジェクトクローン関連 ========================= ▲
-
         // ▼ 偽装Null関連 ========================= ▼
         // MARK: ==偽装Null関連==
 

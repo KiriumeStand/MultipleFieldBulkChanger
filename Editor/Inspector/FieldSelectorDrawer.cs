@@ -17,56 +17,20 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
-        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
-            MultipleFieldBulkChangerVM viewModel = MultipleFieldBulkChangerVM.GetInstance(property.serializedObject);
-            SerializedObject vmRootSO = new(viewModel);
-            string vmSPPath = ViewModelManager.GetVMSPPath(property);
-            SerializedProperty vmSP = vmRootSO.FindProperty(vmSPPath);
+            SerializedProperty vmSP = ViewModelManager.GetViewModelSerializedProperty<MultipleFieldBulkChangerVM, MultipleFieldBulkChanger>(property);
 
             TextField u_SelectFieldPath = BindHelper.BindRelative<TextField>(uxml, UxmlNames.SelectFieldPath, property, nameof(FieldSelector._SelectFieldPath));
             Label u_LogLabel = BindHelper.BindRelative<Label>(uxml, UxmlNames.LogLabel, vmSP, nameof(FieldSelectorVM.vm_LogLabel));
 
             // イベント発行の登録
-            u_LogLabel.RegisterValueChangedCallback(e => OnTextElementValueChangedEventHandler(e, property, uxml, status, vmSP));
-
-            // イベント購読の登録
-            ((IExpansionInspectorCustomizer)this).Subscribe<ListViewItemsRemovedEventArgs>(this,
-                property, status,
-                (sender, args) => { OnListViewAncestorItemRemovedEventHandler(args, property, uxml, status); },
-                e =>
-                {
-                    if (!SerializedObjectUtil.IsValid(property)) return false;
-                    if (status.CurrentPhase < InspectorCustomizerStatus.Phase.BeforeDelayCall) return false;
-
-                    property.serializedObject.Update();
-
-                    SerializedObject senderSerializedObject = e.GetSerializedObject();
-
-                    bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
-
-                    string senderBindingSPInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(e.SenderBindingSerializedProperty);
-
-                    // イベント発行が先祖からかを確認
-                    bool isSenderIsAncestorProperty = false;
-                    foreach (int index in e.RemovedIndex)
-                    {
-                        string targetPathPrefix = $"{senderBindingSPInstancePath}.Array.data[{index}]";
-                        isSenderIsAncestorProperty |= SerializedObjectUtil.GetSerializedPropertyInstancePath(property).StartsWith(targetPathPrefix);
-                    }
-
-                    return isSameEditorInstance && isSenderIsAncestorProperty;
-                },
-                true
-            );
+            u_LogLabel.RegisterValueChangedCallback(e => OnTextElementValueChangedEventHandler(e, property, uxml, vmSP));
         }
 
-        public override void DelayCallCore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void DelayCallCore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
-            MultipleFieldBulkChangerVM viewModel = MultipleFieldBulkChangerVM.GetInstance(property.serializedObject);
-            SerializedObject vmRootSO = new(viewModel);
-            string vmSPPath = ViewModelManager.GetVMSPPath(property);
-            SerializedProperty vmSP = vmRootSO.FindProperty(vmSPPath);
+            SerializedProperty vmSP = ViewModelManager.GetViewModelSerializedProperty<MultipleFieldBulkChangerVM, MultipleFieldBulkChanger>(property);
 
             TextField u_SelectFieldPath = UIQuery.Q<TextField>(uxml, UxmlNames.SelectFieldPath);
             Button u_SelectFieldButton = UIQuery.Q<Button>(uxml, UxmlNames.SelectFieldButton);
@@ -78,7 +42,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             // イベント購読の登録
             u_SelectFieldButton.clicked += () =>
             {
-                OnSelectFieldButtonClickedEventHandler(property, uxml, status, vmSP);
+                OnSelectFieldButtonClickedEventHandler(property, uxml, vmSP);
             };
         }
 
@@ -88,18 +52,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ イベントハンドラー ========================= ▼
         // MARK: ==イベントハンドラー==
 
-        private void OnListViewAncestorItemRemovedEventHandler(ListViewItemsRemovedEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
-        {
-            IExpansionInspectorCustomizerTargetMarker targetObject = MFBCHelper.GetTargetObject(property);
-            ((IExpansionInspectorCustomizer)this).OnDetachFromPanelEvent(property, uxml, targetObject, status);
-        }
-
-        private static void OnTextElementValueChangedEventHandler(ChangeEvent<string> e, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedProperty vmProperty)
+        private static void OnTextElementValueChangedEventHandler(ChangeEvent<string> e, SerializedProperty property, VisualElement uxml, SerializedProperty vmProperty)
         {
             UpdateLogLabel(uxml, vmProperty);
         }
 
-        private static void OnSelectFieldButtonClickedEventHandler(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedProperty vmSP)
+        private static void OnSelectFieldButtonClickedEventHandler(SerializedProperty property, VisualElement uxml, SerializedProperty vmSP)
         {
             ShowFieldSelectorAdvancedDropdown(property, uxml, vmSP);
         }

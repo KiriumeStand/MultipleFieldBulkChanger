@@ -9,33 +9,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     public static class DebugUtil
     {
-        public static void EventManagerDebugLog(BaseEventArgs args, bool isStart, bool isDebugMode)
-        {
-            if (!isDebugMode) return;
-
-            string senderSPInstancePath = GetBindableElementIfExists(args);
-
-            Debug.Log(
-                $"イベントタイプ：{args.GetType().Name}\r\n" +
-                $"ネスト：{UniversalEventManager.EventStacks.Count}\t" +
-                $"始終：{(isStart ? "Start" : "End")}\t" +
-                $"{senderSPInstancePath}"
-            );
-        }
-
-        private static string GetBindableElementIfExists(BaseEventArgs eventArgs)
-        {
-            Type type = eventArgs.GetType();
-
-            PropertyInfo targetProperty = type.GetProperty("SenderSerializedProperty");
-            if (targetProperty != null)
-            {
-                SerializedProperty property = targetProperty.GetValue(eventArgs) as SerializedProperty;
-                return SerializedObjectUtil.GetSerializedPropertyInstancePath(property);
-            }
-            return "";
-        }
-
         public static void SetDebugLabelText(VisualElement uxml, string text)
         {
             Label u_DebugLabel = UIQuery.QOrNull<Label>(uxml, "DebugLabel");
