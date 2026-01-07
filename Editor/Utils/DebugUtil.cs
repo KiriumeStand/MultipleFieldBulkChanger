@@ -13,13 +13,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             if (!isDebugMode) return;
 
-            string senderPropertyInstancePath = GetBindableElementIfExists(args);
+            string senderSPInstancePath = GetBindableElementIfExists(args);
 
             Debug.Log(
                 $"イベントタイプ：{args.GetType().Name}\r\n" +
                 $"ネスト：{UniversalEventManager.EventStacks.Count}\t" +
                 $"始終：{(isStart ? "Start" : "End")}\t" +
-                $"{senderPropertyInstancePath}"
+                $"{senderSPInstancePath}"
             );
         }
 

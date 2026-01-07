@@ -26,13 +26,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(e.SenderBindingSerializedProperty);
+                    string senderBindingSPInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
                     bool isSenderIsAncestorProperty = false;
                     foreach (int index in e.RemovedIndex)
                     {
-                        string targetPathPrefix = $"{senderBindingPropertyInstancePath}.Array.data[{index}]";
+                        string targetPathPrefix = $"{senderBindingSPInstancePath}.Array.data[{index}]";
                         isSenderIsAncestorProperty |= SerializedObjectUtil.GetSerializedPropertyInstancePath(property).StartsWith(targetPathPrefix);
                     }
 
@@ -47,18 +47,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ イベントハンドラー ========================= ▼
         // MARK: ==イベントハンドラー==
 
-        /// <summary>
-        /// 選択オブジェクトが変更された時のイベント処理
-        /// </summary>
-        /// <param name="e"></param>
-        /// <param name="property"></param>
-        /// <param name="propertyInstancePath"></param>
-        protected void OnFieldSelectorSelectObjectChangedEventHandler(ChangeEvent<UnityEngine.Object> e, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
-        {
-            // ノードツリーのキャッシュを更新
-            UpdateSerializedPropertiesCache(property, uxml, status, e.newValue);
-        }
-
         protected void OnListViewAncestorItemRemovedEventHandler(ListViewItemsRemovedEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
         {
             IExpansionInspectorCustomizerTargetMarker targetObject = MFBCHelper.GetTargetObject(property);
@@ -70,29 +58,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         // ▼ メソッド ========================= ▼
         // MARK: ==メソッド==
-
-        /// <summary>
-        /// 選択したオブジェクトの <see cref="SerializedProperty"/> リストを更新
-        /// </summary>
-        /// <param name="property"></param>
-        /// <param name="uxml"></param>
-        /// <param name="status"></param>
-        /// <param name="selectedObject"></param>
-        protected void UpdateSerializedPropertiesCache(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, UnityEngine.Object selectedObject)
-        {
-            // 偽装NullかNullならNullに統一
-            selectedObject = EditorUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject) ? null : selectedObject;
-
-            SerializedPropertyTreeNode propertyRoot = new("None", null, null);
-            if (!EditorUtil.FakeNullUtil.IsNullOrFakeNull(selectedObject))
-            {
-                propertyRoot = SerializedPropertyTreeNode.GetSerializedPropertyTreeWithImporter(new(selectedObject), new());
-            }
-
-            FieldSelectorContainerBase targetObject = MFBCHelper.GetTargetObject(property) as FieldSelectorContainerBase;
-
-            UniversalDataManager.targetObjectSerializedPropertyTreeRootCache.AddOrUpdate(targetObject, propertyRoot);
-        }
 
         // ▲ メソッド ========================= ▲
 

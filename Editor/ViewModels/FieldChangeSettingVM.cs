@@ -13,7 +13,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         [SerializeField]
         internal string vm_ValuePreview = "";
 
-        [SerializeField]
+        [SerializeReference]
         internal List<MultipleFieldSelectorContainerVM> vm_TargetFields = new();
 
         internal Trackable<string> m_Expression { get; private set; }

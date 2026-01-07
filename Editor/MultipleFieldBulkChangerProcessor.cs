@@ -23,13 +23,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             {
                 if (!mfbcComponent._Enable) continue;
 
-                foreach (FieldChangeSetting fcsPropObj in mfbcComponent._FieldChangeSettings)
+                foreach (FieldChangeSetting fcsProp in mfbcComponent._FieldChangeSettings)
                 {
-                    if (!fcsPropObj._Enable) continue;
+                    if (!fcsProp._Enable) continue;
 
-                    foreach (MultipleFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
+                    foreach (MultipleFieldSelectorContainer mfscProp in fcsProp._TargetFields)
                     {
-                        willEditObjects.Add(mfscPropObj._SelectObject);
+                        willEditObjects.Add(mfscProp._SelectObject);
                     }
                 }
             }
@@ -96,17 +96,17 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 {
                     // 引数データの作成
                     List<ArgumentData> argDatas = new();
-                    foreach (ArgumentSetting asPropObj in mfbcComponent._ArgumentSettings)
+                    foreach (ArgumentSetting asProp in mfbcComponent._ArgumentSettings)
                     {
-                        ArgumentData argData = MFBCHelper.GetArgumentData(asPropObj);
+                        ArgumentData argData = MFBCHelper.GetArgumentData(asProp);
                         argDatas.Add(argData);
                     }
 
-                    foreach (FieldChangeSetting fcsPropObj in mfbcComponent._FieldChangeSettings)
+                    foreach (FieldChangeSetting fcsProp in mfbcComponent._FieldChangeSettings)
                     {
-                        if (!fcsPropObj._Enable) continue;
+                        if (!fcsProp._Enable) continue;
 
-                        string expression = fcsPropObj._Expression;
+                        string expression = fcsProp._Expression;
 
                         // 代入式をパース
                         MFBCHelper.ExpressionData expressionData = MFBCHelper.ParseExpression(expression);
@@ -120,25 +120,25 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                             continue;
                         }
 
-                        foreach (MultipleFieldSelectorContainer mfscPropObj in fcsPropObj._TargetFields)
+                        foreach (MultipleFieldSelectorContainer mfscProp in fcsProp._TargetFields)
                         {
-                            if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(mfscPropObj._SelectObject))
+                            if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(mfscProp._SelectObject))
                             {
                                 // MultiFieldSelectorContainer でオブジェクトが指定されていない場合
                                 continue;
                             }
 
-                            SerializedObject targetSO = new(mfscPropObj._SelectObject);
+                            SerializedObject targetSO = new(mfscProp._SelectObject);
 
                             SerializedPropertyTreeNode spTreeRoot = SerializedPropertyTreeNode.GetSerializedPropertyTreeWithImporter(targetSO, new());
 
-                            foreach (FieldSelector fsPropObj in mfscPropObj._FieldSelectors)
+                            foreach (FieldSelector fsProp in mfscProp._FieldSelectors)
                             {
 
                                 SerializedPropertyTreeNode[] allNode = spTreeRoot.GetAllNode();
-                                SerializedPropertyTreeNode targetSPTreeNode = allNode.FirstOrDefault(x => x.FullPath == fsPropObj._SelectFieldPath);
+                                SerializedPropertyTreeNode targetSPTreeNode = allNode.FirstOrDefault(x => x.FullPath == fsProp._SelectFieldPath);
 
-                                string selectFieldInfo = $"指定されたオブジェクト:'{mfscPropObj._SelectObject.name}({mfscPropObj._SelectObject.GetType().FullName})', 指定されたプロパティパス:'{fsPropObj._SelectFieldPath}'";
+                                string selectFieldInfo = $"指定されたオブジェクト:'{mfscProp._SelectObject.name}({mfscProp._SelectObject.GetType().FullName})', 指定されたプロパティパス:'{fsProp._SelectFieldPath}'";
                                 if (targetSPTreeNode == null)
                                 {
                                     Logger.Log($"指定されたプロパティが見つかりませんでした。\n{selectFieldInfo}", LogType.Error, "");

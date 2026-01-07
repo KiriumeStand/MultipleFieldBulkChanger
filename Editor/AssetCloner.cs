@@ -215,18 +215,18 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             SerializedObject so = new(obj);
 
-            HashSet<SerializedPropertyTreeNode.Filter> replacePropFilters = new() {
+            HashSet<SerializedPropertyTreeNode.Filter> replaceSPFilters = new() {
                 new(SerializedPropertyTreeNode.FilterFuncs.IsReadonly, true),
                 new(SerializedPropertyTreeNode.FilterFuncs.IsObjectReferenceType, false),
             };
 
             SerializedPropertyTreeNode treeRoot = SerializedPropertyTreeNode.GetSerializedPropertyTree(so, new());
-            SerializedProperty[] props = treeRoot.Where(replacePropFilters).Select(n => n.SerializedProperty).ToArray();
+            SerializedProperty[] sps = treeRoot.Where(replaceSPFilters).Select(n => n.SerializedProperty).ToArray();
 
             HashSet<Object> objRefs = new();
-            foreach (SerializedProperty prop in props)
+            foreach (SerializedProperty sp in sps)
             {
-                Object orig = prop.objectReferenceValue;
+                Object orig = sp.objectReferenceValue;
                 if (!EditorUtil.FakeNullUtil.IsNullOrFakeNull(orig))
                 {
                     if (_lazyCloneList.Any(x => x.Object.Equals(orig)))
@@ -236,8 +236,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     if (_cloneDic.TryGetValue(orig, out Object clone))
                     {
-                        prop.objectReferenceValue = clone;
-                        prop.serializedObject.ApplyModifiedProperties();
+                        sp.objectReferenceValue = clone;
+                        sp.serializedObject.ApplyModifiedProperties();
                         objRefs.Add(clone);
                     }
                     else

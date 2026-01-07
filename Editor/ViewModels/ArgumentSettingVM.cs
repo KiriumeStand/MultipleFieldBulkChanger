@@ -37,7 +37,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         internal string vm_ReferenceInvalidValueLabel;
         internal object vm_ReferenceGenericObjectValue;
 
-        [SerializeField]
+        [SerializeReference]
         internal SingleFieldSelectorContainerVM vm_SourceField;
 
         internal Trackable<bool> m_IsReferenceMode { get; private set; }
@@ -61,27 +61,25 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (m_IsReferenceMode.Value)
             {
                 FieldSelectorVM fsVM = vm_SourceField.vm_FieldSelector;
-                Trackable<Optional<Type>> selectFieldType = fsVM.SelectFieldType;
-                Trackable<Optional<object>> selectValue = fsVM.SelectValue;
 
                 FieldSPType curFieldSPType = FieldSPType.Generic;
-                if (selectFieldType.Value.HasValue)
+                if (fsVM.SelectFieldType.Value.HasValue)
                 {
-                    curFieldSPType = FieldSPTypeHelper.Parse2FieldSPType(selectFieldType.Value.Value);
+                    curFieldSPType = FieldSPTypeHelper.Parse2FieldSPType(fsVM.SelectFieldType.Value.Value);
                 }
 
                 object curObject = GetReferenceValues(curFieldSPType);
 
-                if (selectValue.IsModified || selectFieldType.IsModified || (selectValue.Value.HasValue && !selectValue.Value.Value.Equals(curObject)))
+                if (fsVM.SelectValue.IsModified || fsVM.SelectFieldType.IsModified || (fsVM.SelectValue.Value.HasValue && !fsVM.SelectValue.Value.Value.Equals(curObject)))
                 {
                     vm_ReferenceArgumentType = curFieldSPType;
-                    UpdateReferenceValues(selectValue.Value.Value, vm_ReferenceArgumentType);
+                    UpdateReferenceValues(fsVM.SelectValue.Value.Value, vm_ReferenceArgumentType);
                 }
 
-                ResultSelectValue = ResultSelectValue.CreateOrUpdate(selectValue.Value);
+                ResultSelectValue = ResultSelectValue.CreateOrUpdate(fsVM.SelectValue.Value);
 
-                selectValue.AcceptChanges();
-                selectFieldType.AcceptChanges();
+                fsVM.SelectValue.AcceptChanges();
+                fsVM.SelectFieldType.AcceptChanges();
             }
             else
             {

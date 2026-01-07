@@ -23,13 +23,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             MultipleFieldBulkChangerVM viewModel = MultipleFieldBulkChangerVM.GetInstance(property.serializedObject);
             SerializedObject vmRootSO = new(viewModel);
-            string vmPropPath = ViewModelManager.GetVMPropPath(property);
-            SerializedProperty vmProperty = vmRootSO.FindProperty(vmPropPath);
+            string vmSPPath = ViewModelManager.GetVMSPPath(property);
+            SerializedProperty vmSP = vmRootSO.FindProperty(vmSPPath);
 
 
             Toggle u_IsReferenceMode = BindHelper.BindRelative<Toggle>(uxml, UxmlNames.IsReferenceMode, property, nameof(ArgumentSetting._IsReferenceMode));
             EnumField u_InputtableArgumentType = BindHelper.BindRelative<EnumField>(uxml, UxmlNames.InputtableArgumentType, property, nameof(ArgumentSetting._InputtableArgumentType));
-            EnumField u_ReferenceArgumentType = BindHelper.BindRelative<EnumField>(uxml, UxmlNames.ReferenceArgumentType, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceArgumentType));
+            EnumField u_ReferenceArgumentType = BindHelper.BindRelative<EnumField>(uxml, UxmlNames.ReferenceArgumentType, vmSP, nameof(ArgumentSettingVM.vm_ReferenceArgumentType));
             TextField u_ArgumentName = BindHelper.BindRelative<TextField>(uxml, UxmlNames.ArgumentName, property, nameof(ArgumentSetting._ArgumentName));
 
             Toggle u_InputtableBoolValueField = BindHelper.BindRelative<Toggle>(uxml, UxmlNames.InputtableFields.BoolValueField, property, nameof(ArgumentSetting._InputtableBoolValue));
@@ -46,19 +46,19 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             PropertyField u_SourceField = BindHelper.BindRelative<PropertyField>(uxml, UxmlNames.SourceField, property, nameof(ArgumentSetting._SourceField));
 
-            Toggle u_ReferenceBoolValueField = BindHelper.BindRelative<Toggle>(uxml, UxmlNames.ReferenceFields.BoolValueField, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceBoolValue));
-            DoubleField u_ReferenceNumberValueField = BindHelper.BindRelative<DoubleField>(uxml, UxmlNames.ReferenceFields.NumberValueField, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceNumberValue));
-            TextField u_ReferenceStringValueField = BindHelper.BindRelative<TextField>(uxml, UxmlNames.ReferenceFields.StringValueField, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceStringValue));
-            ColorField u_ReferenceColorValueField = BindHelper.BindRelative<ColorField>(uxml, UxmlNames.ReferenceFields.ColorValueField, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceColorValue));
-            ObjectField u_ReferenceObjectValueField = BindHelper.BindRelative<ObjectField>(uxml, UxmlNames.ReferenceFields.ObjectValueField, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceObjectValue));
-            Vector2Field u_ReferenceVector2ValueField = BindHelper.BindRelative<Vector2Field>(uxml, UxmlNames.ReferenceFields.Vector2ValueField, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceVector2Value));
-            Vector3Field u_ReferenceVector3ValueField = BindHelper.BindRelative<Vector3Field>(uxml, UxmlNames.ReferenceFields.Vector3ValueField, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceVector3Value));
-            Vector4Field u_ReferenceVector4ValueField = BindHelper.BindRelative<Vector4Field>(uxml, UxmlNames.ReferenceFields.Vector4ValueField, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceVector4Value));
-            BoundsField u_ReferenceBoundsValueField = BindHelper.BindRelative<BoundsField>(uxml, UxmlNames.ReferenceFields.BoundsValueField, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceBoundsValue));
-            CurveField u_ReferenceCurveValueField = BindHelper.BindRelative<CurveField>(uxml, UxmlNames.ReferenceFields.CurveValueField, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceCurveValue));
-            GradientField u_ReferenceGradientValueField = BindHelper.BindRelative<GradientField>(uxml, UxmlNames.ReferenceFields.GradientValueField, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceGradientValue));
+            Toggle u_ReferenceBoolValueField = BindHelper.BindRelative<Toggle>(uxml, UxmlNames.ReferenceFields.BoolValueField, vmSP, nameof(ArgumentSettingVM.vm_ReferenceBoolValue));
+            DoubleField u_ReferenceNumberValueField = BindHelper.BindRelative<DoubleField>(uxml, UxmlNames.ReferenceFields.NumberValueField, vmSP, nameof(ArgumentSettingVM.vm_ReferenceNumberValue));
+            TextField u_ReferenceStringValueField = BindHelper.BindRelative<TextField>(uxml, UxmlNames.ReferenceFields.StringValueField, vmSP, nameof(ArgumentSettingVM.vm_ReferenceStringValue));
+            ColorField u_ReferenceColorValueField = BindHelper.BindRelative<ColorField>(uxml, UxmlNames.ReferenceFields.ColorValueField, vmSP, nameof(ArgumentSettingVM.vm_ReferenceColorValue));
+            ObjectField u_ReferenceObjectValueField = BindHelper.BindRelative<ObjectField>(uxml, UxmlNames.ReferenceFields.ObjectValueField, vmSP, nameof(ArgumentSettingVM.vm_ReferenceObjectValue));
+            Vector2Field u_ReferenceVector2ValueField = BindHelper.BindRelative<Vector2Field>(uxml, UxmlNames.ReferenceFields.Vector2ValueField, vmSP, nameof(ArgumentSettingVM.vm_ReferenceVector2Value));
+            Vector3Field u_ReferenceVector3ValueField = BindHelper.BindRelative<Vector3Field>(uxml, UxmlNames.ReferenceFields.Vector3ValueField, vmSP, nameof(ArgumentSettingVM.vm_ReferenceVector3Value));
+            Vector4Field u_ReferenceVector4ValueField = BindHelper.BindRelative<Vector4Field>(uxml, UxmlNames.ReferenceFields.Vector4ValueField, vmSP, nameof(ArgumentSettingVM.vm_ReferenceVector4Value));
+            BoundsField u_ReferenceBoundsValueField = BindHelper.BindRelative<BoundsField>(uxml, UxmlNames.ReferenceFields.BoundsValueField, vmSP, nameof(ArgumentSettingVM.vm_ReferenceBoundsValue));
+            CurveField u_ReferenceCurveValueField = BindHelper.BindRelative<CurveField>(uxml, UxmlNames.ReferenceFields.CurveValueField, vmSP, nameof(ArgumentSettingVM.vm_ReferenceCurveValue));
+            GradientField u_ReferenceGradientValueField = BindHelper.BindRelative<GradientField>(uxml, UxmlNames.ReferenceFields.GradientValueField, vmSP, nameof(ArgumentSettingVM.vm_ReferenceGradientValue));
 
-            Label u_ReferenceInvalidValueLabel = BindHelper.BindRelative<Label>(uxml, UxmlNames.ReferenceFields.InvalidValueLabel, vmProperty, nameof(ArgumentSettingVM.vm_ReferenceInvalidValueLabel));
+            Label u_ReferenceInvalidValueLabel = BindHelper.BindRelative<Label>(uxml, UxmlNames.ReferenceFields.InvalidValueLabel, vmSP, nameof(ArgumentSettingVM.vm_ReferenceInvalidValueLabel));
 
 
             u_InputtableArgumentType.Init(SelectableFieldType.Number);
@@ -90,13 +90,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(e.SenderBindingSerializedProperty);
+                    string senderBindingSPInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
                     bool isSenderIsAncestorProperty = false;
                     foreach (int index in e.RemovedIndex)
                     {
-                        string targetPathPrefix = $"{senderBindingPropertyInstancePath}.Array.data[{index}]";
+                        string targetPathPrefix = $"{senderBindingSPInstancePath}.Array.data[{index}]";
                         isSenderIsAncestorProperty |= SerializedObjectUtil.GetSerializedPropertyInstancePath(property).StartsWith(targetPathPrefix);
                     }
 
@@ -108,7 +108,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public override void DelayCallCore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
         {
-            string propertyInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(property);
+            string spInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(property);
 
             Toggle u_IsReferenceMode = UIQuery.Q<Toggle>(uxml, UxmlNames.IsReferenceMode);
             EnumField u_InputtableArgumentType = UIQuery.Q<EnumField>(uxml, UxmlNames.InputtableArgumentType);

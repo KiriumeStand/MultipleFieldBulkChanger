@@ -9,7 +9,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     [Serializable]
     internal class MultipleFieldSelectorContainerVM : FieldSelectorContainerViewModelBase<MultipleFieldSelectorContainer>
     {
-        [SerializeField]
+        [SerializeReference]
         internal List<FieldSelectorVM> vm_FieldSelectors = new();
 
         public override void Recalculate()
@@ -21,16 +21,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             SerializedProperty fsListSP = TargetProperty.FindPropertyRelative(nameof(MultipleFieldSelectorContainer._FieldSelectors));
             ViewModelHelper.EnsureAndRecalculateByList<FieldSelectorVM, FieldSelector>(vm_FieldSelectors, fsListSP);
 
-            foreach (FieldSelectorVM fsViewModel in vm_FieldSelectors)
+            foreach (FieldSelectorVM fsVM in vm_FieldSelectors)
             {
-                if (m_SelectObject.IsModified || fsViewModel.m_SelectFieldPath.IsModified)
-                {
-                    fsViewModel.UpdateSelectValue(m_SelectObject.Value);
-
-                    m_SelectObject.AcceptChanges();
-                    fsViewModel.m_SelectFieldPath.AcceptChanges();
-                }
+                fsVM.CreateOrUpdateParentSelectObject(m_SelectObject.Value);
+                fsVM.UpdateSelectValue();
             }
+
+            m_SelectObject.AcceptChanges();
         }
     }
 }

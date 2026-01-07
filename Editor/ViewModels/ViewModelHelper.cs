@@ -6,41 +6,41 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
     internal static class ViewModelHelper
     {
-        internal static TPropVM EnsureAndRecalculate<TPropVM, TPropModel>(this TPropVM propVM, SerializedProperty propSP)
-            where TPropVM : ViewModelPropertyBase<TPropModel>, new()
-            where TPropModel : class
+        internal static TVMProp EnsureAndRecalculate<TVMProp, TModel>(this TVMProp vmProp, SerializedProperty modelPropSP)
+            where TVMProp : ViewModelPropertyBase<TModel>, new()
+            where TModel : class
         {
-            if (propVM == null)
+            if (vmProp == null)
             {
-                propVM = new();
-                propVM.InitializeSetting(propSP);
+                vmProp = new();
+                vmProp.InitializeSetting(modelPropSP);
             }
 
-            propVM.Recalculate();
+            vmProp.Recalculate();
 
-            return propVM;
+            return vmProp;
         }
 
-        internal static void EnsureAndRecalculateByList<TPropVM, TPropModel>(List<TPropVM> propVMList, SerializedProperty propListSP)
-            where TPropVM : ViewModelPropertyBase<TPropModel>, new()
-            where TPropModel : class
+        internal static void EnsureAndRecalculateByList<TVMProp, TModel>(List<TVMProp> vmPropList, SerializedProperty modelPropListSP)
+            where TVMProp : ViewModelPropertyBase<TModel>, new()
+            where TModel : class
         {
-            if (propVMList.Count() > propListSP.arraySize)
+            if (vmPropList.Count() > modelPropListSP.arraySize)
             {
-                propVMList.RemoveRange(propListSP.arraySize, propVMList.Count() - propListSP.arraySize);
+                vmPropList.RemoveRange(modelPropListSP.arraySize, vmPropList.Count() - modelPropListSP.arraySize);
             }
 
-            for (int i = 0; i < propListSP.arraySize; i++)
+            for (int i = 0; i < modelPropListSP.arraySize; i++)
             {
-                if (propVMList.Count() <= i)
+                if (vmPropList.Count() <= i)
                 {
-                    TPropVM propVM = new();
-                    SerializedProperty propSP = propListSP.GetArrayElementAtIndex(i);
-                    propVM.InitializeSetting(propSP);
-                    propVMList.Add(propVM);
+                    SerializedProperty modelPropSP = modelPropListSP.GetArrayElementAtIndex(i);
+                    TVMProp vmProp = new();
+                    vmProp.InitializeSetting(modelPropSP);
+                    vmPropList.Add(vmProp);
                 }
 
-                propVMList[i].Recalculate();
+                vmPropList[i].Recalculate();
             }
         }
     }

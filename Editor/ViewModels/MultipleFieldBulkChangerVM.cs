@@ -9,9 +9,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     [Serializable]
     internal class MultipleFieldBulkChangerVM : ViewModelRootBase<MultipleFieldBulkChangerVM, MultipleFieldBulkChanger>
     {
-        [SerializeField]
+        [SerializeReference]
         internal List<ArgumentSettingVM> vm_ArgumentSettings = new();
-        [SerializeField]
+        [SerializeReference]
         internal List<FieldChangeSettingVM> vm_FieldChangeSettings = new();
 
         public override void Recalculate()

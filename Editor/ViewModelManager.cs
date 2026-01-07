@@ -52,7 +52,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private static readonly List<(FieldInfo, FieldInfo)> target2VMFieldInfoPair = new();
 
-        internal static string GetVMPropPath(SerializedProperty targetSP)
+        internal static string GetVMSPPath(SerializedProperty targetSP)
         {
             SerializedProperty[] spStack = SerializedObjectUtil.GetSerializedPropertyStack(targetSP);
 
@@ -92,8 +92,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 // 相対パスをViewModel用に置き換える
                 relativePathStack[i] = vmType.Name + relativePathStack[i][targetType.Name.Length..];
             }
-            string vmPropPath = string.Join(".", relativePathStack);
-            return vmPropPath;
+            string vmSPPath = string.Join(".", relativePathStack);
+            return vmSPPath;
         }
     }
 }

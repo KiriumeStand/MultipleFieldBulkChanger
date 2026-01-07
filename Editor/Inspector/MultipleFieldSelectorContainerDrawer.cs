@@ -39,16 +39,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             SubscribeListViewItemsRemovedEvent(property, uxml, status);
         }
 
-        public override void DelayCallCore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
-        {
-            ObjectField u_SelectObject = UIQuery.Q<ObjectField>(uxml, UxmlNames.SelectObject);
-
-            // イベント購読の登録
-            u_SelectObject.RegisterValueChangedCallback(e => OnFieldSelectorSelectObjectChangedEventHandler(e, property, uxml, status));
-
-            UpdateSerializedPropertiesCache(property, uxml, status, u_SelectObject.value);
-        }
-
         // ▲ 初期化定義 ========================= ▲
 
 

@@ -100,9 +100,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             foreach (SerializedPropertyTreeNode node in allNode)
             {
                 SerializedPropertyTreeNode[] nodeStack = node.GetNodeStackWithoutRoot();
-                SerializedProperty[] propStack = nodeStack.Select(n => n.SerializedProperty).ToArray();
+                SerializedProperty[] spStack = nodeStack.Select(n => n.SerializedProperty).ToArray();
 
-                bool result = filters.All(f => f.Calc(node.SerializedObject, propStack));
+                bool result = filters.All(f => f.Calc(node.SerializedObject, spStack));
                 if (result) resultList.Add(node);
             }
 
@@ -233,9 +233,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 // 次の要素を取得
                 bool existNext = curSP.Next(enterChildren);
 
-                while (endSPStack.Count() > 0 && SerializedObjectUtil.EqualPropertyRefrence(endSPStack.Last(), curSP))
+                while (endSPStack.Count() > 0 && SerializedObjectUtil.EqualSerializedPropertyRefrence(endSPStack.Last(), curSP))
                 {
-                    if (curParentNode.SerializedProperty != null && SerializedObjectUtil.EqualPropertyRefrence(spStack.Last(), curParentNode.SerializedProperty))
+                    if (curParentNode.SerializedProperty != null && SerializedObjectUtil.EqualSerializedPropertyRefrence(spStack.Last(), curParentNode.SerializedProperty))
                     {
                         curParentNode = curParentNode.Parent;
                     }
@@ -245,7 +245,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
 
                 // ループを続けるか
-                doLoop = existNext && (cancelSP == null || !SerializedObjectUtil.EqualPropertyRefrence(curSP, cancelSP));
+                doLoop = existNext && (cancelSP == null || !SerializedObjectUtil.EqualSerializedPropertyRefrence(curSP, cancelSP));
             }
             while (doLoop);
 
@@ -321,7 +321,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 SerializedProperty lastStack = spStack.Last();
                 Object targetObject = lastStack.serializedObject.targetObject;
-                string propertyPath = lastStack.propertyPath;
+                string spPath = lastStack.propertyPath;
 
                 if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(targetObject))
                 {
@@ -348,14 +348,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 SerializedProperty lastStack = spStack.Last();
                 Object targetObject = lastStack.serializedObject.targetObject;
-                string propertyPath = lastStack.propertyPath;
+                string spPath = lastStack.propertyPath;
 
                 if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(targetObject))
                 {
                     return false;
                 }
 
-                if (propertyPath is "m_ObjectHideFlags" or "m_EditorHideFlags" or "m_StaticEditorFlags")
+                if (spPath is "m_ObjectHideFlags" or "m_EditorHideFlags" or "m_StaticEditorFlags")
                 {
                     return true;
                 }
@@ -363,7 +363,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 return false;
             };
 
-            private static readonly Regex eulerCurvePropPathRegex = new(@"^m_EulerCurves\.Array\.data\[\d+?\]\.curve$", RegexOptions.Compiled);
+            private static readonly Regex eulerCurveSPPathRegex = new(@"^m_EulerCurves\.Array\.data\[\d+?\]\.curve$", RegexOptions.Compiled);
             public static readonly FilterFuncType IsChange2Crash = static (root, spStack) =>
             {
                 if (spStack.Count() == 0)
@@ -372,12 +372,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
 
                 SerializedProperty lastStack = spStack.Last();
-                string propertyPath = lastStack.propertyPath;
+                string spPath = lastStack.propertyPath;
                 Object targetObject = lastStack.serializedObject.targetObject;
 
                 if (targetObject is GameObject)
                 {
-                    if (propertyPath.StartsWith("m_Component.Array.data["))
+                    if (spPath.StartsWith("m_Component.Array.data["))
                     {
                         return true;
                     }
@@ -385,15 +385,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 if (targetObject is Component)
                 {
-                    if (propertyPath.StartsWith("m_GameObject"))
+                    if (spPath.StartsWith("m_GameObject"))
                     {
                         return true;
                     }
                     if (targetObject is Transform)
                     {
                         if (
-                            propertyPath.StartsWith("m_Children.Array.data[") ||
-                            propertyPath.StartsWith("m_Father")
+                            spPath.StartsWith("m_Children.Array.data[") ||
+                            spPath.StartsWith("m_Father")
                         )
                         {
                             return true;
@@ -403,7 +403,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                 if (targetObject is AnimationClip)
                 {
-                    if (eulerCurvePropPathRegex.IsMatch(propertyPath))
+                    if (eulerCurveSPPathRegex.IsMatch(spPath))
                     {
                         // こいつが本当にヤバい。変更して Apply すると一瞬でクソデカメモリリークして恐ろしい負荷がかかる。絶対に変更してはいけない
                         return true;
@@ -421,14 +421,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
 
                 SerializedProperty lastStack = spStack.Last();
-                string propertyPath = lastStack.propertyPath;
+                string spPath = lastStack.propertyPath;
                 Object targetObject = lastStack.serializedObject.targetObject;
                 (bool gftSuccess, Type type, string errorLog) = lastStack.GetFieldType();
 
                 if (
                     gftSuccess &&
-                    ((propertyPath.EndsWith(".m_FileID") && type == typeof(int)) ||
-                    (propertyPath.EndsWith(".m_PathID") && type == typeof(long)))
+                    ((spPath.EndsWith(".m_FileID") && type == typeof(int)) ||
+                    (spPath.EndsWith(".m_PathID") && type == typeof(long)))
                 )
                 {
                     return true;
@@ -440,7 +440,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
 
                 if (
-                    propertyPath.EndsWith(".Array.size") &&
+                    spPath.EndsWith(".Array.size") &&
                     spStack[^2].isArray && spStack[^3].isArray
                 )
                 {
@@ -450,10 +450,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 if (targetObject is Object)
                 {
                     if (
-                        propertyPath.StartsWith("m_ObjectHideFlags") ||
-                        propertyPath.StartsWith("m_CorrespondingSourceObject") ||
-                        propertyPath.StartsWith("m_PrefabAsset") ||
-                        propertyPath.StartsWith("m_PrefabInstance")
+                        spPath.StartsWith("m_ObjectHideFlags") ||
+                        spPath.StartsWith("m_CorrespondingSourceObject") ||
+                        spPath.StartsWith("m_PrefabAsset") ||
+                        spPath.StartsWith("m_PrefabInstance")
                     )
                     {
                         return true;
@@ -461,7 +461,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     if (targetObject is AnimationClip)
                     {
-                        if (propertyPath.StartsWith("m_ClipBindingConstant.genericBindings.Array.data["))
+                        if (spPath.StartsWith("m_ClipBindingConstant.genericBindings.Array.data["))
                         {
                             return true;
                         }

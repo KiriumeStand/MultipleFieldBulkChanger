@@ -672,8 +672,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     if (importer != null)
                     {
                         int firstPeriodIndex = spPath.IndexOf('.');
-                        string fixedPropertyPath = spPath[(firstPeriodIndex + 1)..];
-                        result = GetSelectPathSerializedProperty(importer, fixedPropertyPath);
+                        string fixedSPPath = spPath[(firstPeriodIndex + 1)..];
+                        result = GetSelectPathSerializedProperty(importer, fixedSPPath);
                     }
                 }
             }

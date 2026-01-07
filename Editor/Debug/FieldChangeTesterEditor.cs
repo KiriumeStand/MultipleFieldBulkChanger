@@ -47,7 +47,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             return false;
         };
 
-        private static readonly HashSet<SerializedPropertyTreeNode.Filter> testPropFilters = new()
+        private static readonly HashSet<SerializedPropertyTreeNode.Filter> testSPFilters = new()
         {
             new(IsNotFirstElement, true),
             new(SerializedPropertyTreeNode.FilterFuncs.IsChange2Crash, true),
@@ -67,7 +67,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             if (GUILayout.Button("プロパティ一覧出力"))
             {
                 _lineAppendTimes = 0;
-                OutputPropertyList();
+                OutputSPPathList();
             }
 
             DrawDefaultInspector();
@@ -137,8 +137,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             Type origImporterType = null;
             SerializedObject origImporterSO = null;
 
-            SerializedPropertyTreeNode propTree = SerializedPropertyTreeNode.GetSerializedPropertyTreeWithImporter(origObjSO, enterChildrenFilters);
-            SerializedPropertyTreeNode importerTreeRoot = propTree.Children.FirstOrDefault(n => n.Name == "@Importer");
+            SerializedPropertyTreeNode spTree = SerializedPropertyTreeNode.GetSerializedPropertyTreeWithImporter(origObjSO, enterChildrenFilters);
+            SerializedPropertyTreeNode importerTreeRoot = spTree.Children.FirstOrDefault(n => n.Name == "@Importer");
             if (importerTreeRoot != null)
             {
                 origImporter = importerTreeRoot.SerializedObject.targetObject;
@@ -146,22 +146,22 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 origImporterSO = new(origImporter);
             }
 
-            SerializedPropertyTreeNode[] testPropNodes = propTree.Where(testPropFilters);
-            foreach (SerializedPropertyTreeNode node in testPropNodes)
+            SerializedPropertyTreeNode[] testSPNodes = spTree.Where(testSPFilters);
+            foreach (SerializedPropertyTreeNode node in testSPNodes)
             {
                 node.SetTag("TestProp");
             }
-            SerializedPropertyTreeNode[] allPropNodes = propTree.GetAllNode();
+            SerializedPropertyTreeNode[] allSPNodes = spTree.GetAllNode();
 
-            foreach (SerializedPropertyTreeNode propNode in allPropNodes)
+            foreach (SerializedPropertyTreeNode spNode in allSPNodes)
             {
-                if (propNode.SerializedProperty == null)
+                if (spNode.SerializedProperty == null)
                 {
                     continue;
                 }
                 Object origClone = null;
 
-                string propPath = propNode.SerializedProperty.propertyPath;
+                string spPath = spNode.SerializedProperty.propertyPath;
                 LogData curLogData = null;
                 try
                 {
@@ -169,14 +169,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     Object curObj = origObj;
                     Type curObjType = origObjType;
                     SerializedObject curOrigSO = origObjSO;
-                    curLogData = new(origObjType, propPath);
-                    if (propNode.SerializedProperty.serializedObject.targetObject == origImporter)
+                    curLogData = new(origObjType, spPath);
+                    if (spNode.SerializedProperty.serializedObject.targetObject == origImporter)
                     {
                         importerMode = true;
                         curObj = origImporter;
                         curObjType = origImporterType;
                         curOrigSO = origImporterSO;
-                        curLogData = new(origImporterType, propPath);
+                        curLogData = new(origImporterType, spPath);
                     }
 
                     bool existed = logDatas.Any(x => x.IsEqualData(curLogData));
@@ -188,7 +188,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     StatusAppend(logDatas, curLogData);
 
-                    if (!propNode.Tags.Contains("TestProp"))
+                    if (!spNode.Tags.Contains("TestProp"))
                     {
                         // テスト対象でなければスキップ
                         StatusUpdate(curLogData, StatusStr.S_1_1_Skip, true);
@@ -222,7 +222,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     }
                     StatusUpdate(curLogData, StatusStr.S_3_3_GetCloneSO_S, true);
 
-                    SerializedProperty cloneProp1 = cloneSO1.FindProperty(propPath);
+                    SerializedProperty cloneProp1 = cloneSO1.FindProperty(spPath);
                     if (cloneProp1 == null)
                     {
                         StatusUpdate(curLogData, StatusStr.S_4_1_GetCloneProp_E, true);
@@ -239,7 +239,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         StatusUpdate(curLogData, StatusStr.S_5_2_GetFieldType_E, true, errorLog);
                         continue;
                     }
-                    curLogData.TargetPropType = fieldType.FullName;
+                    curLogData.TargetSPType = fieldType.FullName;
 
                     StatusUpdate(curLogData, StatusStr.S_5_2_GetFieldType_S, true);
 
@@ -280,7 +280,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     }
                     StatusUpdate(curLogData, StatusStr.S_7_3_ChangeApply_S, true);
 
-                    SerializedProperty origProp = curOrigSO.FindProperty(propPath);
+                    SerializedProperty origProp = curOrigSO.FindProperty(spPath);
                     if (origProp == null)
                     {
                         StatusUpdate(curLogData, StatusStr.S_8_1_OriginalSPGet_E, true);
@@ -296,7 +296,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     }
                     StatusUpdate(curLogData, StatusStr.S_8_2_SettingCheckSOGet_S, true);
 
-                    SerializedProperty cloneProp2 = cloneSO2.FindProperty(propPath);
+                    SerializedProperty cloneProp2 = cloneSO2.FindProperty(spPath);
                     if (cloneProp2 == null)
                     {
                         StatusUpdate(curLogData, StatusStr.S_8_3_SettingCheckSPGet_E, true);
@@ -347,7 +347,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 }
                 catch (Exception e)
                 {
-                    multiplefieldbulkchanger.editor.Logger.DebugLog($"TestAllPropertyで不明な例外 : {propPath}\n{e.Message}\n{e.StackTrace}", LogType.Warning);
+                    multiplefieldbulkchanger.editor.Logger.DebugLog($"TestAllPropertyで不明な例外 : {spPath}\n{e.Message}\n{e.StackTrace}", LogType.Warning);
                     continue;
                 }
                 finally
@@ -489,7 +489,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        private void OutputPropertyList()
+        private void OutputSPPathList()
         {
             FieldChangeTester component = (FieldChangeTester)target;
 
@@ -605,10 +605,10 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         private record LogData
         {
-            public LogData(Type targetType, string propPath)
+            public LogData(Type targetType, string spPath)
             {
                 TargetObjType = targetType.FullName;
-                PropertyPath = propPath;
+                SPPath = spPath;
             }
 
             public LogData(List<string> tsvLine)
@@ -623,8 +623,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             public StatusStr Status;
 
             public string TargetObjType;
-            public string PropertyPath;
-            public string TargetPropType;
+            public string SPPath;
+            public string TargetSPType;
             public string IsUneditable;
             public string StatusStr;
             public string LastCloneTestStatus;
@@ -638,8 +638,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     return i switch
                     {
                         0 => TargetObjType,
-                        1 => PropertyPath,
-                        2 => TargetPropType,
+                        1 => SPPath,
+                        2 => TargetSPType,
                         3 => IsUneditable,
                         4 => StatusStr,
                         5 => LastCloneTestStatus,
@@ -653,8 +653,8 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                     _ = i switch
                     {
                         0 => TargetObjType = value,
-                        1 => PropertyPath = value,
-                        2 => TargetPropType = value,
+                        1 => SPPath = value,
+                        2 => TargetSPType = value,
                         3 => IsUneditable = value,
                         4 => StatusStr = value,
                         5 => LastCloneTestStatus = value,
@@ -682,7 +682,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
             public bool IsEqualData(LogData logData)
             {
-                return TargetObjType == logData.TargetObjType && PropertyPath == logData.PropertyPath;
+                return TargetObjType == logData.TargetObjType && SPPath == logData.SPPath;
             }
         }
 
@@ -750,7 +750,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 if (!File.Exists(_path))
                 {
                     using StreamWriter writer = new(_path, true, _encoding);
-                    string tsvHeader = $"TargetObjType\tPropertyPath\tTargetPropType\tIsUneditable\tStatus\tManualInfo\tInfo";
+                    string tsvHeader = $"TargetObjType\tPropertyPath\tTargetSPType\tIsUneditable\tStatus\tManualInfo\tInfo";
                     writer.WriteLine(tsvHeader);
                 }
 

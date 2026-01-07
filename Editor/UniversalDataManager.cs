@@ -35,14 +35,6 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         /// <returns></returns>
         internal static readonly Dictionary<UniqueObjectIdentifier, Dictionary<InspectorCustomizerIdentifier, object>> UniversalUniqueObjectDictionaries = new();
 
-        // ▼ SerializedProperty系 ========================= ▼
-        // MARK: ==SerializedProperty系==
-
-        internal static readonly ConditionalWeakTable<FieldSelectorContainerBase, SerializedPropertyTreeNode> targetObjectSerializedPropertyTreeRootCache = new();
-
-        // ▲ SerializedProperty系 ========================= ▲
-
-
         // ▼ メソッド ========================= ▼
         // MARK: ==メソッド==
 

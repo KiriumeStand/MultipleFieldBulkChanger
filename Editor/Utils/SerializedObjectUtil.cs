@@ -175,7 +175,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        internal static bool EqualPropertyRefrence(SerializedProperty spX, SerializedProperty spY)
+        internal static bool EqualSerializedPropertyRefrence(SerializedProperty spX, SerializedProperty spY)
         {
             return spX.serializedObject.targetObject == spY.serializedObject.targetObject && spX.propertyPath == spY.propertyPath;
         }

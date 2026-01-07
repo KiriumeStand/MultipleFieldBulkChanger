@@ -16,15 +16,15 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         {
             MultipleFieldBulkChangerVM viewModel = MultipleFieldBulkChangerVM.GetInstance(property.serializedObject);
             SerializedObject vmRootSO = new(viewModel);
-            string vmPropPath = ViewModelManager.GetVMPropPath(property);
-            SerializedProperty vmProperty = vmRootSO.FindProperty(vmPropPath);
+            string vmSPPath = ViewModelManager.GetVMSPPath(property);
+            SerializedProperty vmSP = vmRootSO.FindProperty(vmSPPath);
 
 
             Toggle u_Enable = BindHelper.BindRelative<Toggle>(uxml, UxmlNames.Enable, property, nameof(FieldChangeSetting._Enable));
             TextField u_Expression = BindHelper.BindRelative<TextField>(uxml, UxmlNames.Expression, property, nameof(FieldChangeSetting._Expression));
             ListView u_TargetFields = BindHelper.BindRelative<ListView>(uxml, UxmlNames.TargetFields, property, nameof(FieldChangeSetting._TargetFields));
 
-            Label u_ValuePreview = BindHelper.BindRelative<Label>(uxml, UxmlNames.ValuePreview, vmProperty, nameof(FieldChangeSettingVM.vm_ValuePreview));
+            Label u_ValuePreview = BindHelper.BindRelative<Label>(uxml, UxmlNames.ValuePreview, vmSP, nameof(FieldChangeSettingVM.vm_ValuePreview));
 
             // イベント発行の登録
             u_TargetFields.itemsAdded += (e) =>
@@ -56,13 +56,13 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
 
-                    string senderBindingPropertyInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(e.SenderBindingSerializedProperty);
+                    string senderBindingSPInstancePath = SerializedObjectUtil.GetSerializedPropertyInstancePath(e.SenderBindingSerializedProperty);
 
                     // イベント発行が先祖からかを確認
                     bool isSenderIsAncestorProperty = false;
                     foreach (int index in e.RemovedIndex)
                     {
-                        string targetPathPrefix = $"{senderBindingPropertyInstancePath}.Array.data[{index}]";
+                        string targetPathPrefix = $"{senderBindingSPInstancePath}.Array.data[{index}]";
                         isSenderIsAncestorProperty |= SerializedObjectUtil.GetSerializedPropertyInstancePath(property).StartsWith(targetPathPrefix);
                     }
 
