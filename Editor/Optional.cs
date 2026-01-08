@@ -1,30 +1,38 @@
+using System;
+using System.Collections.Generic;
+
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public readonly struct Optional<T>
+    internal record Optional<T> : IEquatable<Optional<T>>
     {
-        public bool HasValue { get; }
-        public T Value { get; }
+        internal bool HasValue { get; }
+        private readonly T _value;
+        internal T Value { get => HasValue ? _value : default; }
 
-        public Optional(T value, bool hasValue)
+        internal Optional(T value, bool hasValue)
         {
-            Value = value;
+            _value = value;
             HasValue = hasValue;
         }
 
-        public Optional(T value)
+        internal Optional(T value)
         {
-            Value = value;
+            _value = value;
             HasValue = true;
         }
 
-        public static Optional<T> None => new(default, false);
-    }
+        internal static Optional<T> None => new(default, false);
 
-    public static class OptionalHelper
-    {
-        public static Optional<T> Some<T>(T value)
+        public virtual bool Equals(Optional<T> other)
         {
-            return new(value);
+            if (HasValue == false && other.HasValue == false) return true;
+            if (HasValue != other.HasValue) return false;
+            return EqualityComparer<T>.Default.Equals(Value, other.Value);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine((Value, HasValue));
         }
     }
 }

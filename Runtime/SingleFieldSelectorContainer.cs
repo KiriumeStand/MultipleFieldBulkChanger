@@ -13,11 +13,11 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
 
         public object Clone()
         {
-            SingleFieldSelectorContainer clone = new();
-
-            clone._SelectObject = _SelectObject;
-            clone._FieldSelector = (FieldSelector)_FieldSelector.Clone();
-
+            SingleFieldSelectorContainer clone = new()
+            {
+                _SelectObject = _SelectObject,
+                _FieldSelector = (FieldSelector)_FieldSelector.Clone()
+            };
             return clone;
         }
     }

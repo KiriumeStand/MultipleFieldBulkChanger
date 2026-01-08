@@ -1,155 +1,49 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
+using UnityEditor.IMGUI.Controls;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
+    public class FieldSelectorDrawer : ExpansionPropertyDrawer { }
+
     [CustomPropertyDrawer(typeof(FieldSelector))]
-    public class FieldSelectorDrawer : ExpansionPropertyDrawer
+    public class FieldSelectorDrawerImpl : ExpansionPropertyDrawerImpl<FieldSelectorDrawer>
     {
-        // 非Editableなプロパティの選択を許可する先祖辞書
-        private static readonly List<Type> AllowUneditableAncestorTypes = new()
-        {
-            typeof(ArgumentSetting)
-        };
-
-        public FieldSelectorDrawer() : base() { }
-
-
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
-        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
-            DropdownField u_SelectField = UIQuery.Q<DropdownField>(uxml, UxmlNames.SelectField);
+            SerializedProperty vmSP = ViewModelManager.GetViewModelSerializedProperty<MultipleFieldBulkChangerVM, MultipleFieldBulkChanger>(property);
+
             TextField u_SelectFieldPath = BindHelper.BindRelative<TextField>(uxml, UxmlNames.SelectFieldPath, property, nameof(FieldSelector._SelectFieldPath));
-            Label u_LogLabel = UIQuery.Q<Label>(uxml, UxmlNames.LogLabel);
+            Label u_LogLabel = BindHelper.BindRelative<Label>(uxml, UxmlNames.LogLabel, vmSP, nameof(FieldSelectorVM.vm_LogLabel));
 
             // イベント発行の登録
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectField, this, property, status);
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectFieldPath, this, property, status);
-
-            // イベント購読の登録
-            ((IExpansionInspectorCustomizer)this).Subscribe<SelectObjectSerializedPropertiesUpdateEventArgs>(this,
-                property, status,
-                (sender, args) => { OnSelectObjectNodeTreeUpdateEventHandler(args, property, targetObject, uxml, status); },
-                e =>
-                {
-                    if (!EditorUtil.SerializedObjectUtil.IsValid(property)) return false;
-                    if (status.CurrentPhase < InspectorCustomizerStatus.Phase.BeforeDelayCall) return false;
-
-                    property.serializedObject.Update();
-
-                    bool isSameEditorInstance = e.GetSerializedObjectObjectId() == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
-
-                    bool isSenderIsAncestorProperty = false;
-                    if (e.SenderInspectorCustomizerSerializedProperty != null)
-                    {
-                        string thisPropertyInstancePath = EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(property);
-                        SerializedProperty senderDrawerProperty = e.SenderInspectorCustomizerSerializedProperty;
-                        string senderPropertyTypeName = senderDrawerProperty.type;
-                        if (senderPropertyTypeName == $"managedReference<{nameof(SingleFieldSelectorContainer)}>")
-                        {
-                            SerializedProperty senderDescendantProperty = senderDrawerProperty.SafeFindPropertyRelative(nameof(SingleFieldSelectorContainer._FieldSelector));
-                            if (senderDescendantProperty == null) return false;
-                            isSenderIsAncestorProperty = EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(senderDescendantProperty) == thisPropertyInstancePath;
-                        }
-                        else if (senderPropertyTypeName == $"managedReference<{nameof(MultiFieldSelectorContainer)}>")
-                        {
-                            SerializedProperty senderDescendantProperty = senderDrawerProperty.SafeFindPropertyRelative(nameof(MultiFieldSelectorContainer._FieldSelectors));
-                            if (senderDescendantProperty == null) return false;
-                            string senderDescendantPropertyPathPattern = $@"^{Regex.Escape(EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(senderDescendantProperty))}\.Array\.data\[\d+?\]";
-                            isSenderIsAncestorProperty = Regex.IsMatch(thisPropertyInstancePath, senderDescendantPropertyPathPattern);
-                        }
-                    }
-                    return isSameEditorInstance && isSenderIsAncestorProperty;
-                },
-                true
-            );
-            ((IExpansionInspectorCustomizer)this).Subscribe<ListViewItemsRemovedEventArgs>(this,
-                property, status,
-                (sender, args) => { OnListViewAncestorItemRemovedEventHandler(args, property, uxml, status); },
-                e =>
-                {
-                    if (!EditorUtil.SerializedObjectUtil.IsValid(property)) return false;
-                    if (status.CurrentPhase < InspectorCustomizerStatus.Phase.BeforeDelayCall) return false;
-
-                    property.serializedObject.Update();
-
-                    SerializedObject senderSerializedObject = e.GetSerializedObject();
-
-                    bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
-
-                    string senderBindingPropertyInstancePath = EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(e.SenderBindingSerializedProperty);
-
-                    // イベント発行が先祖からかを確認
-                    bool isSenderIsAncestorProperty = false;
-                    foreach (int index in e.RemovedIndex)
-                    {
-                        string targetPathPrefix = $"{senderBindingPropertyInstancePath}.Array.data[{index}]";
-                        isSenderIsAncestorProperty |= EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(property).StartsWith(targetPathPrefix);
-                    }
-
-                    return isSameEditorInstance && isSenderIsAncestorProperty;
-                },
-                true
-            );
-            ((IExpansionInspectorCustomizer)this).Subscribe<FieldSelectorLogChangeRequestEventArgs>(this,
-                property, status,
-                (sender, args) => { OnFieldSelectorLogChangeRequestEventHandler(args, property, uxml, status); },
-                e =>
-                {
-                    if (!EditorUtil.SerializedObjectUtil.IsValid(property)) return false;
-                    if (status.CurrentPhase < InspectorCustomizerStatus.Phase.BeforeDelayCall) return false;
-
-                    property.serializedObject.Update();
-
-                    SerializedObject senderSerializedObject = e.GetSerializedObject();
-
-                    bool isSameEditorInstance = EditorUtil.ObjectIdUtil.GetObjectId(senderSerializedObject) == EditorUtil.ObjectIdUtil.GetObjectId(property.serializedObject);
-
-                    bool isSelfIsEventTarget = e.TargetFieldSelectorPropertyInstancePath == EditorUtil.SerializedObjectUtil.GetPropertyInstancePath(property);
-
-                    return isSameEditorInstance && isSelfIsEventTarget;
-                },
-                true
-            );
+            u_LogLabel.RegisterValueChangedCallback(e => OnTextElementValueChangedEventHandler(e, property, uxml, vmSP));
         }
 
-        public override void DelayCallCore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void DelayCallCore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
-            DropdownField u_SelectField = UIQuery.Q<DropdownField>(uxml, UxmlNames.SelectField);
+            SerializedProperty vmSP = ViewModelManager.GetViewModelSerializedProperty<MultipleFieldBulkChangerVM, MultipleFieldBulkChanger>(property);
+
             TextField u_SelectFieldPath = UIQuery.Q<TextField>(uxml, UxmlNames.SelectFieldPath);
+            Button u_SelectFieldButton = UIQuery.Q<Button>(uxml, UxmlNames.SelectFieldButton);
+
+            Label u_LogLabel = UIQuery.Q<Label>(uxml, UxmlNames.LogLabel);
+
+            UpdateLogLabel(uxml, vmSP);
 
             // イベント購読の登録
-            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent(u_SelectField, this, property, status,
-                (sender, args) => { OnFieldSelectorSelectFieldChangedEventHandler(args, property, uxml, status); });
-            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent(u_SelectFieldPath, this, property, status,
-                (sender, args) => { OnFieldSelectorSelectFieldPathChangedEventHandler(args, property, uxml, status); });
-
-            DelayInit(property, uxml, status);
-        }
-
-        private void DelayInit(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
-        {
-            SerializedProperty fieldSelectorContainerProperty = EditorUtil.SerializedObjectUtil.GetParentProperty(property);
-
-            bool allowUneditable = ConfirmAllowUneditable(property);
-
-            // フィールド選択ドロップダウンフィールドの選択項目を更新
-            UpdateSelectFieldDropdownFieldChoices(property, uxml, fieldSelectorContainerProperty, allowUneditable);
-
-            TextField u_SelectFieldPath = UIQuery.Q<TextField>(uxml, UxmlNames.SelectFieldPath);
-            ChangeSelectFieldDropdownFieldValue(property, uxml, u_SelectFieldPath.value);
-
-            // 選択中のFieldのSerializedPropertyを取得
-            SerializedProperty selectingProperty = GetSelectingSerializedProperty(property, uxml);
-            // 選択されているフィールド情報を更新
-            UpdateSelectFieldDatas(property, uxml, status, selectingProperty);
+            u_SelectFieldButton.clicked += () =>
+            {
+                OnSelectFieldButtonClickedEventHandler(property, uxml, vmSP);
+            };
         }
 
         // ▲ 初期化定義 ========================= ▲
@@ -158,78 +52,14 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ イベントハンドラー ========================= ▼
         // MARK: ==イベントハンドラー==
 
-        /// <summary>
-        /// フィールド選択ドロップダウンの選択が変更された時のイベント処理
-        /// </summary>
-        /// <param name="args"></param>
-        /// <param name="property"></param>
-        /// <param name="propertyInstancePath"></param>
-        private void OnFieldSelectorSelectFieldChangedEventHandler(FieldValueChangedEventArgs<string> args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
+        private static void OnTextElementValueChangedEventHandler(ChangeEvent<string> e, SerializedProperty property, VisualElement uxml, SerializedProperty vmProperty)
         {
-            // 選択フィールドパスの内容を変更
-            ChangeSelectFieldPathTextFieldValue(property, uxml, args.NewValue);
-
-            // 選択中のFieldのSerializedPropertyを取得
-            SerializedProperty selectingProperty = GetSelectingSerializedProperty(property, uxml);
-            // 選択されているフィールド情報を更新
-            UpdateSelectFieldDatas(property, uxml, status, selectingProperty);
+            UpdateLogLabel(uxml, vmProperty);
         }
 
-        /// <summary>
-        /// フィールドパスが変更された時のイベント処理
-        /// </summary>
-        /// <param name="args"></param>
-        /// <param name="property"></param>
-        /// <param name="propertyInstancePath"></param>
-        private void OnFieldSelectorSelectFieldPathChangedEventHandler(FieldValueChangedEventArgs<string> args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
+        private static void OnSelectFieldButtonClickedEventHandler(SerializedProperty property, VisualElement uxml, SerializedProperty vmSP)
         {
-            // フィールド選択ドロップダウンの選択内容の変更
-            ChangeSelectFieldDropdownFieldValue(property, uxml, args.NewValue);
-
-            // 選択中のFieldのSerializedPropertyを取得
-            SerializedProperty selectingProperty = GetSelectingSerializedProperty(property, uxml);
-            // 選択されているフィールド情報を更新
-            UpdateSelectFieldDatas(property, uxml, status, selectingProperty);
-        }
-
-        /// <summary>
-        /// 親の選択オブジェクトが変更された時のイベント処理
-        /// </summary>
-        /// <param name="args"></param>
-        /// <param name="property"></param>
-        private void OnSelectObjectNodeTreeUpdateEventHandler(SelectObjectSerializedPropertiesUpdateEventArgs args, SerializedProperty property, IExpansionInspectorCustomizerTargetMarker targetObject, VisualElement uxml, InspectorCustomizerStatus status)
-        {
-            bool allowUneditable = ConfirmAllowUneditable(property);
-
-            // フィールド選択ドロップダウンフィールドの選択項目を更新
-            UpdateSelectFieldDropdownFieldChoices(property, uxml, args.SenderInspectorCustomizerSerializedProperty, allowUneditable);
-
-            TextField u_SelectFieldPath = UIQuery.Q<TextField>(uxml, UxmlNames.SelectFieldPath);
-            ChangeSelectFieldDropdownFieldValue(property, uxml, u_SelectFieldPath.value);
-
-            // 選択中のFieldのSerializedPropertyを取得
-            SerializedProperty selectingProperty = GetSelectingSerializedProperty(property, uxml);
-            // 選択されているフィールド情報を更新
-            UpdateSelectFieldDatas(property, uxml, status, selectingProperty);
-        }
-
-        private void OnListViewAncestorItemRemovedEventHandler(ListViewItemsRemovedEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
-        {
-            IExpansionInspectorCustomizerTargetMarker targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property);
-            ((IExpansionInspectorCustomizer)this).OnDetachFromPanelEvent(property, uxml, targetObject, status);
-        }
-
-        private static void OnFieldSelectorLogChangeRequestEventHandler(FieldSelectorLogChangeRequestEventArgs args, SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status)
-        {
-            Label u_LogLabel = UIQuery.Q<Label>(uxml, UxmlNames.LogLabel);
-            u_LogLabel.text = args.LogMessage;
-            u_LogLabel.style.color = args.LogColor;
-            u_LogLabel.style.unityFontStyleAndWeight = args.FontStyle;
-            u_LogLabel.style.fontSize = args.FontSize;
-
-            if (!string.IsNullOrWhiteSpace(args.LogMessage))
-                EditorUtil.VisualElementHelper.SetDisplay(u_LogLabel, true);
-            else EditorUtil.VisualElementHelper.SetDisplay(u_LogLabel, false);
+            ShowFieldSelectorAdvancedDropdown(property, uxml, vmSP);
         }
 
         // ▲ イベントハンドラー ========================= ▲
@@ -238,130 +68,52 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ メソッド ========================= ▼
         // MARK: ==メソッド==
 
-        /// <summary>
-        /// 子孫に <see cref="AllowUneditableAncestorTypes"/> に含まれる型のオブジェクトがあるか確認する
-        /// </summary>
-        /// <param name="property"></param>
-        /// <returns></returns>
-        private static bool ConfirmAllowUneditable(SerializedProperty property)
+        private static void UpdateLogLabel(VisualElement uxml, SerializedProperty vmSP)
         {
-            SerializedProperty curProperty = property;
-            while (true)
+            Label u_LogLabel = UIQuery.Q<Label>(uxml, UxmlNames.LogLabel);
+
+            SerializedProperty logStyleSP = vmSP.FindPropertyRelative(nameof(FieldSelectorVM.vm_LogStyle));
+            logStyleSP.serializedObject.Update();
+            string logStyle = logStyleSP.stringValue;
+            switch (logStyle)
             {
-                (SerializedObject rootSerializedObject, SerializedProperty parentProperty) = EditorUtil.SerializedObjectUtil.GetParentPropertyAndRootObject(curProperty);
-                if (parentProperty == null) return false;
-
-                object resultValue = EditorUtil.SerializedObjectUtil.GetPropertyValue(parentProperty);
-                if (AllowUneditableAncestorTypes.Contains(resultValue?.GetType())) return true;
-
-                curProperty = parentProperty;
-            }
-        }
-
-        private static SerializedProperty GetSelectingSerializedProperty(SerializedProperty property, VisualElement uxml)
-        {
-            property.serializedObject.Update();
-
-            SerializedProperty fieldSelectorContainerProperty = EditorUtil.SerializedObjectUtil.GetParentProperty(property);
-            FieldSelectorContainerBase fieldSelectorContainerObject = EditorUtil.SerializedObjectUtil.GetTargetObject(fieldSelectorContainerProperty) as FieldSelectorContainerBase;
-            if (!UniversalDataManager.targetObjectAllPropertiesCache.ContainsKey(fieldSelectorContainerObject)) return null;
-
-            TextField u_SelectFieldPath = UIQuery.Q<TextField>(uxml, UxmlNames.SelectFieldPath);
-            string propertyPath = u_SelectFieldPath.value;
-            string fixedPropertyPath = propertyPath.Replace('/', '.');
-            SerializedProperty selectingSerializedProperty =
-                UniversalDataManager.targetObjectAllPropertiesCache[fieldSelectorContainerObject]?
-                    .FirstOrDefault(x => x.propertyPath == fixedPropertyPath);
-
-            return selectingSerializedProperty;
-        }
-
-        /// <summary>
-        /// フィールドパステキストフィールドの内容を更新
-        /// </summary>
-        /// <param name="args"></param>
-        /// <param name="property"></param>
-        private static void ChangeSelectFieldPathTextFieldValue(SerializedProperty property, VisualElement uxml, string selectedFieldPath)
-        {
-            if (selectedFieldPath == "") return;
-
-            TextField u_SelectFieldPath = UIQuery.Q<TextField>(uxml, UxmlNames.SelectFieldPath);
-            u_SelectFieldPath.value = selectedFieldPath;
-        }
-
-        /// <summary>
-        /// フィールド選択ドロップダウンの内容を更新
-        /// </summary>
-        /// <param name="property"></param>
-        /// <param name="uxml"></param>
-        /// <param name="selectedFieldPath"></param>
-        private static void ChangeSelectFieldDropdownFieldValue(SerializedProperty property, VisualElement uxml, string selectedFieldPath)
-        {
-            DropdownField u_SelectField = UIQuery.Q<DropdownField>(uxml, UxmlNames.SelectField);
-            string newValue = u_SelectField.choices.Contains(selectedFieldPath) ? selectedFieldPath : "";
-            u_SelectField.value = newValue;
-        }
-
-        /// <summary>
-        /// フィールド選択ドロップダウンの選択項目を更新
-        /// </summary>
-        /// <param name="args"></param>
-        private static void UpdateSelectFieldDropdownFieldChoices(SerializedProperty property, VisualElement uxml, SerializedProperty fieldSelectorContainerProperty, bool allowUneditable)
-        {
-            FieldSelectorContainerBase fieldSelectorContainerObject = EditorUtil.SerializedObjectUtil.GetTargetObject(fieldSelectorContainerProperty) as FieldSelectorContainerBase;
-            if (!UniversalDataManager.targetObjectAllPropertiesCache.ContainsKey(fieldSelectorContainerObject)) return;
-
-            SerializedPropertyType[] allowSerializedPropertyType = {
-                SerializedPropertyType.Boolean,
-                SerializedPropertyType.Character,
-                SerializedPropertyType.Enum,
-                SerializedPropertyType.Float,
-                SerializedPropertyType.Integer,
-                SerializedPropertyType.ObjectReference,
-                SerializedPropertyType.String,
-             };
-
-            DropdownField u_SelectField = UIQuery.Q<DropdownField>(uxml, UxmlNames.SelectField);
-            u_SelectField.choices =
-                UniversalDataManager.targetObjectAllPropertiesCache[fieldSelectorContainerObject]
-                    .Where(
-                        x => (allowUneditable || x.editable)
-                        //&& allowSerializedPropertyType.Contains(x.propertyType)
-                        && x.propertyType != SerializedPropertyType.Generic
-                    )
-                    .Select(x => x.propertyPath.Replace('.', '/'))
-                    .ToList();
-        }
-
-        /// <summary>
-        /// 選択されているフィールド情報の更新
-        /// </summary>
-        /// <param name="property"></param>
-        /// <param name="uxml"></param>
-        private void UpdateSelectFieldDatas(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedProperty selectProperty)
-        {
-            string selectPropertyValueTypeFullName = "";
-            if (selectProperty != null)
-            {
-                (bool success, Type fieldType, string errorLog) = selectProperty.GetFieldType();
-                if (success)
-                {
-                    selectPropertyValueTypeFullName = fieldType.FullName;
-                }
+                case "Error":
+                    u_LogLabel.style.color = new StyleColor(Color.red);
+                    u_LogLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                    u_LogLabel.style.fontSize = 12;
+                    break;
+                case "Normal":
+                default:
+                    u_LogLabel.style.color = new StyleColor(Color.white);
+                    u_LogLabel.style.unityFontStyleAndWeight = FontStyle.Normal;
+                    u_LogLabel.style.fontSize = 12;
+                    break;
             }
 
-            FieldSelector targetObject = EditorUtil.SerializedObjectUtil.GetTargetObject(property) as FieldSelector;
-
-            UniversalDataManager.selectFieldPropertyCache[targetObject] = selectProperty;
-
-            OnSelectFieldSerializedPropertyUpdateEventPublish(property, uxml, status, selectProperty, selectPropertyValueTypeFullName);
+            if (!string.IsNullOrWhiteSpace(u_LogLabel.text))
+                VisualElementUtil.SetDisplay(u_LogLabel, true);
+            else VisualElementUtil.SetDisplay(u_LogLabel, false);
         }
-        private void OnSelectFieldSerializedPropertyUpdateEventPublish(SerializedProperty property, VisualElement uxml, InspectorCustomizerStatus status, SerializedProperty newProperty, string newPropertyValueTypeFullName)
+
+        private static void ShowFieldSelectorAdvancedDropdown(SerializedProperty property, VisualElement uxml, SerializedProperty vmSP)
         {
-            if (status.CurrentPhase <= InspectorCustomizerStatus.Phase.BeforeDelayCall) return;
-            property.serializedObject.Update();
-            SelectedFieldSerializedPropertyUpdateEventArgs args = new(this, property, uxml, status, newProperty, newPropertyValueTypeFullName);
-            ((IExpansionInspectorCustomizer)this).Publish(args);
+            TextField u_SelectFieldPath = UIQuery.Q<TextField>(uxml, UxmlNames.SelectFieldPath);
+            Button u_SelectFieldButton = UIQuery.Q<Button>(uxml, UxmlNames.SelectFieldButton);
+
+            FieldSelectorVM vm = (FieldSelectorVM)vmSP.managedReferenceValue;
+            SerializedPropertyTreeNode rootNode = vm.GetParentSelectObjectSerializedPropertyTree();
+
+            SerializedProperty selectFieldPathSP = property.FindPropertyRelative(nameof(FieldSelector._SelectFieldPath));
+
+            SerializedProperty fieldSelectorContainerSP = SerializedObjectUtil.GetParentSerializedProperty(property);
+            IExpansionInspectorCustomizerTargetMarker grandparentObject = MFBCHelper.GetTargetObject(fieldSelectorContainerSP);
+            bool ddItemEditableOnly = grandparentObject is FieldChangeSetting;
+
+            FieldSelectorAdvancedDropdown dropdown = new(
+                new List<string>() { u_SelectFieldPath.value }, new AdvancedDropdownState(),
+                rootNode, selectFieldPathSP, ddItemEditableOnly
+            );
+            dropdown.Show(u_SelectFieldButton.parent.worldBound);
         }
 
         // ▲ メソッド ========================= ▲
@@ -372,11 +124,311 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public record UxmlNames
         {
-            public static readonly string SelectField = "FS_SelectField";
             public static readonly string SelectFieldPath = "FS_SelectFieldPath";
+            public static readonly string SelectFieldButton = "FS_SelectFieldButton";
             public static readonly string LogLabel = "FS_LogLabel";
         }
 
         // ▲ 名前辞書 ========================= ▲
+
+
+        // ▼ 拡張AdvancedDropdown ========================= ▼
+        // MARK: ==拡張AdvancedDropdown==
+
+        private class FieldSelectorAdvancedDropdown : ExpantionAdvancedDropdown<FieldSelectorAdvancedDropdownItem>
+        {
+            protected override FieldSelectorAdvancedDropdownItem GetNewSearchTreeRoot() => new("Search Results", false, null);
+
+            private readonly SerializedPropertyTreeNode _rootNode;
+
+            private readonly SerializedProperty _bindingProperty;
+
+            private readonly bool _editableOnly;
+
+            private readonly HashSet<SerializedPropertyTreeNode.Filter> _selectableFilters = new();
+            private readonly HashSet<SerializedPropertyTreeNode.Filter> _innerNodeFilters = new();
+
+            public FieldSelectorAdvancedDropdown(
+                List<string> selectedItemPaths, AdvancedDropdownState state, SerializedPropertyTreeNode root,
+                 SerializedProperty bindingProperty, bool editableOnly
+            ) : base(selectedItemPaths.Select(x => FieldSelectorAdvancedDropdownItem.GetHashCode(x, true)), state)
+            {
+                CurrentFolderContextualSearch = true;
+                Vector2 minSize = minimumSize;
+                minSize.y = 200;
+                minimumSize = minSize;
+
+                _rootNode = root;
+                _bindingProperty = bindingProperty;
+                _editableOnly = editableOnly;
+
+                _selectableFilters.Add(new(SerializedPropertyTreeNode.FilterFuncs.IsGenericType, true));
+                if (Settings.Instance._Limitter)
+                {
+                    _selectableFilters.Add(new(SerializedPropertyTreeNode.FilterFuncs.IsHighRisk, true));
+                    _selectableFilters.Add(new(SerializedPropertyTreeNode.FilterFuncs.IsChange2Crash, true));
+
+                    _innerNodeFilters.Add(new(SerializedPropertyTreeNode.FilterFuncs.IsHighRisk, true));
+                    _innerNodeFilters.Add(new(SerializedPropertyTreeNode.FilterFuncs.IsChange2Crash, true));
+                }
+            }
+
+            protected override FieldSelectorAdvancedDropdownItem GenericBuildRoot()
+            {
+                if (_rootNode == null)
+                    return new(_rootNode?.Name, false, _rootNode);
+
+                Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs = new() { { _rootNode, new(_rootNode.Name, false, _rootNode) } };
+                foreach (SerializedPropertyTreeNode child in _rootNode.Children)
+                {
+                    BuildRootInternal(child, nodeADItemPairs);
+                }
+                return nodeADItemPairs[_rootNode];
+            }
+
+            private void BuildRootInternal(
+                SerializedPropertyTreeNode curNode, Dictionary<SerializedPropertyTreeNode, FieldSelectorAdvancedDropdownItem> nodeADItemPairs
+            )
+            {
+                if (curNode.SerializedProperty == null)
+                {
+                    FieldSelectorAdvancedDropdownItem innerItem = new($"{curNode.Name} ->", false, curNode);
+                    nodeADItemPairs[curNode.Parent].AddChild(innerItem);
+
+                    FieldSelectorAdvancedDropdownItem dictRegisterItem = innerItem;
+                    nodeADItemPairs.Add(curNode, dictRegisterItem);
+
+                    foreach (SerializedPropertyTreeNode child in curNode.Children)
+                    {
+                        BuildRootInternal(child, nodeADItemPairs);
+                    }
+                }
+                else
+                {
+                    SerializedPropertyTreeNode[] spNodeStack = curNode.GetNodeStackWithoutRoot();
+                    SerializedProperty[] spStack = spNodeStack.Select(x => x.SerializedProperty).ToArray();
+
+
+                    bool isSelectable = true;
+                    bool isInnerNode = true;
+
+                    isInnerNode &= curNode.Children.Any();
+                    if (Settings.Instance._Limitter)
+                    {
+                        isSelectable &= curNode.Tags.Contains("Selectable");
+                        if (_editableOnly)
+                        {
+                            isSelectable &= curNode.Tags.Contains("Editable");
+                        }
+                    }
+
+                    isSelectable &= _selectableFilters.All(x => x.Calc(curNode.SerializedObject, spStack));
+                    isInnerNode &= _innerNodeFilters.All(x => x.Calc(curNode.SerializedObject, spStack));
+
+                    if (isSelectable || isInnerNode)
+                    {
+                        FieldSelectorAdvancedDropdownItem selectableItem = null;
+                        if (isSelectable)
+                        {
+                            selectableItem = new(curNode.Name, true, curNode);
+                            nodeADItemPairs[curNode.Parent].AddChild(selectableItem);
+                        }
+
+                        FieldSelectorAdvancedDropdownItem innerItem = null;
+                        if (isInnerNode)
+                        {
+                            innerItem = new($"{curNode.Name} ->", false, curNode);
+                            nodeADItemPairs[curNode.Parent].AddChild(innerItem);
+                        }
+
+                        FieldSelectorAdvancedDropdownItem dictRegisterItem = innerItem ?? selectableItem;
+                        nodeADItemPairs.Add(curNode, dictRegisterItem);
+
+                        if (isInnerNode)
+                        {
+                            foreach (SerializedPropertyTreeNode child in curNode.Children)
+                            {
+                                BuildRootInternal(child, nodeADItemPairs);
+                            }
+                        }
+                    }
+                }
+            }
+
+            protected override (string itemName, string description, string tooltip) BuildDisplayTexts(
+                    FieldSelectorAdvancedDropdownItem item, string name, Texture2D icon, bool enabled, bool drawArrow, bool selected, bool hasSearch)
+            {
+                string itemName = "";
+                string description = "";
+                string tooltip = "";
+
+                itemName = item.name;
+                SerializedProperty sp = item.Node.SerializedProperty;
+                if (sp != null)
+                {
+                    string path = sp.propertyPath;
+                    tooltip = path;
+                    if (hasSearch)
+                    {
+                        description = $"({path})";
+                    }
+                    else
+                    {
+                        if (item.name.StartsWith("data["))
+                        {
+                            string[] nameFieldNames = new[] { "m_name", "_name", "name" };
+                            IEnumerable<SerializedPropertyTreeNode> nameNodes = item.Node.Children.Where(x => nameFieldNames.Contains(x.SerializedProperty.name.ToLower()));
+
+                            foreach (SerializedPropertyTreeNode node in nameNodes)
+                            {
+                                if (node.SerializedProperty.propertyType == SerializedPropertyType.String)
+                                {
+                                    // マテリアルのプロパティ名を description に表示
+                                    description = $"({node.SerializedProperty.stringValue})";
+                                    break;
+                                }
+                            }
+                        }
+
+                        {
+                            UnityEngine.Object targetObject = sp.serializedObject.targetObject;
+                            bool isNull = EditorUtil.FakeNullUtil.IsNullOrFakeNull(targetObject);
+                            if (!isNull)
+                            {
+                                string[] pathStack;
+                                switch (targetObject)
+                                {
+                                    case Material:
+                                        // マテリアルの m_SavedPropertiesの要素か
+                                        if (
+                                            sp.name == "data" &&
+                                            (item.Node.Parent.SerializedProperty?.isArray ?? false) &&
+                                            item.Node.Parent.Parent.SerializedProperty.arrayElementType == "pair" &&
+                                            (pathStack = path.Split('.')).Length == 4 &&
+                                            pathStack[0] == "m_SavedProperties" &&
+                                            new[] { "m_TexEnvs", "m_Ints", "m_Floats", "m_Colors" }.Contains(pathStack[1])
+                                        )
+                                        {
+                                            // マテリアルのプロパティ名を description に表示
+                                            description = $"({sp.displayName})";
+                                        }
+                                        break;
+                                    case AnimationClip:
+                                        if (
+                                            sp.name == "data" &&
+                                            (item.Node.Parent.SerializedProperty?.isArray ?? false) &&
+                                            item.Node.Parent.Parent.SerializedProperty.arrayElementType.EndsWith("Curve") &&
+                                            (pathStack = path.Split('.')).Length == 3 &&
+                                            pathStack[0].EndsWith("Curves") &&
+                                            true
+                                        )
+                                        {
+                                            string pathString = "";
+                                            string attributeString = "";
+
+                                            SerializedPropertyTreeNode pathSPNode = item.Node.Children.FirstOrDefault(x => x.SerializedProperty.name == "path");
+                                            if (pathSPNode != null && pathSPNode.SerializedProperty.propertyType == SerializedPropertyType.String)
+                                            {
+                                                pathString = pathSPNode.SerializedProperty.stringValue;
+                                            }
+
+                                            switch (item.Node.Parent.Parent.SerializedProperty.arrayElementType)
+                                            {
+                                                case "FloatCurve":
+                                                case "PPtrCurve":
+                                                    SerializedPropertyTreeNode attributeSPNode = item.Node.Children.FirstOrDefault(x => x.SerializedProperty.name == "attribute");
+
+                                                    if (attributeSPNode != null && attributeSPNode.SerializedProperty.propertyType == SerializedPropertyType.String)
+                                                    {
+                                                        attributeString = attributeSPNode.SerializedProperty.stringValue;
+                                                    }
+                                                    break;
+                                                case "Vector3Curve":
+                                                    switch (pathStack[0])
+                                                    {
+                                                        case "m_PositionCurves":
+                                                            attributeString = "Position";
+                                                            break;
+                                                        case "m_EulerCurves":
+                                                            attributeString = "Rotation";
+                                                            break;
+                                                        case "m_ScaleCurves":
+                                                            attributeString = "Scale";
+                                                            break;
+                                                    }
+                                                    break;
+                                                case "QuaternionCurve":
+                                                    switch (pathStack[0])
+                                                    {
+                                                        case "m_RotationCurves":
+                                                            attributeString = "Quaternion";
+                                                            break;
+                                                    }
+                                                    break;
+                                                case "CompressedAnimationCurve":
+                                                    switch (pathStack[0])
+                                                    {
+                                                        case "m_CompressedRotationCurves":
+                                                            attributeString = "CompressedAnimation";
+                                                            break;
+                                                    }
+                                                    break;
+                                            }
+                                            description = $"{pathString} : {attributeString}";
+                                        }
+                                        if (
+                                            sp.name == "size" &&
+                                            (item.Node.Parent.SerializedProperty?.isArray ?? false) &&
+                                            item.Node.Parent.Parent.SerializedProperty.arrayElementType.EndsWith("Curve") &&
+                                            (pathStack = path.Split('.')).Length == 3 &&
+                                            pathStack[0].EndsWith("Curves")
+                                        )
+                                        {
+                                            description = $"({item.Node.Parent.Parent.SerializedProperty.arrayElementType})";
+                                        }
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return (itemName, description, tooltip);
+            }
+
+            protected override void GenericItemSelected(FieldSelectorAdvancedDropdownItem item)
+            {
+                _bindingProperty.stringValue = item.FullPath;
+                _bindingProperty.serializedObject.ApplyModifiedProperties();
+            }
+        }
+
+        private class FieldSelectorAdvancedDropdownItem : ExpantionAdvancedDropdownItem
+        {
+            public bool IsSelectable { get; }
+            public SerializedPropertyTreeNode Node { get; }
+
+            public override int Id { get => GetHashCode(); }
+
+            public override string FullPath => Node?.FullPath ?? "";
+
+            public FieldSelectorAdvancedDropdownItem(string displayName, bool isSelectable, SerializedPropertyTreeNode node) : base(displayName)
+            {
+                IsSelectable = isSelectable;
+                Node = node;
+            }
+
+            public override int GetHashCode()
+            {
+                return GetHashCode(FullPath, IsSelectable);
+            }
+
+            public static int GetHashCode(string fullPath, bool isSelectable)
+            {
+                return (fullPath + (isSelectable ? "@value" : "")).GetHashCode();
+            }
+        }
+
+        // ▲ 拡張AdvancedDropdown ========================= ▲
     }
 }

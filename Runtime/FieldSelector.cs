@@ -9,13 +9,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
         // プロパティの参照パス
         public string _SelectFieldPath = "";
 
-        public string FixedSelectFieldPath => _SelectFieldPath.Replace('/', '.');
-
         public object Clone()
         {
-            FieldSelector clone = new();
-
-            clone._SelectFieldPath = _SelectFieldPath;
+            FieldSelector clone = new()
+            {
+                _SelectFieldPath = _SelectFieldPath
+            };
 
             return clone;
         }

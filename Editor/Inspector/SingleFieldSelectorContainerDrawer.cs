@@ -5,36 +5,18 @@ using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
+    public class SingleFieldSelectorContainerDrawer : ExpansionPropertyDrawer { }
+
     [CustomPropertyDrawer(typeof(SingleFieldSelectorContainer))]
-    public class SingleFieldSelectorContainerDrawer : FieldSelectorContainerDrawerBase
+    public class SingleFieldSelectorContainerDrawerImpl : FieldSelectorContainerDrawerImplBase<SingleFieldSelectorContainerDrawer>
     {
-        public SingleFieldSelectorContainerDrawer() : base() { }
-
-
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
-        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
             ObjectField u_SelectObject = BindHelper.BindRelative<ObjectField>(uxml, UxmlNames.SelectObject, property, nameof(SingleFieldSelectorContainer._SelectObject));
-            PropertyField u_SelectField = BindHelper.BindRelative<PropertyField>(uxml, UxmlNames.FieldSelector, property, nameof(SingleFieldSelectorContainer._FieldSelector));
-
-            // イベント発行の登録
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectObject, this, property, status);
-
-            // イベント購読の登録
-            SubscribeListViewItemsRemovedEvent(property, uxml, status);
-        }
-
-        public override void DelayCallCore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
-        {
-            ObjectField u_SelectObject = UIQuery.Q<ObjectField>(uxml, UxmlNames.SelectObject);
-
-            // イベント購読の登録
-            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<UnityEngine.Object>(u_SelectObject, this, property, status,
-                (sender, args) => { OnFieldSelectorSelectObjectChangedEventHandler(args, uxml, status); });
-
-            UpdateSerializedPropertiesCache(property, uxml, status, u_SelectObject.value);
+            PropertyField u_FieldSelector = BindHelper.BindRelative<PropertyField>(uxml, UxmlNames.FieldSelector, property, nameof(SingleFieldSelectorContainer._FieldSelector));
         }
 
         // ▲ 初期化定義 ========================= ▲

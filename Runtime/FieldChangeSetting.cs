@@ -16,17 +16,18 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.runtime
         public string _Expression = "";
 
         [SerializeReference]
-        public List<MultiFieldSelectorContainer> _TargetFields = new();
+        public List<MultipleFieldSelectorContainer> _TargetFields = new();
 
         public object Clone()
         {
-            FieldChangeSetting clone = new();
-
-            clone._Enable = _Enable;
-            clone._Expression = _Expression;
-            foreach (MultiFieldSelectorContainer tfItem in _TargetFields)
+            FieldChangeSetting clone = new()
             {
-                clone._TargetFields.Add((MultiFieldSelectorContainer)tfItem.Clone());
+                _Enable = _Enable,
+                _Expression = _Expression
+            };
+            foreach (MultipleFieldSelectorContainer tfItem in _TargetFields)
+            {
+                clone._TargetFields.Add((MultipleFieldSelectorContainer)tfItem.Clone());
             }
 
             return clone;

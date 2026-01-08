@@ -4,7 +4,6 @@ using System.Text.RegularExpressions;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEditor.UIElements;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
@@ -12,28 +11,22 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
     [CustomEditor(typeof(MultipleFieldBulkChanger))]
     public class MultipleFieldBulkChangerEditor : ExpansionEditor
     {
+        private EditorApplication.CallbackFunction editorApplicationUpdateCallback;
         private static readonly Regex XIndexRegex = new(@"^(.+?)(\d+)$", RegexOptions.Compiled);
-
-        public MultipleFieldBulkChangerEditor() : base() { }
 
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
-        public override void CreateInspectorGUICore(VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void CreateInspectorGUICore(VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
             MultipleFieldBulkChanger castedTargetObject = targetObject as MultipleFieldBulkChanger;
 
-            // MARK: デバッグ用
+            MultipleFieldBulkChangerVM viewModel = MultipleFieldBulkChangerVM.GetInstance(serializedObject);
+
+            // MARK: デバッグ用(常設)
             Button u_DebugButton = UIQuery.Q<Button>(uxml, "MFBC_DebugButton");
-            u_DebugButton.clicked += () =>
-            {
-                RuntimeUtil.Debugger.DebugLog(
-                    $"drawerId:{EditorUtil.ObjectIdUtil.GetObjectId(this)}/targetId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedObject.targetObject)}/propertyId:{EditorUtil.ObjectIdUtil.GetObjectId(serializedObject)}/Unsubscriptions/ManagedEventCount:{UniversalEventManager.ManagedEventCount}/\r\n" +
-                    $"\r\n" +
-                    $"{UniversalDataManager.Debugger.UnsubscribeActionsInfoList}"
-                    , LogType.Log);
-            };
-            EditorUtil.VisualElementHelper.SetDisplay(u_DebugButton, RuntimeUtil.DebugMode);
+            u_DebugButton.clicked += () => { };
+            VisualElementUtil.SetDisplay(u_DebugButton, Settings.Instance._DebugMode);
 
             Toggle u_Enable = BindHelper.Bind<Toggle>(uxml, UxmlNames.Enable, serializedObject, nameof(MultipleFieldBulkChanger._Enable));
             ListView u_Arguments = BindHelper.Bind<ListView>(uxml, UxmlNames.Arguments, serializedObject, nameof(MultipleFieldBulkChanger._ArgumentSettings));
@@ -57,19 +50,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
                     curElement._ArgumentName = nextNames[i];
                 }
+
+                viewModel.Recalculate();
             };
             u_Arguments.itemsRemoved += (e) =>
             {
-                ListViewItemsRemovedEventArgs args = new(this, serializedObject, u_Arguments, status, e);
-                ((IExpansionInspectorCustomizer)this).Publish(args);
-            };
-            u_Arguments.itemIndexChanged += (e1, e2) =>
-            {
-                //RuntimeUtil.Debugger.DebugLog($"u_Arguments.itemIndexChanged/{e1}/{e2}", LogType.Warning);
-            };
-            u_Arguments.itemsSourceChanged += () =>
-            {
-                //RuntimeUtil.Debugger.DebugLog($"u_Arguments.itemsSourceChanged", LogType.Error);
+                viewModel.Recalculate();
             };
 
             u_ChangeSettings.itemsAdded += (e) =>
@@ -99,78 +85,47 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                         curElement._Expression = firstArgName;
                     }
                 }
+
+                viewModel.Recalculate();
             };
             u_ChangeSettings.itemsRemoved += (e) =>
             {
-                ListViewItemsRemovedEventArgs args = new(this, serializedObject, u_ChangeSettings, status, e);
-                ((IExpansionInspectorCustomizer)this).Publish(args);
-            };
-            u_ChangeSettings.itemIndexChanged += (e1, e2) =>
-            {
-                RuntimeUtil.Debugger.DebugLog($"u_ChangeSettings.itemIndexChanged/{e1}/{e2}", LogType.Warning);
+                viewModel.Recalculate();
             };
 
             // このオブジェクトをウィンドウ要素にバインド
             uxml.Bind(serializedObject);
         }
 
-        public override void DelayCallCore(VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void DelayCallCore(VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
+            MultipleFieldBulkChangerVM viewModel = MultipleFieldBulkChangerVM.GetInstance(serializedObject);
+
             // 参照値の更新をリクエストするイベントの発行処理
-            void editorApplicationUpdateCallback()
+            editorApplicationUpdateCallback = () =>
             {
-                if (!EditorUtil.SerializedObjectUtil.IsValid(serializedObject))
-                {
-                    // MARK: デバッグ用
-                    RuntimeUtil.Debugger.DebugLog($"serializedObject/IsValid == false/editorApplicationUpdateCallback", LogType.Warning);
-                    return;
-                }
-                if (serializedObject == null)
-                {
-                    // MARK: デバッグ用
-                    RuntimeUtil.Debugger.DebugLog($"ここは必要みたいです/editorApplicationUpdateCallback", LogType.Warning);
-                    return;
-                }
+                if (!SerializedObjectUtil.IsValid(serializedObject)) { return; }
+                if (serializedObject == null) { return; }
 
-                // MARK: デバッグ用
-                var argumentDataDictionary = UniversalDataManager.GetUniqueObjectDictionary<ArgumentData>(UniversalDataManager.IdentifierNames.ArgumentData);
-                string text = $"argumentDataDictionary/{argumentDataDictionary.Count()}";
-                EditorUtil.Debugger.SetDebugLabelText(uxml, text);
-
-                SelectedFieldSerializedPropertyReloadRequestEventArgs args = new(this, serializedObject, uxml, status);
-                ((IExpansionInspectorCustomizer)this).Publish(args);
-            }
-
-            // 後で解除するために必要なのでUniqueObjectとして上記のイベントの発行処理を保管
-            UniversalDataManager.RegisterUniqueObject((this, targetObject, serializedObject), UniversalDataManager.IdentifierNames.EditorApplicationUpdateIdentifier, (EditorApplication.CallbackFunction)editorApplicationUpdateCallback);
+                viewModel.Recalculate();
+            };
 
             // EditorApplication.updateに上記のイベントの発行処理を登録する
             EditorApplication.update += editorApplicationUpdateCallback;
+
+            // DetachFromPanelEventで自動クリーンアップ
+            uxml.RegisterCallback<DetachFromPanelEvent>(e =>
+            {
+                // EditorApplication.updateに登録していた処理を削除
+                EditorApplication.update -= editorApplicationUpdateCallback;
+            });
         }
 
         // ▲ 初期化定義 ========================= ▲
 
 
-        // ▼ イベントハンドラー ========================= ▼
-        // MARK: ==イベントハンドラー==
-
-        // ▲ イベントハンドラー ========================= ▲
-
-
         // ▼ メソッド ========================= ▼
         // MARK: ==メソッド==
-
-        public override void OnCleanup(SerializedObject serializedObject, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
-        {
-            string identifier = UniversalDataManager.IdentifierNames.EditorApplicationUpdateIdentifier;
-            // EditorApplication.updateに登録した処理を取得
-            var editorApplicationUpdateCallback = UniversalDataManager.GetUniqueObject<EditorApplication.CallbackFunction>((this, targetObject, serializedObject), identifier);
-            // 不要なのでDBからは削除
-            UniversalDataManager.ClearUniqueObject<EditorApplication.CallbackFunction>((this, targetObject, serializedObject), identifier);
-
-            // EditorApplication.updateに登録していた処理を削除
-            EditorApplication.update -= editorApplicationUpdateCallback;
-        }
 
         private string[] GetNextIndexedName(IEnumerable<string> usedNames, string prefix, int needCount)
         {

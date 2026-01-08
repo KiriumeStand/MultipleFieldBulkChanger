@@ -5,45 +5,32 @@ using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    [CustomPropertyDrawer(typeof(MultiFieldSelectorContainer))]
-    public class MultipleFieldSelectorContainerDrawer : FieldSelectorContainerDrawerBase
+    public class MultipleFieldSelectorContainerDrawer : ExpansionPropertyDrawer { }
+
+    [CustomPropertyDrawer(typeof(MultipleFieldSelectorContainer))]
+    public class MultipleFieldSelectorContainerDrawerImpl : FieldSelectorContainerDrawerImplBase<MultipleFieldSelectorContainerDrawer>
     {
-        public MultipleFieldSelectorContainerDrawer() : base() { }
-
-
         // ▼ 初期化定義 ========================= ▼
         // MARK: ==初期化定義==
 
-        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
+        public override void CreatePropertyGUICore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject)
         {
-            ObjectField u_SelectObject = BindHelper.BindRelative<ObjectField>(uxml, UxmlNames.SelectObject, property, nameof(MultiFieldSelectorContainer._SelectObject));
-            ListView u_SelectFields = BindHelper.BindRelative<ListView>(uxml, UxmlNames.FieldsSelector, property, nameof(MultiFieldSelectorContainer._FieldSelectors));
+            MultipleFieldBulkChangerVM viewModel = MultipleFieldBulkChangerVM.GetInstance(property.serializedObject);
+
+            ObjectField u_SelectObject = BindHelper.BindRelative<ObjectField>(uxml, UxmlNames.SelectObject, property, nameof(MultipleFieldSelectorContainer._SelectObject));
+            ListView u_SelectFields = BindHelper.BindRelative<ListView>(uxml, UxmlNames.FieldsSelector, property, nameof(MultipleFieldSelectorContainer._FieldSelectors));
 
             // イベント発行の登録
-            EditorUtil.EventUtil.RegisterFieldValueChangeEventPublisher(u_SelectObject, this, property, status);
             u_SelectFields.itemsAdded += (e) =>
             {
-                IExpansionInspectorCustomizer.AddListElementWithClone(((MultiFieldSelectorContainer)targetObject)._FieldSelectors, e);
+                IExpansionInspectorCustomizer.AddListElementWithClone(((MultipleFieldSelectorContainer)targetObject)._FieldSelectors, e);
+
+                viewModel.Recalculate();
             };
             u_SelectFields.itemsRemoved += (e) =>
             {
-                ListViewItemsRemovedEventArgs args = new(this, property, u_SelectFields, status, e);
-                ((IExpansionInspectorCustomizer)this).Publish(args);
+                viewModel.Recalculate();
             };
-
-            // イベント購読の登録
-            SubscribeListViewItemsRemovedEvent(property, uxml, status);
-        }
-
-        public override void DelayCallCore(SerializedProperty property, VisualElement uxml, IExpansionInspectorCustomizerTargetMarker targetObject, InspectorCustomizerStatus status)
-        {
-            ObjectField u_SelectObject = UIQuery.Q<ObjectField>(uxml, UxmlNames.SelectObject);
-
-            // イベント購読の登録
-            EditorUtil.EventUtil.SubscribeFieldValueChangedEvent<UnityEngine.Object>(u_SelectObject, this, property, status,
-                (sender, args) => { OnFieldSelectorSelectObjectChangedEventHandler(args, uxml, status); });
-
-            UpdateSerializedPropertiesCache(property, uxml, status, u_SelectObject.value);
         }
 
         // ▲ 初期化定義 ========================= ▲
