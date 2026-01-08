@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
 using UnityEngine;
 using FilterFuncType = System.Func<UnityEditor.SerializedObject, UnityEditor.SerializedProperty[], bool>;

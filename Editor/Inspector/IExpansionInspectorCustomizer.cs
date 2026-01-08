@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using io.github.kiriumestand.multiplefieldbulkchanger.runtime;
 using UnityEditor;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
