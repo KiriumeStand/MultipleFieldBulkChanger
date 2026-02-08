@@ -28,11 +28,16 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             u_DebugButton.clicked += () => { };
             VisualElementUtil.SetDisplay(u_DebugButton, Settings.Instance._DebugMode);
 
+            Button u_BakeButton = UIQuery.Q<Button>(uxml, UxmlNames.Bake);
             Toggle u_Enable = BindHelper.Bind<Toggle>(uxml, UxmlNames.Enable, serializedObject, nameof(MultipleFieldBulkChanger._Enable));
             ListView u_Arguments = BindHelper.Bind<ListView>(uxml, UxmlNames.Arguments, serializedObject, nameof(MultipleFieldBulkChanger._ArgumentSettings));
             ListView u_ChangeSettings = BindHelper.Bind<ListView>(uxml, UxmlNames.ChangeSettings, serializedObject, nameof(MultipleFieldBulkChanger._FieldChangeSettings));
 
             // イベント発行の登録
+            u_BakeButton.clicked += () =>
+            {
+                OnBakeButtonClickedEventHandler(serializedObject);
+            };
             u_Arguments.itemsAdded += (e) =>
             {
                 IExpansionInspectorCustomizer.AddListElementWithClone(castedTargetObject._ArgumentSettings, e);
@@ -124,6 +129,20 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▲ 初期化定義 ========================= ▲
 
 
+        // ▼ イベントハンドラー ========================= ▼
+        // MARK: ==イベントハンドラー==
+
+        private static void OnBakeButtonClickedEventHandler(SerializedObject so)
+        {
+            bool isOK = EditorUtility.DisplayDialog("Multiple Field Bulk Changer", $"アセットやオブジェクトのパラメータを破壊的に変更します。\nこの操作は取り消せません！！\nよろしいですか？", "OK", "Cancel");
+            if (!isOK) return;
+
+            MFBCHelper.ChangePropertyValues(new List<MultipleFieldBulkChanger>() { so.targetObject as MultipleFieldBulkChanger });
+        }
+
+        // ▲ イベントハンドラー ========================= ▲
+
+
         // ▼ メソッド ========================= ▼
         // MARK: ==メソッド==
 
@@ -165,6 +184,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         public record UxmlNames
         {
+            public static readonly string Bake = "MFBC_Bake";
             public static readonly string Enable = "MFBC_Enable";
             public static readonly string Arguments = "MFBC_Arguments";
             public static readonly string ChangeSettings = "MFBC_ChangeSettings";
