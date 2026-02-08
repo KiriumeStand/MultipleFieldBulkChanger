@@ -707,6 +707,121 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
+        internal static void ChangePropertyValues(IEnumerable<MultipleFieldBulkChanger> mfbcComponents)
+        {
+            foreach (MultipleFieldBulkChanger mfbcComponent in mfbcComponents)
+            {
+                if (mfbcComponent._Enable)
+                {
+                    // 引数データの作成
+                    List<ArgumentData> argDatas = new();
+                    foreach (ArgumentSetting asProp in mfbcComponent._ArgumentSettings)
+                    {
+                        ArgumentData argData = GetArgumentData(asProp);
+                        argDatas.Add(argData);
+                    }
+
+                    foreach (FieldChangeSetting fcsProp in mfbcComponent._FieldChangeSettings)
+                    {
+                        if (!fcsProp._Enable) continue;
+
+                        string expression = fcsProp._Expression;
+
+                        // 代入式をパース
+                        ExpressionData expressionData = ParseExpression(expression);
+
+                        // パースした代入式を解く
+                        (Optional<object> result, Type resultValueType, string calcErrorLog) = expressionData.Expression != null ? CalculateExpression(expressionData, argDatas) : (Optional<object>.None, null, expressionData.ErrorLog);
+
+                        if (!result.HasValue)
+                        {
+                            Logger.Log($"代入式の計算に失敗しました。\n代入式:'{expression}'\n計算エラーログ:'{calcErrorLog}'", LogType.Error, "");
+                            continue;
+                        }
+
+                        foreach (MultipleFieldSelectorContainer mfscProp in fcsProp._TargetFields)
+                        {
+                            if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(mfscProp._SelectObject))
+                            {
+                                // MultiFieldSelectorContainer でオブジェクトが指定されていない場合
+                                continue;
+                            }
+
+                            SerializedObject targetSO = new(mfscProp._SelectObject);
+
+                            SerializedPropertyTreeNode spTreeRoot = SerializedPropertyTreeNode.GetSerializedPropertyTreeWithImporter(targetSO, new());
+
+                            foreach (FieldSelector fsProp in mfscProp._FieldSelectors)
+                            {
+
+                                SerializedPropertyTreeNode[] allNode = spTreeRoot.GetAllNode();
+                                SerializedPropertyTreeNode targetSPTreeNode = allNode.FirstOrDefault(x => x.FullPath == fsProp._SelectFieldPath);
+
+                                string selectFieldInfo = $"指定されたオブジェクト:'{mfscProp._SelectObject.name}({mfscProp._SelectObject.GetType().FullName})', 指定されたプロパティパス:'{fsProp._SelectFieldPath}'";
+                                if (targetSPTreeNode == null)
+                                {
+                                    Logger.Log($"指定されたプロパティが見つかりませんでした。\n{selectFieldInfo}", LogType.Error, "");
+                                    continue;
+                                }
+                                if (!targetSPTreeNode.Tags.Contains("Editable"))
+                                {
+                                    Logger.Log($"編集不可なプロパティが指定されました。\n{selectFieldInfo}", LogType.Error, "");
+                                    continue;
+                                }
+
+                                // 代入先の SerializedProperty
+                                SerializedProperty targetSP = targetSPTreeNode.SerializedProperty;
+
+                                if (targetSP == null)
+                                {
+                                    Logger.Log($"指定されたプロパティの SerializedProperty が見つかりませんでした。\n{selectFieldInfo}", LogType.Error, "");
+                                    continue;
+                                }
+
+                                (bool getFieldTypeSuccess, Type targetFieldType, string errorLog) = targetSP.GetFieldType();
+                                if (!getFieldTypeSuccess)
+                                {
+                                    Logger.Log($"指定されたプロパティの型が取得できませんでした。\n{selectFieldInfo}\n型取得エラーログ:'{errorLog}'", LogType.Error, "");
+                                    continue;
+                                }
+
+                                // 代入先と代入値の型の相性は問題ないか確認
+                                bool isValid = ValidationTypeAssignable(result.Value.GetType(), targetFieldType);
+
+                                if (!isValid)
+                                {
+                                    Logger.Log($"指定されたプロパティの型に対し、代入しようとした値の型が不適合です。\n{selectFieldInfo}\n代入値の型:'{result.Value.GetType().FullName}', 代入先の型:'{targetFieldType}'", LogType.Error, "");
+                                    continue;
+                                }
+
+                                // カスタムキャスト処理
+                                object customCastedResult = CustomCast(result.Value, targetFieldType);
+                                if (EditorUtil.FakeNullUtil.IsNullOrFakeNull(customCastedResult))
+                                {
+                                    customCastedResult = null;
+                                }
+
+                                try
+                                {
+                                    targetSP.boxedValue = customCastedResult;
+                                    targetSP.serializedObject.ApplyModifiedPropertiesWithoutUndo();
+                                    if (targetSP.serializedObject.targetObject is AssetImporter importer)
+                                    {
+                                        importer.SaveAndReimport();
+                                    }
+                                }
+                                catch
+                                {
+                                    Logger.Log("プロパティの値の変更に失敗しました。", LogType.Error, "");
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         internal record ExpressionData : IEquatable<ExpressionData>
         {
             internal string ExpressionString = "";
