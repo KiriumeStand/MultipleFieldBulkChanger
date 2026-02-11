@@ -30,7 +30,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         internal static TViewModel GetInstance(SerializedObject modelSO)
         {
             TTarget castedTargetObject = modelSO.targetObject as TTarget;
-            if (_instances.TryGetValue(castedTargetObject, out TViewModel vm))
+            if (_instances.TryGetValue(castedTargetObject, out TViewModel vm) && !EditorUtil.FakeNullUtil.IsNullOrFakeNull(vm))
             {
                 return vm;
             }
@@ -40,7 +40,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 vm.Model = castedTargetObject;
                 vm.Recalculate();
 
-                _instances.Add(castedTargetObject, vm);
+                _instances.AddOrUpdate(castedTargetObject, vm);
                 return vm;
             }
         }
