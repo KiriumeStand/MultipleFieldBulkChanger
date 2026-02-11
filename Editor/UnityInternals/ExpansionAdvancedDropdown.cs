@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
@@ -10,7 +11,7 @@ using System.Linq.Expressions;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public abstract class ExpantionAdvancedDropdown<TItem> : AdvancedDropdown where TItem : ExpantionAdvancedDropdownItem
+    public abstract class ExpansionAdvancedDropdown<TItem> : AdvancedDropdown where TItem : ExpansionAdvancedDropdownItem
     {
         protected virtual char? Separator { get; } = null;
 
@@ -26,7 +27,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        public ExpantionAdvancedDropdown(IEnumerable<int> selectedItemIds, AdvancedDropdownState state) : base(state)
+        public ExpansionAdvancedDropdown(IEnumerable<int> selectedItemIds, AdvancedDropdownState state) : base(state)
         {
             // 派生クラスの型
             Type actualType = GetType();
@@ -36,9 +37,9 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             bool isOverrideSearchMethod = searchMethodInfo.DeclaringType != searchMethodInfo.GetBaseDefinition().DeclaringType;
 
             Func<List<TItem>, string, TItem> customSearch = isOverrideSearchMethod ? GenericSearch : null;
-            ExpantionAdvancedDropdownDataSource newDataSource = new(selectedItemIds, GenericBuildRoot, GenericSearch);
+            ExpansionAdvancedDropdownDataSource newDataSource = new(selectedItemIds, GenericBuildRoot, GenericSearch);
             m_DataSource = newDataSource;
-            m_Gui = new ExpantionAdvancedDropdownGUI(newDataSource, BuildDisplayTexts);
+            m_Gui = new ExpansionAdvancedDropdownGUI(newDataSource, BuildDisplayTexts);
         }
 
         protected override sealed AdvancedDropdownItem BuildRoot() => GenericBuildRoot();
@@ -151,7 +152,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 
         protected virtual void GenericItemSelected(TItem item) { }
 
-        private class ExpantionAdvancedDropdownDataSource : AdvancedDropdownDataSource
+        private class ExpansionAdvancedDropdownDataSource : AdvancedDropdownDataSource
         {
             private static readonly Func<AdvancedDropdownDataSource, AdvancedDropdownItem> _currentContextTreeGetter;
             private readonly AdvancedDropdownItem _lastSearchableElementsRoot;
@@ -159,7 +160,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             private readonly Func<TItem> _buildRootCallback;
             private readonly Func<List<TItem>, string, TItem> _searchCallback;
 
-            internal ExpantionAdvancedDropdownDataSource(
+            internal ExpansionAdvancedDropdownDataSource(
                 IEnumerable<int> selectedItemIds,
                 Func<TItem> buildRootCallback,
                 Func<List<TItem>, string, TItem> searchCallback
@@ -170,7 +171,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 _searchCallback = searchCallback;
             }
 
-            static ExpantionAdvancedDropdownDataSource()
+            static ExpansionAdvancedDropdownDataSource()
             {
                 // private フィールドである、 AdvancedDropdownDataSource.m_SearchableElements にアクセスするための式木を作成しキャッシュ
                 FieldInfo fieldInfo = typeof(AdvancedDropdownDataSource).GetField("m_CurrentContextTree",
@@ -240,12 +241,12 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        private class ExpantionAdvancedDropdownGUI : AdvancedDropdownGUI
+        private class ExpansionAdvancedDropdownGUI : AdvancedDropdownGUI
         {
             readonly Func<TItem, string, Texture2D, bool, bool, bool, bool, (string itemName, string description, string tooltip)> _buildDisplayTextsCallback;
 
-            public ExpantionAdvancedDropdownGUI(
-                ExpantionAdvancedDropdownDataSource dataSource,
+            public ExpansionAdvancedDropdownGUI(
+                ExpansionAdvancedDropdownDataSource dataSource,
                 Func<TItem, string, Texture2D, bool, bool, bool, bool, (string itemName, string description, string tooltip)> buildDisplayTextsCallback)
                 : base(dataSource)
             {
@@ -253,7 +254,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
                 _buildDisplayTextsCallback = buildDisplayTextsCallback;
             }
 
-            readonly ExpantionAdvancedDropdownDataSource m_DataSource;
+            readonly ExpansionAdvancedDropdownDataSource m_DataSource;
 
             internal override sealed void DrawItem(AdvancedDropdownItem item, string name, Texture2D icon, bool enabled, bool drawArrow, bool selected, bool hasSearch)
             {
@@ -385,3 +386,4 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         }
     }
 }
+#endif
