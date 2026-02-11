@@ -135,7 +135,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         // ▼ 拡張AdvancedDropdown ========================= ▼
         // MARK: ==拡張AdvancedDropdown==
 
-        private class FieldSelectorAdvancedDropdown : ExpantionAdvancedDropdown<FieldSelectorAdvancedDropdownItem>
+        private class FieldSelectorAdvancedDropdown : ExpansionAdvancedDropdown<FieldSelectorAdvancedDropdownItem>
         {
             protected override FieldSelectorAdvancedDropdownItem GetNewSearchTreeRoot() => new("Search Results", false, null);
 
@@ -403,7 +403,7 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
             }
         }
 
-        private class FieldSelectorAdvancedDropdownItem : ExpantionAdvancedDropdownItem
+        private class FieldSelectorAdvancedDropdownItem : ExpansionAdvancedDropdownItem
         {
             public bool IsSelectable { get; }
             public SerializedPropertyTreeNode Node { get; }
