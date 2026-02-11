@@ -1,16 +1,17 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections;
 using UnityEditor.IMGUI.Controls;
 
 namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
 {
-    public abstract class ExpantionAdvancedDropdownItem : AdvancedDropdownItem
+    public abstract class ExpansionAdvancedDropdownItem : AdvancedDropdownItem
     {
         public virtual string FullPath { get; } = "";
 
         public virtual int Id { get => FullPath.GetHashCode(); }
 
-        public ExpantionAdvancedDropdownItem(string name) : base(name) { }
+        public ExpansionAdvancedDropdownItem(string name) : base(name) { }
 
         public override int GetHashCode() => FullPath.GetHashCode();
 
@@ -20,3 +21,4 @@ namespace io.github.kiriumestand.multiplefieldbulkchanger.editor
         }
     }
 }
+#endif
